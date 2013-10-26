@@ -18,6 +18,11 @@ import (
 	"time"
 )
 
+var (
+	HandshakeAlreadyPerformedError = errors.New("handshake already performed on this TLS conn")
+	ServerHandshakeOnClientError   = errors.New("server handshake was attempted on a client conn")
+)
+
 // A Conn represents a secured connection.
 // It implements the net.Conn interface.
 type Conn struct {
@@ -796,7 +801,7 @@ func (c *Conn) readHandshake() (interface{}, error) {
 	var m handshakeMessage
 	switch data[0] {
 	case typeClientHello:
-		m = new(clientHelloMsg)
+		m = new(ClientHelloMsg)
 	case typeServerHello:
 		m = new(serverHelloMsg)
 	case typeCertificate:
@@ -948,6 +953,30 @@ func (c *Conn) Handshake() error {
 	}
 	if c.isClient {
 		return c.clientHandshake()
+	}
+	_, err := c.serverHandshake()
+	return err
+}
+
+// ServerHandshake runs the server handshake protocol if it has not yet been
+// run. If it has been run before, HandshakeAlreadyPerformedError will be
+// returned with a nil *ServerHandshakeState. If this is called on a client
+// connection, it will return ServerHandshakeOnClientError.
+//
+// Most uses of this package need not call ServerHandshake explicitly: the
+// first Read or Write will call it automatically. Those that do, generally,
+// can get away with just calling Handshake.
+func (c *Conn) ServerHandshake() (*ServerHandshakeState, error) {
+	c.handshakeMutex.Lock()
+	defer c.handshakeMutex.Unlock()
+	if err := c.error(); err != nil {
+		return nil, err
+	}
+	if c.handshakeComplete {
+		return nil, HandshakeAlreadyPerformedError
+	}
+	if c.isClient {
+		return nil, ServerHandshakeOnClientError
 	}
 	return c.serverHandshake()
 }

@@ -21,7 +21,7 @@ func (c *Conn) clientHandshake() error {
 		c.config = defaultConfig()
 	}
 
-	hello := &clientHelloMsg{
+	hello := &ClientHelloMsg{
 		vers:               c.config.maxVersion(),
 		compressionMethods: []uint8{compressionNone},
 		random:             make([]byte, 32),
@@ -33,7 +33,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	possibleCipherSuites := c.config.cipherSuites()
-	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
+	hello.CipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
 NextCipherSuite:
 	for _, suiteId := range possibleCipherSuites {
@@ -46,7 +46,7 @@ NextCipherSuite:
 			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
 				continue
 			}
-			hello.cipherSuites = append(hello.cipherSuites, suiteId)
+			hello.CipherSuites = append(hello.CipherSuites, suiteId)
 			continue NextCipherSuite
 		}
 	}

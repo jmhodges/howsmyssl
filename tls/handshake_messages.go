@@ -6,12 +6,12 @@ package tls
 
 import "bytes"
 
-type clientHelloMsg struct {
+type ClientHelloMsg struct {
 	raw                []byte
 	vers               uint16
 	random             []byte
 	sessionId          []byte
-	cipherSuites       []uint16
+	CipherSuites       []uint16
 	compressionMethods []uint8
 	nextProtoNeg       bool
 	serverName         string
@@ -23,8 +23,8 @@ type clientHelloMsg struct {
 	signatureAndHashes []signatureAndHash
 }
 
-func (m *clientHelloMsg) equal(i interface{}) bool {
-	m1, ok := i.(*clientHelloMsg)
+func (m *ClientHelloMsg) equal(i interface{}) bool {
+	m1, ok := i.(*ClientHelloMsg)
 	if !ok {
 		return false
 	}
@@ -33,7 +33,7 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		m.vers == m1.vers &&
 		bytes.Equal(m.random, m1.random) &&
 		bytes.Equal(m.sessionId, m1.sessionId) &&
-		eqUint16s(m.cipherSuites, m1.cipherSuites) &&
+		eqUint16s(m.CipherSuites, m1.CipherSuites) &&
 		bytes.Equal(m.compressionMethods, m1.compressionMethods) &&
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		m.serverName == m1.serverName &&
@@ -45,12 +45,12 @@ func (m *clientHelloMsg) equal(i interface{}) bool {
 		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes)
 }
 
-func (m *clientHelloMsg) marshal() []byte {
+func (m *ClientHelloMsg) marshal() []byte {
 	if m.raw != nil {
 		return m.raw
 	}
 
-	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.cipherSuites)*2 + 1 + len(m.compressionMethods)
+	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.CipherSuites)*2 + 1 + len(m.compressionMethods)
 	numExtensions := 0
 	extensionsLength := 0
 	if m.nextProtoNeg {
@@ -96,13 +96,13 @@ func (m *clientHelloMsg) marshal() []byte {
 	x[38] = uint8(len(m.sessionId))
 	copy(x[39:39+len(m.sessionId)], m.sessionId)
 	y := x[39+len(m.sessionId):]
-	y[0] = uint8(len(m.cipherSuites) >> 7)
-	y[1] = uint8(len(m.cipherSuites) << 1)
-	for i, suite := range m.cipherSuites {
+	y[0] = uint8(len(m.CipherSuites) >> 7)
+	y[1] = uint8(len(m.CipherSuites) << 1)
+	for i, suite := range m.CipherSuites {
 		y[2+i*2] = uint8(suite >> 8)
 		y[3+i*2] = uint8(suite)
 	}
-	z := y[2+len(m.cipherSuites)*2:]
+	z := y[2+len(m.CipherSuites)*2:]
 	z[0] = uint8(len(m.compressionMethods))
 	copy(z[1:], m.compressionMethods)
 
@@ -230,7 +230,7 @@ func (m *clientHelloMsg) marshal() []byte {
 	return x
 }
 
-func (m *clientHelloMsg) unmarshal(data []byte) bool {
+func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 	if len(data) < 42 {
 		return false
 	}
@@ -253,9 +253,9 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 		return false
 	}
 	numCipherSuites := cipherSuiteLen / 2
-	m.cipherSuites = make([]uint16, numCipherSuites)
+	m.CipherSuites = make([]uint16, numCipherSuites)
 	for i := 0; i < numCipherSuites; i++ {
-		m.cipherSuites[i] = uint16(data[2+2*i])<<8 | uint16(data[3+2*i])
+		m.CipherSuites[i] = uint16(data[2+2*i])<<8 | uint16(data[3+2*i])
 	}
 	data = data[2+cipherSuiteLen:]
 	if len(data) < 1 {
