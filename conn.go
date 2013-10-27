@@ -59,12 +59,14 @@ func (c *conn) Write(b []byte) (int, error) {
 // makes less sense.
 type tlsData struct {
 	CipherSuites            []string `json:"cipher_suites"`
-	EphemeralKeysSupported  bool     `json:"ephemeral_keys_supported"`
-	SessionTicketsSupported bool     `json:"session_ticket_supported"`
+	EphemeralKeysSupported  bool     `json:"ephemeral_keys_supported"` // good
+	SessionTicketsSupported bool     `json:"session_ticket_supported"` // good
+	TLSCompressionSupported bool     `json:"tls_compression_support"`  // bad
 }
 
 func (c *conn) TLSData() *tlsData {
 	ephemeralKeys := false
+	compressionSupported := false
 	cs := make([]string, 0)
 
 	c.handshakeMutex.Lock()
@@ -81,10 +83,18 @@ func (c *conn) TLSData() *tlsData {
 		cs = append(cs, s)
 	}
 	ticketSupported := c.st.ClientHello.TicketSupported
+
+	for _, cm := range c.st.ClientHello.CompressionMethods {
+		if cm != 0x0 {
+			compressionSupported = true
+			break
+		}
+	}
 	return &tlsData{
 		CipherSuites:            cs,
 		EphemeralKeysSupported:  ephemeralKeys,
 		SessionTicketsSupported: ticketSupported,
+		TLSCompressionSupported: compressionSupported,
 	}
 }
 
