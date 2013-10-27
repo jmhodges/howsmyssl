@@ -90,7 +90,7 @@ func TestNoSuiteOverlap(t *testing.T) {
 	clientHello := &ClientHelloMsg{
 		vers:               0x0301,
 		CipherSuites:       []uint16{0xff00},
-		compressionMethods: []uint8{0},
+		CompressionMethods: []uint8{0},
 	}
 	testClientHelloFailure(t, clientHello, alertHandshakeFailure)
 }
@@ -99,7 +99,7 @@ func TestNoCompressionOverlap(t *testing.T) {
 	clientHello := &ClientHelloMsg{
 		vers:               0x0301,
 		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0xff},
+		CompressionMethods: []uint8{0xff},
 	}
 	testClientHelloFailure(t, clientHello, alertHandshakeFailure)
 }

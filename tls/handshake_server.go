@@ -134,7 +134,7 @@ Curves:
 
 	foundCompression := false
 	// We only support null compression, so check that the client offered it.
-	for _, compression := range hs.ClientHello.compressionMethods {
+	for _, compression := range hs.ClientHello.CompressionMethods {
 		if compression == compressionNone {
 			foundCompression = true
 			break

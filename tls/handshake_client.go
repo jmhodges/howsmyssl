@@ -23,7 +23,7 @@ func (c *Conn) clientHandshake() error {
 
 	hello := &ClientHelloMsg{
 		vers:               c.config.maxVersion(),
-		compressionMethods: []uint8{compressionNone},
+		CompressionMethods: []uint8{compressionNone},
 		random:             make([]byte, 32),
 		ocspStapling:       true,
 		serverName:         c.config.ServerName,

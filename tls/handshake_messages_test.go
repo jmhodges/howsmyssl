@@ -116,7 +116,7 @@ func (*ClientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 	for i := 0; i < len(m.CipherSuites); i++ {
 		m.CipherSuites[i] = uint16(rand.Int31())
 	}
-	m.compressionMethods = randomBytes(rand.Intn(63)+1, rand)
+	m.CompressionMethods = randomBytes(rand.Intn(63)+1, rand)
 	if rand.Intn(10) > 5 {
 		m.nextProtoNeg = true
 	}

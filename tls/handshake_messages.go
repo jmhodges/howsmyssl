@@ -12,7 +12,7 @@ type ClientHelloMsg struct {
 	random             []byte
 	sessionId          []byte
 	CipherSuites       []uint16
-	compressionMethods []uint8
+	CompressionMethods []uint8
 	nextProtoNeg       bool
 	serverName         string
 	ocspStapling       bool
@@ -34,7 +34,7 @@ func (m *ClientHelloMsg) equal(i interface{}) bool {
 		bytes.Equal(m.random, m1.random) &&
 		bytes.Equal(m.sessionId, m1.sessionId) &&
 		eqUint16s(m.CipherSuites, m1.CipherSuites) &&
-		bytes.Equal(m.compressionMethods, m1.compressionMethods) &&
+		bytes.Equal(m.CompressionMethods, m1.CompressionMethods) &&
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		m.serverName == m1.serverName &&
 		m.ocspStapling == m1.ocspStapling &&
@@ -50,7 +50,7 @@ func (m *ClientHelloMsg) marshal() []byte {
 		return m.raw
 	}
 
-	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.CipherSuites)*2 + 1 + len(m.compressionMethods)
+	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.CipherSuites)*2 + 1 + len(m.CompressionMethods)
 	numExtensions := 0
 	extensionsLength := 0
 	if m.nextProtoNeg {
@@ -103,10 +103,10 @@ func (m *ClientHelloMsg) marshal() []byte {
 		y[3+i*2] = uint8(suite)
 	}
 	z := y[2+len(m.CipherSuites)*2:]
-	z[0] = uint8(len(m.compressionMethods))
-	copy(z[1:], m.compressionMethods)
+	z[0] = uint8(len(m.CompressionMethods))
+	copy(z[1:], m.CompressionMethods)
 
-	z = z[1+len(m.compressionMethods):]
+	z = z[1+len(m.CompressionMethods):]
 	if numExtensions > 0 {
 		z[0] = byte(extensionsLength >> 8)
 		z[1] = byte(extensionsLength)
@@ -265,7 +265,7 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 	if len(data) < 1+compressionMethodsLen {
 		return false
 	}
-	m.compressionMethods = data[1 : 1+compressionMethodsLen]
+	m.CompressionMethods = data[1 : 1+compressionMethodsLen]
 
 	data = data[1+compressionMethodsLen:]
 
