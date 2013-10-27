@@ -3,11 +3,37 @@
 <header>
 </header>
 <body>
-  {{if .SessionTicketsSupported}}
-  <p>Session tickets are supported in your client.</p>
+  {{if .EphemeralKeysSupported}}
+  <p>Great! Ephemeral Keys are supported in your client. You've got
+  protection from global passive observers (who really are out there now).!</p>
+
   {{else}}
-  <p>Session tickets are not supported in your client. :(</p>
+  <p>Oh dear. Ephemeral keys are not supported in your client. Without them,
+  global passive observers will be able to scoop up all of your encrypted traffic
+  and decode it when their attacks or their computers are faster. This is
+  actually happening.</p>
   {{end}}
+
+  {{if .SessionTicketsSupported}}
+  <p>Good! Session tickets are supported in your client. Services you use
+  will be able to scale out their TLS connections much </p>
+
+  {{else}}
+  <p>Oh no. Session tickets are not supported in your client. Without them,
+  it'll take your connections over TLS longer to work and its harder for
+  services to scale out.</p>
+  {{end}}
+
+  {{if .TLSCompressionSupported}}
+  <p>Your TLS client is using TLS compresssion. This is really not good. It
+  makes your TLS connections susceptible to the CRIME attack and your
+  encrypted data could be leaked!</p>
+
+  {{else}}
+  <p>Good. Your TLS client does not attempt TLS compression, avoiding
+  information leaks from a CRIME attack.</p>
+  {{end}}
+
   <p>Ciphers your client supports:</p>
   <ul>
     {{range .CipherSuites}}
