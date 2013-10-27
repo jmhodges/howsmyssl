@@ -280,7 +280,7 @@ func (hs *ServerHandshakeState) doFullHandshake() error {
 		hs.hello.ocspStapling = true
 	}
 
-	hs.hello.ticketSupported = hs.ClientHello.ticketSupported && !config.SessionTicketsDisabled
+	hs.hello.TicketSupported = hs.ClientHello.TicketSupported && !config.SessionTicketsDisabled
 	hs.hello.cipherSuite = hs.suite.id
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
@@ -499,7 +499,7 @@ func (hs *ServerHandshakeState) readFinished() error {
 }
 
 func (hs *ServerHandshakeState) sendSessionTicket() error {
-	if !hs.hello.ticketSupported {
+	if !hs.hello.TicketSupported {
 		return nil
 	}
 

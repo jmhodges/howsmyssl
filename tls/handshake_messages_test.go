@@ -130,7 +130,7 @@ func (*ClientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 		m.supportedCurves[i] = uint16(rand.Intn(30000))
 	}
 	if rand.Intn(10) > 5 {
-		m.ticketSupported = true
+		m.TicketSupported = true
 		if rand.Intn(10) > 5 {
 			m.sessionTicket = randomBytes(rand.Intn(300), rand)
 		}
@@ -164,7 +164,7 @@ func (*serverHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 		m.ocspStapling = true
 	}
 	if rand.Intn(10) > 5 {
-		m.ticketSupported = true
+		m.TicketSupported = true
 	}
 
 	return reflect.ValueOf(m)
