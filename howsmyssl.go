@@ -180,9 +180,6 @@ func hijacked500(h http.Header, brw *bufio.ReadWriter) {
 
 func tlsRedirect(w http.ResponseWriter, r *http.Request) {
 	var u url.URL
-	if r.URL == nil {
-		log.Fatalf("wtf")
-	}
 	u = *r.URL
 	u.Scheme = "https"
 	if httpsPort == "443" {
@@ -190,7 +187,6 @@ func tlsRedirect(w http.ResponseWriter, r *http.Request) {
 	} else {
 		u.Host = *vhost + ":" + httpsPort
 	}
-	log.Printf("hwwaaa %s", u.String())
 	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 }
 
