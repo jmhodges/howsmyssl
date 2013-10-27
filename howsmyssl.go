@@ -148,7 +148,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 		Header:        h,
 		Body:          ioutil.NopCloser(bytes.NewBuffer(bs)),
 		ProtoMajor:    1,
-		ProtoMinor:    1,
+		ProtoMinor:    1, // TODO(jmhodges): respond to HTTP/1.0 correctly
 	}
 	bs, err = httputil.DumpResponse(resp, true)
 	if err != nil {
