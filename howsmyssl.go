@@ -20,7 +20,7 @@ import (
 
 var (
 	httpsAddr = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
-	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTPS server on")
+	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
 	vhost     = flag.String("vhost", "localhost", "public domain to use in redirects and templates")
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
