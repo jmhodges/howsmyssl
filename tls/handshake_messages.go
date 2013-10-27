@@ -8,7 +8,7 @@ import "bytes"
 
 type ClientHelloMsg struct {
 	raw                []byte
-	vers               uint16
+	Vers               uint16
 	random             []byte
 	sessionId          []byte
 	CipherSuites       []uint16
@@ -30,7 +30,7 @@ func (m *ClientHelloMsg) equal(i interface{}) bool {
 	}
 
 	return bytes.Equal(m.raw, m1.raw) &&
-		m.vers == m1.vers &&
+		m.Vers == m1.Vers &&
 		bytes.Equal(m.random, m1.random) &&
 		bytes.Equal(m.sessionId, m1.sessionId) &&
 		eqUint16s(m.CipherSuites, m1.CipherSuites) &&
@@ -90,8 +90,8 @@ func (m *ClientHelloMsg) marshal() []byte {
 	x[1] = uint8(length >> 16)
 	x[2] = uint8(length >> 8)
 	x[3] = uint8(length)
-	x[4] = uint8(m.vers >> 8)
-	x[5] = uint8(m.vers)
+	x[4] = uint8(m.Vers >> 8)
+	x[5] = uint8(m.Vers)
 	copy(x[6:38], m.random)
 	x[38] = uint8(len(m.sessionId))
 	copy(x[39:39+len(m.sessionId)], m.sessionId)
@@ -235,7 +235,7 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 		return false
 	}
 	m.raw = data
-	m.vers = uint16(data[4])<<8 | uint16(data[5])
+	m.Vers = uint16(data[4])<<8 | uint16(data[5])
 	m.random = data[6:38]
 	sessionIdLen := int(data[38])
 	if sessionIdLen > 32 || len(data) < 39+sessionIdLen {

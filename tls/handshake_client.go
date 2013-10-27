@@ -22,7 +22,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	hello := &ClientHelloMsg{
-		vers:               c.config.maxVersion(),
+		Vers:               c.config.maxVersion(),
 		CompressionMethods: []uint8{compressionNone},
 		random:             make([]byte, 32),
 		ocspStapling:       true,
@@ -43,7 +43,7 @@ NextCipherSuite:
 			}
 			// Don't advertise TLS 1.2-only cipher suites unless
 			// we're attempting TLS 1.2.
-			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+			if hello.Vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
 				continue
 			}
 			hello.CipherSuites = append(hello.CipherSuites, suiteId)
@@ -62,7 +62,7 @@ NextCipherSuite:
 		return errors.New("short read from Rand")
 	}
 
-	if hello.vers >= VersionTLS12 {
+	if hello.Vers >= VersionTLS12 {
 		hello.signatureAndHashes = supportedSKXSignatureAlgorithms
 	}
 

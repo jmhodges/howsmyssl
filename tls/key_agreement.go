@@ -66,8 +66,8 @@ func (ka rsaKeyAgreement) processServerKeyExchange(config *Config, clientHello *
 
 func (ka rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello *ClientHelloMsg, cert *x509.Certificate) ([]byte, *clientKeyExchangeMsg, error) {
 	preMasterSecret := make([]byte, 48)
-	preMasterSecret[0] = byte(clientHello.vers >> 8)
-	preMasterSecret[1] = byte(clientHello.vers)
+	preMasterSecret[0] = byte(clientHello.Vers >> 8)
+	preMasterSecret[1] = byte(clientHello.Vers)
 	_, err := io.ReadFull(config.rand(), preMasterSecret[2:])
 	if err != nil {
 		return nil, nil, err
