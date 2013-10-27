@@ -1,0 +1,18 @@
+<DOCTYPE html>
+<html>
+<header>
+</header>
+<body>
+  {{if .SessionTicketsSupported}}
+  <p>Session tickets are supported in your client.</p>
+  {{else}}
+  <p>Session tickets are not supported in your client. :(</p>
+  {{end}}
+  <p>Ciphers your client supports:</p>
+  <ul>
+    {{range .CipherSuites}}
+    <li>{{.}}</li>
+    {{end}}
+  </ul>
+</body>
+</html>
