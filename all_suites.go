@@ -1,8 +1,9 @@
 package main
 
-// generated from:
+// All cipher suites in the TLS standards.
+// Generated with:
 // curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
-var cipherSuites = map[uint16]string{
+var allCipherSuites = map[uint16]string{
 	0x0000: "TLS_NULL_WITH_NULL_NULL",
 	0x0001: "TLS_RSA_WITH_NULL_MD5",
 	0x0002: "TLS_RSA_WITH_NULL_SHA",

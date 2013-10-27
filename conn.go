@@ -72,7 +72,7 @@ func (c *conn) TLSData() *tlsData {
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
 	for _, ci := range c.st.ClientHello.CipherSuites {
-		s, found := cipherSuites[ci]
+		s, found := allCipherSuites[ci]
 		if found {
 			if strings.Contains(s, "DHE_") {
 				ephemeralKeys = true
