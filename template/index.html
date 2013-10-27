@@ -48,6 +48,17 @@
   out.</p>
   {{end}}
 
+  {{if len .InsecureCipherSuites}}
+  <p>Oh boy, your client supports cipher suites that are known to be
+  insecure:</p>
+
+  <ul>
+    {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
+    <li>{{$cipherSuite}}: This cipher {{sentence $reasons}}</li>
+    {{end}}
+  </ul>
+
+  {{end}}
   <p>Cipher suites your client supports:</p>
   <ul>
     {{range .CipherSuites}}

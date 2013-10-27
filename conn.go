@@ -64,10 +64,11 @@ type tlsData struct {
 	TLSCompressionSupported     bool     `json:"tls_compression_supported"`      // bad if true
 	UnknownCipherSuiteSupported bool     `json:"unknown_cipher_suite_supported"` // bad if true
 	BEASTAttackVuln             bool     `json:"beast_attack_vuln"`              // bad if true
+	InsecureCipherSuites        map[string][]string
 }
 
 func (c *conn) TLSData() *tlsData {
-	d := &tlsData{}
+	d := &tlsData{InsecureCipherSuites: make(map[string][]string)}
 
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
@@ -81,6 +82,16 @@ func (c *conn) TLSData() *tlsData {
 			if c.st.ClientHello.Vers <= tls.VersionTLS10 && strings.Contains(s, "_CBC_") {
 				d.BEASTAttackVuln = true
 			}
+			if fewBitCipherSuites[s] {
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
+			}
+			if nullCipherSuites[s] {
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullReason)
+			}
+			if nullAuthCipherSuites[s] {
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullAuthReason)
+			}
+
 		} else {
 			d.UnknownCipherSuiteSupported = true
 			s = fmt.Sprintf("Some unknown cipher suite: %#x", ci)

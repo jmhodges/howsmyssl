@@ -14,6 +14,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,10 @@ var (
 
 func main() {
 	flag.Parse()
-	index = template.Must(template.ParseFiles(*tmplDir + "/index.html"))
+	index = template.Must(template.New("index.html").
+		Funcs(template.FuncMap{"sentence": sentence}).
+		ParseFiles(*tmplDir + "/index.html"))
+
 	_, port, err := net.SplitHostPort(*httpsAddr)
 	httpsPort = port
 	if err != nil {
@@ -188,4 +192,12 @@ func tlsRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("hwwaaa %s", u.String())
 	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+}
+
+func sentence(parts []string) string {
+	if len(parts) == 1 {
+		return parts[0] + "."
+	}
+	commaed := parts[:len(parts)-1]
+	return strings.Join(commaed, ", ") + ", and " + parts[len(parts)-1] + "."
 }
