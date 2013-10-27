@@ -54,11 +54,11 @@ func main() {
 	}
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
 	if err != nil {
-		log.Fatal("unable to listen for the HTTPS server on %s: %s", *httpsAddr, err)
+		log.Fatalf("unable to listen for the HTTPS server on %s: %s", *httpsAddr, err)
 	}
 	plaintextListener, err := net.Listen("tcp", *httpAddr)
 	if err != nil {
-		log.Fatal("unable to listen for the HTTP server on %s: %s", *httpAddr, err)
+		log.Fatalf("unable to listen for the HTTP server on %s: %s", *httpAddr, err)
 	}
 	l := &listener{tlsListener}
 	m := tlsMux()
