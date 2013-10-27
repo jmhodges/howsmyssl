@@ -109,8 +109,6 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, render func(*tlsData) ([]byte, error)) {
-	// At this point, all of our templates better work or we're screwed and
-	// unable to signal that back to the user.
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
