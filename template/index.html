@@ -20,9 +20,10 @@
   will be able to scale out their TLS connections much </p>
 
   {{else}}
-  <p>Oh no. Session tickets are not supported in your client. Without them,
+  <p>Not so good. Session tickets are not supported in your client. Without them,
   it'll take your connections over TLS longer to work and its harder for
-  services to scale out.</p>
+  services to scale out. Generally, clients with ephemeral key support gets
+  this for free.</p>
   {{end}}
 
   {{if .TLSCompressionSupported}}
