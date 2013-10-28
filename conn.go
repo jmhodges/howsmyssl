@@ -64,7 +64,7 @@ type tlsData struct {
 	TLSCompressionSupported     bool     `json:"tls_compression_supported"`      // bad if true
 	UnknownCipherSuiteSupported bool     `json:"unknown_cipher_suite_supported"` // bad if true
 	BEASTAttackVuln             bool     `json:"beast_attack_vuln"`              // bad if true
-	InsecureCipherSuites        map[string][]string
+	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
 }
 
 func (c *conn) TLSData() *tlsData {
