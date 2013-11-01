@@ -80,9 +80,13 @@ func main() {
 
 func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
 	m := http.NewServeMux()
-	m.Handle(vhost+"/s/", staticHandler)
-	m.Handle(vhost+"/a/check", apiHandler)
-	m.Handle(vhost+"/", webHandler)
+	prefix := vhost
+	if port != "443" {
+		prefix = net.JoinHostPort(vhost, port)
+	}
+	m.Handle(prefix+"/s/", staticHandler)
+	m.Handle(prefix+"/a/check", apiHandler)
+	m.Handle(prefix+"/", webHandler)
 	m.Handle("/", tlsRedirect(vhost, port, webHandler))
 	return m
 }
@@ -207,7 +211,11 @@ func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
 	}
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.Host)
-		if err == nil && vhost == host {
+		log.Printf("wha %#v %#v == %#v and %s then %s", err, vhost, host, r.URL, r.Host)
+		if err != nil {
+			host = r.Host
+		}
+		if vhost == host {
 			webHandler.ServeHTTP(w, r)
 			return
 		}
