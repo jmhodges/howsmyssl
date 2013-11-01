@@ -27,8 +27,7 @@ var (
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir   = flag.String("templateDir", "./template", "file path to the directory of templates")
 
-	index     *template.Template
-	httpsPort string
+	index *template.Template
 )
 
 func main() {
@@ -37,12 +36,10 @@ func main() {
 		Funcs(template.FuncMap{"sentence": sentence}).
 		ParseFiles(*tmplDir + "/index.html"))
 
-	_, port, err := net.SplitHostPort(*httpsAddr)
-	httpsPort = port
+	_, httpsPort, err := net.SplitHostPort(*httpsAddr)
 	if err != nil {
 		log.Fatalf("unable to parse httpsAddr: %s", err)
 	}
-
 	cert, err := tls.LoadX509KeyPair(*certPath, *keyPath)
 	if err != nil {
 		log.Fatalf("unable to load TLS key cert pair %s: %s", certPath, err)
@@ -61,24 +58,33 @@ func main() {
 		log.Fatalf("unable to listen for the HTTP server on %s: %s", *httpAddr, err)
 	}
 	l := &listener{tlsListener}
-	m := tlsMux()
+
+	m := tlsMux(
+		*vhost,
+		httpsPort,
+		http.HandlerFunc(handleWeb),
+		http.HandlerFunc(handleAPI),
+		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
+
 	go func() {
 		err := http.Serve(l, m)
 		if err != nil {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = http.Serve(plaintextListener, http.HandlerFunc(tlsRedirect))
+	err = http.Serve(plaintextListener, plaintextRedirect(*vhost, httpsPort))
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
 }
 
-func tlsMux() *http.ServeMux {
+func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
 	m := http.NewServeMux()
-	m.Handle("/s/", http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
-	m.HandleFunc("/a/check", handleAPI)
-	m.HandleFunc("/", handleWeb)
+
+	m.Handle(vhost+"/s/", staticHandler)
+	m.Handle(vhost+"/a/check", apiHandler)
+	m.Handle(vhost+"/", webHandler)
+	m.Handle("/", tlsRedirect(vhost, port, webHandler))
 	return m
 }
 
@@ -176,16 +182,39 @@ func hijacked500(h http.Header, brw *bufio.ReadWriter) {
 	brw.Flush()
 }
 
-func tlsRedirect(w http.ResponseWriter, r *http.Request) {
+func commonRedirect(w http.ResponseWriter, r *http.Request, vhostWithPort string) {
 	var u url.URL
 	u = *r.URL
 	u.Scheme = "https"
-	if httpsPort == "443" {
-		u.Host = *vhost
-	} else {
-		u.Host = *vhost + ":" + httpsPort
-	}
+	u.Host = vhostWithPort
 	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+
+}
+
+func plaintextRedirect(vhost, port string) http.Handler {
+	if port != "443" {
+		vhost = net.JoinHostPort(vhost, port)
+	}
+	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		commonRedirect(w, r, vhost)
+	}
+	return h
+}
+
+func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
+	vhostWithPort := vhost
+	if port != "443" {
+		vhostWithPort = net.JoinHostPort(vhost, port)
+	}
+	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		host, _, err := net.SplitHostPort(r.Host)
+		if err == nil && vhost == host {
+			webHandler.ServeHTTP(w, r)
+			return
+		}
+		commonRedirect(w, r, vhostWithPort)
+	}
+	return h
 }
 
 func sentence(parts []string) string {
