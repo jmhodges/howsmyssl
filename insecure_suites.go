@@ -113,3 +113,13 @@ var nullAuthCipherSuites = map[string]bool{
 	"TLS_SRP_SHA_WITH_AES_128_CBC_SHA":         true,
 	"TLS_SRP_SHA_WITH_AES_256_CBC_SHA":         true,
 }
+
+// Unspecified cipher suites that are contained in NSS but have no matching
+// specification. 0xFEFF is emitted by Firefox 25.0 NSS says both of these are
+// "new non-experimental openly spec'ed versions of those cipher suites." It
+// is unclear what specs it refers to. They will remain here until I figure
+// out what they are.
+var weirdNSSSuites = map[uint16]string{
+	0xFEFE: "SSL_RSA_FIPS_WITH_DES_CBC_SHA",
+	0xFEFF: "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA",
+}
