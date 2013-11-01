@@ -38,8 +38,9 @@
 
   {{if .BEASTAttackVuln}}
   <p>Ick. Your client is probably open to the BEAST attack. It's using version
-  TLS 1.0 or earlier and using the CBC mode for its block cipher and that
-  leaks information. Fixed in TLS 1.1 and later.</p>
+  TLS 1.0 or earlier while also supporting a cipher suite that uses CBC for
+  its block cipher. That combination may leak information. Fixed in TLS 1.1
+  and later.</p>
   {{end}}
 
   {{if .UnknownCipherSuiteSupported}}
@@ -59,9 +60,9 @@
   </ul>
 
   {{end}}
-  <p>Cipher suites your client supports:</p>
+  <p>Cipher suites your client said it supports:</p>
   <ul>
-    {{range .CipherSuites}}
+    {{range .GivenCipherSuites}}
     <li>{{.}}</li>
     {{end}}
   </ul>

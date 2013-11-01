@@ -80,7 +80,6 @@ func main() {
 
 func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
 	m := http.NewServeMux()
-
 	m.Handle(vhost+"/s/", staticHandler)
 	m.Handle(vhost+"/a/check", apiHandler)
 	m.Handle(vhost+"/", webHandler)
@@ -88,7 +87,7 @@ func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handl
 	return m
 }
 
-func renderHTML(data *tlsData) ([]byte, error) {
+func renderHTML(data *clientInfo) ([]byte, error) {
 	b := new(bytes.Buffer)
 	err := index.Execute(b, data)
 	if err != nil {
@@ -97,7 +96,7 @@ func renderHTML(data *tlsData) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func renderJSON(data *tlsData) ([]byte, error) {
+func renderJSON(data *clientInfo) ([]byte, error) {
 	return json.Marshal(data)
 }
 
@@ -114,7 +113,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 	hijackHandle(w, r, "application/json", renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, render func(*tlsData) ([]byte, error)) {
+func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, render func(*clientInfo) ([]byte, error)) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -137,7 +136,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 		log.Printf("Unable to convert net.Connn to *conn: %s\n", err)
 		hijacked500(h, brw)
 	}
-	data := tc.TLSData()
+	data := ClientInfo(tc)
 	bs, err := render(data)
 	if err != nil {
 		log.Printf("Unable to excute index template: %s\n", err)
