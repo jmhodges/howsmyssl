@@ -14,6 +14,7 @@ type clientInfo struct {
 	UnknownCipherSuiteSupported bool                `json:"unknown_cipher_suite_supported"` // bad if true
 	BEASTAttackVuln             bool                `json:"beast_attack_vuln"`              // bad if true
 	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
+	TLSVersion                  string              `json:"tls_version"`
 }
 
 func ClientInfo(c *conn) *clientInfo {
@@ -54,6 +55,16 @@ func ClientInfo(c *conn) *clientInfo {
 			d.TLSCompressionSupported = true
 			break
 		}
+	}
+	switch c.st.ClientHello.Vers {
+	case tls.VersionSSL30:
+		d.TLSVersion = "SSL 3.0"
+	case tls.VersionTLS10:
+		d.TLSVersion = "TLS 1.0"
+	case tls.VersionTLS11:
+		d.TLSVersion = "TLS 1.1"
+	case tls.VersionTLS12:
+		d.TLSVersion = "TLS 1.2"
 	}
 	return d
 }
