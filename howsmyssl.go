@@ -28,6 +28,11 @@ var (
 	tmplDir   = flag.String("templateDir", "./template", "file path to the directory of templates")
 
 	index *template.Template
+
+
+	wtfM *http.ServeMux
+	web2 http.HandlerFunc
+	api2 http.HandlerFunc
 )
 
 func main() {
@@ -59,13 +64,15 @@ func main() {
 	}
 	l := &listener{tlsListener}
 
+	web2 = http.HandlerFunc(handleWeb)
+	api2 = http.HandlerFunc(handleAPI)
 	m := tlsMux(
 		*vhost,
 		httpsPort,
-		http.HandlerFunc(handleWeb),
-		http.HandlerFunc(handleAPI),
+		web2,
+		api2,
 		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
-
+	wtfM = m
 	go func() {
 		err := http.Serve(l, m)
 		if err != nil {
@@ -84,6 +91,7 @@ func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handl
 	if port != "443" {
 		prefix = net.JoinHostPort(vhost, port)
 	}
+	log.Printf("Prefix: %s", prefix)
 	m.Handle(prefix+"/s/", staticHandler)
 	m.Handle(prefix+"/a/check", apiHandler)
 	m.Handle(prefix+"/", webHandler)
@@ -118,6 +126,10 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, render func(*clientInfo) ([]byte, error)) {
+	log.Printf("Request host (hijack): %s, and url %#v", r.Host, r.URL)
+	log.Printf("Request (hijack): %#v", r)
+	h2, patt := wtfM.Handler(r)
+	log.Printf("Request mux (hijack): %#v and %#v web %#v, api %#v", h2, patt, web2, api2)
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -210,8 +222,9 @@ func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
 		vhostWithPort = net.JoinHostPort(vhost, port)
 	}
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Request host (redirect): %s, and url %#v", r.Host, r.URL)
+		log.Printf("Request (redirect): %#v", r)
 		host, _, err := net.SplitHostPort(r.Host)
-		log.Printf("wha %#v %#v == %#v and %s then %s", err, vhost, host, r.URL, r.Host)
 		if err != nil {
 			host = r.Host
 		}

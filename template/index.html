@@ -41,6 +41,11 @@
   TLS 1.0 or earlier while also supporting a cipher suite that uses CBC for
   its block cipher. That combination may leak information. Fixed in TLS 1.1
   and later.</p>
+
+  {{else}}
+  <p>Good. Your client is not open to the BEAST attack. Either, it's a TLS
+  version later than 1.0, doesn't support the CBC block mode on TLS 1.0, or is
+  performing the 1/n-1 mitigation for the BEAST attack.
   {{end}}
 
   {{if .UnknownCipherSuiteSupported}}
