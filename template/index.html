@@ -3,8 +3,20 @@
 <header>
 </header>
 <body>
+  {{if eq .TLSVersion "TLS 1.2"}}
+  <p>Great! Your client is using TLS 1.2, the most modern version of TLS.</p>
+  {{else if eq .TLSVersion "TLS 1.1"}}
+  <p>Enh, your client is using TLS 1.1. It would be better to be TLS 1.2, but
+  at least it isn't susceptible to the BEAST attack. But, it also doesn't
+  have the AES-GCM cipher suite available.</p>
+  {{else}}
+  <p>Oh dear, your client is {{.TLSVersion}}, which is very old, possibly
+  susceptible to the BEAST attack, and doesn't have the best cipher suites
+  available on it.</p>
+  {{end}}
+
   {{if .EphemeralKeysSupported}}
-  <p>Great! Ephemeral keys are supported in the cipher suites your client
+  <p>Cool! Ephemeral keys are supported in the cipher suites your client
   supports. You've got protection from global passive observers (who really
   are out there now).!</p>
 
