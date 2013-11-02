@@ -65,7 +65,6 @@ func main() {
 		http.HandlerFunc(handleWeb),
 		http.HandlerFunc(handleAPI),
 		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
-
 	go func() {
 		err := http.Serve(l, m)
 		if err != nil {
@@ -137,7 +136,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 	h.Set("Connection", "close")
 	tc, ok := c.(*conn)
 	if !ok {
-		log.Printf("Unable to convert net.Connn to *conn: %s\n", err)
+		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
 		hijacked500(h, brw)
 	}
 	data := ClientInfo(tc)
@@ -211,7 +210,6 @@ func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
 	}
 	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.Host)
-		log.Printf("wha %#v %#v == %#v and %s then %s", err, vhost, host, r.URL, r.Host)
 		if err != nil {
 			host = r.Host
 		}

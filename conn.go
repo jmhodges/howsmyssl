@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"github.com/jmhodges/howsmyssl/tls"
+	"log"
 	"net"
 	"sync"
 )
@@ -61,6 +62,7 @@ func (c *conn) handshake() error {
 		return nil
 	}
 	if err != nil {
+		log.Printf("handshake problem: %#v", err)
 		return err
 	}
 	c.handshakeMutex.Lock()
