@@ -4,6 +4,7 @@ var (
 	fewBitReason   = "uses keys smaller than 128 bits keys in its encryption"
 	nullReason     = "specifies no encryption at all for the connection"
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
+	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
 )
 
 // Cipher suites with less than 128-bit encryption.
@@ -114,11 +115,11 @@ var nullAuthCipherSuites = map[string]bool{
 	"TLS_SRP_SHA_WITH_AES_256_CBC_SHA":         true,
 }
 
-// Unspecified cipher suites that are contained in NSS but have no matching
-// specification. 0xFEFF is emitted by Firefox 25.0 NSS says both of these are
-// "new non-experimental openly spec'ed versions of those cipher suites." It
-// is unclear what specs it refers to. They will remain here until I figure
-// out what they are.
+// Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
+// 0xFEFF is still emitted by by Firefox 25.0. Discussed here:
+// https://groups.google.com/forum/#!topic/mozilla.dev.tech.crypto/oWk0FkKsek4
+// and
+// http://www-archive.mozilla.org/projects/security/pki/nss/ssl/fips-ssl-ciphersuites.html
 var weirdNSSSuites = map[uint16]string{
 	0xFEFE: "SSL_RSA_FIPS_WITH_DES_CBC_SHA",
 	0xFEFF: "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA",

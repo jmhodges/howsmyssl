@@ -41,10 +41,15 @@ func ClientInfo(c *conn) *clientInfo {
 			if nullAuthCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullAuthReason)
 			}
-
 		} else {
 			d.UnknownCipherSuiteSupported = true
-			s = fmt.Sprintf("Some unknown cipher suite: %#x", ci)
+			w, found := weirdNSSSuites[ci]
+			if !found {
+				s = fmt.Sprintf("Some unknown cipher suite: %#x", ci)
+			} else {
+				s = w
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], weirdNSSReason)
+			}
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
