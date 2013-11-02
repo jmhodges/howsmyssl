@@ -49,6 +49,8 @@ func main() {
 		Certificates: []tls.Certificate{cert},
 		NextProtos:   []string{"https"},
 	}
+	tlsConf.BuildNameToCertificate()
+
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
 	if err != nil {
 		log.Fatalf("unable to listen for the HTTPS server on %s: %s", *httpsAddr, err)
