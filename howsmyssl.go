@@ -65,6 +65,8 @@ func main() {
 		http.HandlerFunc(handleWeb),
 		http.HandlerFunc(handleAPI),
 		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
+
+	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
 		err := http.Serve(l, m)
 		if err != nil {
