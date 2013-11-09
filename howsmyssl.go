@@ -32,10 +32,7 @@ var (
 
 func main() {
 	flag.Parse()
-	index = template.Must(template.New("index.html").
-		Funcs(template.FuncMap{"sentence": sentence}).
-		ParseFiles(*tmplDir + "/index.html"))
-
+	index = loadIndex()
 	_, httpsPort, err := net.SplitHostPort(*httpsAddr)
 	if err != nil {
 		log.Fatalf("unable to parse httpsAddr: %s", err)
@@ -224,6 +221,13 @@ func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
 		commonRedirect(w, r, vhostWithPort)
 	}
 	return h
+}
+
+func loadIndex() *template.Template {
+	return template.Must(template.New("index.html").
+		Funcs(template.FuncMap{"sentence": sentence}).
+		ParseFiles(*tmplDir + "/index.html"))
+
 }
 
 func sentence(parts []string) string {
