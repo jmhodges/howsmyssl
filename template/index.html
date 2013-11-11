@@ -38,11 +38,12 @@
         <h1>Your SSL client is {{ratingSpan .Rating}}.</h1>
         <p>Check out the sections below for information about the SSL
           client you used to render this page.</p>
+        <p><small>Yes, it's really "TLS", but "SSL" is more widely known.</small></p>
       </div>
 
       <div class="row">
         <div class="span4">
-          <h2>TLS Version</h2>
+          <h2>Version</h2>
           {{if eq .TLSVersion "TLS 1.2"}}
           <p>Great! Your client is using TLS 1.2, the most modern version of TLS.</p>
           {{else if eq .TLSVersion "TLS 1.1"}}
