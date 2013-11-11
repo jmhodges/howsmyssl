@@ -1,82 +1,142 @@
-<DOCTYPE html>
+<!DOCTYPE html>
 <html>
-<header>
-</header>
-<body>
-  {{if eq .TLSVersion "TLS 1.2"}}
-  <p>Great! Your client is using TLS 1.2, the most modern version of TLS.</p>
-  {{else if eq .TLSVersion "TLS 1.1"}}
-  <p>Enh, your client is using TLS 1.1. It would be better to be TLS 1.2, but
-  at least it isn't susceptible to the BEAST attack. But, it also doesn't
-  have the AES-GCM cipher suite available.</p>
-  {{else}}
-  <p>Oh dear, your client is {{.TLSVersion}}, which is very old, possibly
-  susceptible to the BEAST attack, and doesn't have the best cipher suites
-  available on it.</p>
-  {{end}}
+  <head>
+    <meta charset="utf-8">
+    <title>How's My SSL?</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+    </style>
+    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">How's My SSL?</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="/">Home</a></li>
+              <li><a href="/s/about.html">About</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
 
-  {{if .EphemeralKeysSupported}}
-  <p>Cool! Ephemeral keys are supported in the cipher suites your client
-  supports. You've got protection from global passive observers (who really
-  are out there now).!</p>
+      <div class="hero-unit">
+        <h1>This is how your SSL client is.</h1>
+        <p>Check out the sections below for information about the SSL
+          client you used to render this page.</p>
+      </div>
 
-  {{else}}
-  <p>Oh dear. Ephemeral keys are not supported in your client. Without them,
-  global passive observers will be able to scoop up all of your encrypted traffic
-  and decode it when their attacks or their computers are faster. This is
-  actually happening.</p>
-  {{end}}
-
-  {{if .SessionTicketsSupported}}
-  <p>Good! Session tickets are supported in your client. Services you use
-  will be able to scale out their TLS connections much </p>
-
-  {{else}}
-  <p>Not so good. Session tickets are not supported in your client. Without them,
-  it'll take your connections over TLS longer to work and its harder for
-  services to scale out. Generally, clients with ephemeral key support gets
-  this for free.</p>
-  {{end}}
-
-  {{if .TLSCompressionSupported}}
-  <p>Uh oh. Your TLS client is using TLS compression. This is really not good. It
-  makes your TLS connections susceptible to the CRIME attack and your
-  encrypted data could be leaked!</p>
-
-  {{else}}
-  <p>Good. Your TLS client does not attempt TLS compression, avoiding
-  information leaks from a CRIME attack.</p>
-  {{end}}
-
-  {{if .BEASTAttackVuln}}
-  <p>Ick. Your client is probably open to the BEAST attack. It's using version
-  TLS 1.0 or earlier while also supporting a cipher suite that uses CBC for
-  its block cipher. That combination may leak information. Fixed in TLS 1.1
-  and later.</p>
-  {{end}}
-
-  {{if .UnknownCipherSuiteSupported}}
-  <p>Not good. Your client is using a cipher suite this app doesn't
-  recognize. It's not in the standards and almost certainly not secure. Watch
-  out.</p>
-  {{end}}
-
-  {{if len .InsecureCipherSuites}}
-  <p>Oh boy, your client supports cipher suites that are known to be
-  insecure:</p>
-
-  <ul>
-    {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
-    <li>{{$cipherSuite}}: This cipher {{sentence $reasons}}</li>
-    {{end}}
-  </ul>
-
-  {{end}}
-  <p>Cipher suites your client said it supports:</p>
-  <ul>
-    {{range .GivenCipherSuites}}
-    <li>{{.}}</li>
-    {{end}}
-  </ul>
-</body>
+      <div class="row">
+        <div class="span4">
+          <h2>TLS Version</h2>
+          {{if eq .TLSVersion "TLS 1.2"}}
+          <p>Great! Your client is using TLS 1.2, the most modern version of TLS.</p>
+          {{else if eq .TLSVersion "TLS 1.1"}}
+          <p>Enh, your client is using TLS 1.1. It would be better to be TLS 1.2, but
+            at least it isn't susceptible to the BEAST attack. But, it also doesn't
+            have the AES-GCM cipher suite available.</p>
+          {{else}}
+          <p>Oh dear, your client is {{.TLSVersion}}, which is very old, possibly
+            susceptible to the BEAST attack, and doesn't have the best cipher suites
+            available on it.</p>
+          {{end}}
+        </div>
+        <div class="span4">
+          <h2>Ephemeral Key Support</h2>
+          {{if .EphemeralKeysSupported}}
+          <p>Cool! Ephemeral keys are supported in the cipher suites your client
+            supports. You've got protection from global passive observers (who really
+            are out there now).!</p>
+          {{else}}
+          <p>Shoot. Ephemeral keys are not supported in your client. Without them,
+            global passive observers will be able to scoop up all of your encrypted traffic
+            and decode it when their attacks or their computers are faster. This is
+            actually happening.</p>
+          {{end}}
+        </div>
+        <div class="span4">
+          <h2>Session Tickets Support</h2>
+          {{if .SessionTicketsSupported}}
+          <p>Good! Session tickets are supported in your client. Services you use
+            will be able to scale out their TLS connections much </p>
+          {{else}}
+          <p>Not so good. Session tickets are not supported in your client. Without them,
+            it'll take your connections over TLS longer to work and its harder for
+            services to scale out. Generally, clients with ephemeral key support gets
+            this for free.</p>
+          {{end}}
+        </div>
+      </div>
+      <div class="row">
+        <div class="span4">
+          <h2>TLS Compression</h2>
+          {{if .TLSCompressionSupported}}
+          <p>Uh oh. Your TLS client is using TLS compression. This is really not good. It
+            makes your TLS connections susceptible to the CRIME attack and your
+            encrypted data could be leaked!</p>
+          {{else}}
+          <p>Good. Your TLS client does not attempt TLS compression, avoiding
+            information leaks from a CRIME attack.</p>
+          {{end}}
+        </div>
+        <div class="span4">
+          <h2>BEAST Attack Vulnerability</h2>
+          {{if .BEASTAttackVuln}}
+          <p>Ick. Your client is probably open to the BEAST attack. It's using version
+            TLS 1.0 or earlier while also supporting a cipher suite that uses CBC for
+            its block cipher. That combination may leak information. Fixed in TLS 1.1
+            and later.</p>
+          {{else}}
+          <p>Probably okay. Your client is either not vulnerable
+            to the BEAST attack at all, or it supports a newer version of
+            TLS that isn't.</p>
+          {{end}}
+        </div>
+        <div class="span4">
+          <h2>Given Cipher Suites</h2>
+          <p>Cipher suites your client said it supports:</p>
+          <ul>
+            {{range .GivenCipherSuites}}
+            <li>{{.}}</li>
+            {{end}}
+          </ul>
+        </div>
+      </div>
+      <div class="row">
+        {{if len .InsecureCipherSuites}}
+        <div class="span4">
+          <p>Oh boy, your client supports cipher suites that are known to be
+            insecure:</p>
+          <ul>
+            {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
+            <li>{{$cipherSuite}}: This cipher {{sentence $reasons}}</li>
+            {{end}}
+          </ul>
+        </div>
+        {{end}}
+        {{if .UnknownCipherSuiteSupported}}
+        <div class="span4">
+          <h2>Unknown Cipher Suites Supported</h2>
+          <p>Not good. Your client is using a cipher suite this app doesn't
+            recognize. It's not in the standards and almost certainly not secure. Watch
+            out.</p>
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </body>
 </html>
