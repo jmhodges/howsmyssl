@@ -118,8 +118,9 @@
         </div>
       </div>
       <div class="row">
-        {{if len .InsecureCipherSuites}}
         <div class="span4">
+          <h2>Insecure Cipher Suites</h2>
+          {{if len .InsecureCipherSuites}}
           <p>Oh boy, your client supports cipher suites that are known to be
             insecure:</p>
           <ul>
@@ -127,8 +128,10 @@
             <li>{{$cipherSuite}}: This cipher {{sentence $reasons}}</li>
             {{end}}
           </ul>
+          {{else}}
+          <p>Nice. Your client has only known-secure cipher suites.</p>
+          {{end}}
         </div>
-        {{end}}
         {{if .UnknownCipherSuiteSupported}}
         <div class="span4">
           <h2>Unknown Cipher Suites Supported</h2>
