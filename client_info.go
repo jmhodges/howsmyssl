@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+type Rating string
+
+var (
+	okay               Rating = "Probably Okay"
+	needingImprovement Rating = "Improvable"
+	bad                Rating = "Bad"
+)
+
 type clientInfo struct {
 	GivenCipherSuites           []string            `json:"given_cipher_suites"`
 	EphemeralKeysSupported      bool                `json:"ephemeral_keys_supported"`       // good if true
@@ -15,6 +23,7 @@ type clientInfo struct {
 	BEASTAttackVuln             bool                `json:"beast_attack_vuln"`              // bad if true
 	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                  string              `json:"tls_version"`
+	Rating                      Rating              `json:"rating"`
 }
 
 func ClientInfo(c *conn) *clientInfo {
@@ -70,6 +79,19 @@ func ClientInfo(c *conn) *clientInfo {
 		d.TLSVersion = "TLS 1.1"
 	case tls.VersionTLS12:
 		d.TLSVersion = "TLS 1.2"
+	}
+	d.Rating = okay
+
+	if !d.EphemeralKeysSupported || !d.SessionTicketsSupported {
+		d.Rating = needingImprovement
+	}
+
+	if d.TLSCompressionSupported ||
+		d.UnknownCipherSuiteSupported ||
+		d.BEASTAttackVuln ||
+		len(d.InsecureCipherSuites) != 0 ||
+		c.st.ClientHello.Vers <= tls.VersionTLS10 {
+		d.Rating = bad
 	}
 	return d
 }

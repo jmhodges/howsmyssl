@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/jmhodges/howsmyssl/tls"
 	"html/template"
 	"io/ioutil"
@@ -225,9 +226,22 @@ func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
 
 func loadIndex() *template.Template {
 	return template.Must(template.New("index.html").
-		Funcs(template.FuncMap{"sentence": sentence}).
+		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan}).
 		ParseFiles(*tmplDir + "/index.html"))
 
+}
+
+func ratingSpan(rating Rating) template.HTML {
+	color := "black"
+	switch rating {
+	case okay:
+		color = "green"
+	case needingImprovement:
+		color = "yellow"
+	case bad:
+		color = "red"
+	}
+	return template.HTML(fmt.Sprintf(`<span style="color:%s">%s</span>`, color, rating))
 }
 
 func sentence(parts []string) string {
