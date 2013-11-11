@@ -108,20 +108,9 @@
           {{end}}
         </div>
         <div class="span4">
-          <h2>Given Cipher Suites</h2>
-          <p>Cipher suites your client said it supports:</p>
-          <ul>
-            {{range .GivenCipherSuites}}
-            <li>{{.}}</li>
-            {{end}}
-          </ul>
-        </div>
-      </div>
-      <div class="row">
-        <div class="span4">
           <h2>Insecure Cipher Suites</h2>
           {{if len .InsecureCipherSuites}}
-          <p>Oh boy, your client supports cipher suites that are known to be
+          <p>Oh boy. Your client supports cipher suites that are known to be
             insecure:</p>
           <ul>
             {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
@@ -132,6 +121,8 @@
           <p>Nice. Your client has only known-secure cipher suites.</p>
           {{end}}
         </div>
+      </div>
+      <div class="row">
         {{if .UnknownCipherSuiteSupported}}
         <div class="span4">
           <h2>Unknown Cipher Suites Supported</h2>
@@ -140,6 +131,15 @@
             out.</p>
         </div>
         {{end}}
+        <div class="span4">
+          <h2>Given Cipher Suites</h2>
+          <p>Cipher suites your client said it supports:</p>
+          <ul>
+            {{range .GivenCipherSuites}}
+            <li>{{.}}</li>
+            {{end}}
+          </ul>
+        </div>
       </div>
     </div>
   </body>
