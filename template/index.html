@@ -87,26 +87,28 @@
         <div class="span4">
           <h2>TLS Compression</h2>
           {{if .TLSCompressionSupported}}
-          <p>Uh oh. Your TLS client is using TLS compression. This is really not good. It
-            makes your TLS connections susceptible to the CRIME attack and your
-            encrypted data could be leaked!</p>
-          {{else}}
+          <p>Uh oh. Your TLS client is using TLS compression. This is really
+            not good. It makes your TLS connections susceptible to
+            the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            attack</a> and your encrypted data could be leaked!</p>  {{else}}
           <p>Good. Your TLS client does not attempt TLS compression, avoiding
-            information leaks from a CRIME attack.</p>
-          {{end}}
+            information leaks from the
+            <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            attack</a>.</p>  {{end}}
         </div>
         <div class="span4">
           <h2>BEAST Attack Vulnerability</h2>
           {{if .BEASTAttackVuln}}
-          <p>Ick. Your client is probably open to the BEAST attack. It's using version
-            TLS 1.0 or earlier while also supporting a cipher suite that uses CBC for
-            its block cipher. That combination may leak information. Fixed in TLS 1.1
-            and later.</p>
-          {{else}}
-          <p>Probably okay. Your client is either not vulnerable
-            to the BEAST attack at all, or it supports a newer version of
-            TLS that isn't.</p>
-          {{end}}
+          <p>Ick. Your client is probably open to
+            the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            attack</a>. It's using version TLS 1.0 or earlier while also
+            supporting a cipher suite that uses CBC for its block cipher. That
+            combination may leak information. Fixed in TLS 1.1 and later.</p>
+            {{else}}
+          <p>Probably okay. Your client is either not vulnerable to
+            the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            attack</a> at all, or it supports a newer version of TLS that
+            isn't.</p>  {{end}}
         </div>
         <div class="span4">
           <h2>Insecure Cipher Suites</h2>
