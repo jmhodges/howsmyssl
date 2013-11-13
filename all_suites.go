@@ -2,7 +2,8 @@ package main
 
 // All cipher suites in the TLS standards.
 // Generated with:
-// curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
+//   curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
+// Plus appending the new ChaCha20/Poly1305 curve ciphers from Chrome 33.0.
 var allCipherSuites = map[uint16]string{
 	0x0000: "TLS_NULL_WITH_NULL_NULL",
 	0x0001: "TLS_RSA_WITH_NULL_MD5",
@@ -318,4 +319,8 @@ var allCipherSuites = map[uint16]string{
 	0xC0A9: "TLS_PSK_WITH_AES_256_CCM_8",
 	0xC0AA: "TLS_PSK_DHE_WITH_AES_128_CCM_8",
 	0xC0AB: "TLS_PSK_DHE_WITH_AES_256_CCM_8",
+
+	0xCC13: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+	0xCC14: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+	0xCC15: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 }
