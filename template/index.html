@@ -62,7 +62,7 @@
           {{if .EphemeralKeysSupported}}
           <p>Cool! Ephemeral keys are supported in the cipher suites your client
             supports. You've got protection from global passive observers (who really
-            are out there now).!</p>
+            are out there now).</p>
           {{else}}
           <p>Shoot. Ephemeral keys are not supported in your client. Without them,
             global passive observers will be able to scoop up all of your encrypted traffic
@@ -74,7 +74,7 @@
           <h2>Session Tickets Support</h2>
           {{if .SessionTicketsSupported}}
           <p>Good! Session tickets are supported in your client. Services you use
-            will be able to scale out their TLS connections much </p>
+            will be able to scale out their TLS connections more easily.</p>
           {{else}}
           <p>Not so good. Session tickets are not supported in your client. Without them,
             it'll take your connections over TLS longer to work and its harder for
