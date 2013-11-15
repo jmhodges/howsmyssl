@@ -26,7 +26,7 @@ var (
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir   = flag.String("templateDir", "./template", "file path to the directory of templates")
+	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
 
 	index *template.Template
 )
