@@ -8,7 +8,7 @@ import (
 
 type Rating string
 
-var (
+const (
 	okay               Rating = "Probably Okay"
 	needingImprovement Rating = "Improvable"
 	bad                Rating = "Bad"
