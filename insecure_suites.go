@@ -1,7 +1,7 @@
 package main
 
 var (
-	fewBitReason   = "uses keys smaller than 128 bits keys in its encryption"
+	fewBitReason   = "uses keys smaller than 128 bits in its encryption"
 	nullReason     = "specifies no encryption at all for the connection"
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
