@@ -232,16 +232,16 @@ func loadIndex() *template.Template {
 }
 
 func ratingSpan(rating Rating) template.HTML {
-	color := "black"
+	class := ""
 	switch rating {
 	case okay:
-		color = "green"
-	case needingImprovement:
-		color = "yellow"
+		class = "okay"
+	case improvable:
+		class = "improvable"
 	case bad:
-		color = "red"
+		class = "bad"
 	}
-	return template.HTML(fmt.Sprintf(`<span style="color:%s">%s</span>`, color, rating))
+	return template.HTML(fmt.Sprintf(`<span class="%s">%s</span>`, class, rating))
 }
 
 func sentence(parts []string) string {

@@ -61,7 +61,8 @@
       <p>Clients are rated as "Probably Okay" if no security problems could be detected.</p>
 
       <p>Clients are downgraded to "Improvable" if they do not support
-        ephemeral key cipher suites, or session tickets.</p>
+        ephemeral key cipher suites, do not support session tickets, or are
+        using TLS 1.1.</p>
       <p>Clients are downgraded to "Bad" if any of the following are true:</p>
       <ul>
         <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or earlier.</li>
