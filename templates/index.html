@@ -55,7 +55,8 @@
         <div class="span4">
           <h2>Version</h2>
           {{if eq .TLSVersion "TLS 1.2"}}
-          <p><span class="okay">Great!</span> Your client is using TLS 1.2, the most modern version of TLS.</p>
+          <p><span class="okay">Great!</span> Your client is using TLS 1.2,
+          the most modern version of the encryption protocol.</p>
           {{else if eq .TLSVersion "TLS 1.1"}}
           <p><span class="improvable">Enh</span>, your client is using TLS 1.1. It would be better to be TLS 1.2, but
             at least it isn't susceptible to the BEAST attack. But, it also doesn't
@@ -120,9 +121,11 @@
           <p><span class="bad">Ick.</span> Your client is probably open to
             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a>. It's using version TLS 1.0 or earlier while also
-            supporting a cipher suite that uses CBC for its block cipher. That
-            combination may leak information. Fixed in TLS 1.1 and later.</p>
-            {{else}}
+            supporting a cipher suite that
+            uses <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+            Chaining</a>. That combination may leak information. Fixed in TLS
+            1.1 and later.</p>
+          {{else}}
           <p><span class="okay">Probably okay.</span> Your client is either
             not vulnerable to
             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
