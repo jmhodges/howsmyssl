@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>About &middot; How's My SSL?</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .main {
+        font-size: 15px;
+      }
+    </style>
+    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">How's My SSL?</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li><a href="/">Home</a></li>
+              <li class="active"><a href="/s/about.html">About</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container main">
+      <div class="page-header">
+        <h1>About this site</h1>
+      </div>
+      <p class="lead">How's My SSL? is a cute little website that's meant to
+        tell you how your <a href="#tls-vs-ssl">TLS client</a> (like the web
+        browser you're reading this with) is doing.</p>
+
+      <p>How's My SSL? was borne out of my own need to know more about TLS
+        clients in the wild while I worked on a web server at my day job. It's
+        purpose is to give developers and technically-savvy folks a quick an
+        easy way to interrogate their tools and learn more about them.</p>
+      
+      <p>It's also meant to put impetus on developers to improve their tools
+        by modernizing their TLS stacks. While it can't possibly detect every
+        problem is a TLS client, it can check for many common ones.</p>
+
+      <h3 id="rating">Rating</h3>
+      <p>How's My SSL? gives a rating to each client that connects to
+      it. These ratings are not the final word on "how secure" a client is,
+      but merely captures some important aspects of the client.</p>
+
+      <p>Clients are rated as "Probably Okay" if no security problems could be detected.</p>
+
+      <p>Clients are downgraded to "Improvable" if they do not support
+        ephemeral key cipher suites, or session tickets.</p>
+      <p>Clients are downgraded to "Bad" if any of the following are true:</p>
+      <ul>
+        <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3.</li>
+        <li>It supports known insecure cipher suites. Developers can find the
+          list of known insecure cipher suites in
+          the <a href="https://github.com/jmhodges/howsmyssl/blob/master/insecure_suites.go">howsmyssl
+          repository</a> on GitHub.</li>
+        <li>It supports TLS compression (that is compression of the encryption
+          information used to secure your connection) which exposes it to the
+          <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+          attack</a>.</li>
+        <li>It is susceptible to the
+          <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+          attack</a>. A caveat here: the first is that some advanced clients
+          have a workaround called "1/n-1 record splitting" that is not yet
+          detectable by Hows My SSL?. Known clients that do this are recent
+          versions of Chrome and Firefox but it is unlikely that others
+          do.</li>
+      </ul>
+      <p>(By the way, clients rated as "Bad" may also have problems that, on their
+      own, would have the client rated as "Improvable".)</p>
+
+      <h3 id="tls-vs-ssl">TLS vs SSL</h3>
+      <p>So, the jargon around these things is weird. When folks refer to the
+      "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+      they are referring to the modern protocols of encrypting data across the
+      internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>", when
+      used by experts, refers to the first versions of these modern
+      protocols.</p>
+
+      <h3 id="what-it-means">What It Means</h3>
+      <p>FIXME</p>
+
+      <h3 id="for-developers">For Developers</h3>
+      <p>How's My SSL? provides a simple HTTP JSON API for developers that
+      want to test clients without a browser
+      experience: <code>https://howsmyssl.com/a/check</code>.</p>
+
+      <p><pre>
+    GET https://howsmyssl.com/a/check
+
+    {
+      given_cipher_suites: [
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_RC4_128_SHA",
+        "TLS_RSA_WITH_RC4_128_MD5",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
+      ],
+      ephemeral_keys_supported: true,
+      session_ticket_supported: true,
+      tls_compression_supported: false,
+      unknown_cipher_suite_supported: false,
+      beast_attack_vuln: false,
+      insecure_cipher_suites: {
+        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": [
+          "uses keys smaller than 128 bits keys in its encryption"
+        ]
+      },
+      tls_version: "TLS 1.2",
+      rating: "Bad"
+    }
+      </pre><p>
+      <p>The returned JSON hash will have a least these keys, but may include
+        more as the the security environment changes. Each of these values
+        keys map fairly obviously to the HTML version and
+        the <a href="#what-it-means"> about its text can be helpful to
+        understand their meaning. The source code
+        that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
+        the client info</a> may also be helpful. All strings returned may
+        contain HTML escaped text.</a>
+
+      <p>Let me be a little more explicit. How's My SSL is Open Source
+      software and can
+      be <a href="https://github.com/jmhodges/howsmyssl">found on
+      GitHub</a>. There's a
+      <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
+    </div>
+  </body>
+</html>
