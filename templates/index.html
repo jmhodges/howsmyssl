@@ -101,14 +101,15 @@
         <div class="span4">
           <h2>TLS Compression</h2>
           {{if .TLSCompressionSupported}}
-          <p><span class="bad">Uh oh.</span> Your TLS client is using TLS
-            compression. This is really not good. It makes your TLS
-            connections susceptible to
+          <p><span class="bad">Uh oh.</span> Your TLS client supports
+            compressing the settings that encrypt your connection. This is
+            really not good. It makes your TLS connections susceptible to
             the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
             attack</a> and your encrypted data could be leaked!</p>
           {{else}}
           <p><span class="okay">Good.</span> Your TLS client does not attempt
-            TLS compression, avoiding information leaks from the
+            to compress the settings that encrypt your connection, avoiding
+            information leaks from the
             <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
             attack</a>.</p>
           {{end}}
