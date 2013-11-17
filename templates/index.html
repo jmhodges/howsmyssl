@@ -60,7 +60,7 @@
             at least it isn't susceptible to the BEAST attack. But, it also doesn't
             have the AES-GCM cipher suite available.</p>
           {{else}}
-          <p><span class="bad">Oh dear</span>, your client is {{.TLSVersion}}, which is very old, possibly
+          <p><span class="bad">Oh dear.</span> Your client is using {{.TLSVersion}}, which is very old, possibly
             susceptible to the BEAST attack, and doesn't have the best cipher suites
             available on it.</p>
           {{end}}
