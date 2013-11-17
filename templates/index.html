@@ -69,14 +69,18 @@
           <h2>Ephemeral Key Support</h2>
           {{if .EphemeralKeysSupported}}
           <p><span class="okay">Cool!</span> Ephemeral keys are supported in
-            the cipher suites your client supports. You've got protection from
-            global passive observers (who really are out there now).!</p>
+            the cipher suites your client supports. This dramatically
+            increases your protection against snoopers, including global
+            passive adversaries who scoop up large amounts of encrypted
+            traffic, and store them until their attacks (or their computers)
+            improve.</p>
           {{else}}
           <p><span class="improvable">Shoot.</span> Ephemeral keys are not supported
-            in your client. Without them, global passive observers will be
+            in your client. Without them, global passive adversaries will be
             able to scoop up all of your encrypted traffic and decode it when
             their attacks or their computers are faster. This is actually
-            happening.</p>  {{end}}
+            happening.</p>
+          {{end}}
         </div>
         <div class="span4">
           <h2>Session Tickets Support</h2>
