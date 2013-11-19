@@ -1,7 +1,7 @@
 package main
 
 var (
-	fewBitReason   = "uses keys smaller than 128 bits keys in its encryption"
+	fewBitReason   = "uses keys smaller than 128 bits in its encryption"
 	nullReason     = "specifies no encryption at all for the connection"
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
@@ -18,8 +18,6 @@ var (
 //   TLS_KRB5_EXPORT_WITH_RC4_40_SHA	     40-bit encryption, export grade
 //   TLS_KRB5_WITH_DES_CBC_MD5	             56-bit encryption
 //   TLS_KRB5_WITH_DES_CBC_SHA               56-bit encryption
-//
-// TODO(jmhodges): There are sure to be more that should be added.
 var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": true,
 	"TLS_DHE_DSS_WITH_DES_CBC_SHA":          true,

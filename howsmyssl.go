@@ -26,7 +26,7 @@ var (
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir   = flag.String("templateDir", "./template", "file path to the directory of templates")
+	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
 
 	index *template.Template
 )
@@ -232,16 +232,16 @@ func loadIndex() *template.Template {
 }
 
 func ratingSpan(rating Rating) template.HTML {
-	color := "black"
+	class := ""
 	switch rating {
 	case okay:
-		color = "green"
-	case needingImprovement:
-		color = "yellow"
+		class = "okay"
+	case improvable:
+		class = "improvable"
 	case bad:
-		color = "red"
+		class = "bad"
 	}
-	return template.HTML(fmt.Sprintf(`<span style="color:%s">%s</span>`, color, rating))
+	return template.HTML(fmt.Sprintf(`<span class="%s">%s</span>`, class, rating))
 }
 
 func sentence(parts []string) string {

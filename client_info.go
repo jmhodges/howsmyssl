@@ -8,10 +8,10 @@ import (
 
 type Rating string
 
-var (
-	okay               Rating = "Probably Okay"
-	needingImprovement Rating = "Improvable"
-	bad                Rating = "Bad"
+const (
+	okay       Rating = "Probably Okay"
+	improvable Rating = "Improvable"
+	bad        Rating = "Bad"
 )
 
 type clientInfo struct {
@@ -51,9 +51,9 @@ func ClientInfo(c *conn) *clientInfo {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullAuthReason)
 			}
 		} else {
-			d.UnknownCipherSuiteSupported = true
 			w, found := weirdNSSSuites[ci]
 			if !found {
+				d.UnknownCipherSuiteSupported = true
 				s = fmt.Sprintf("Some unknown cipher suite: %#x", ci)
 			} else {
 				s = w
@@ -70,7 +70,8 @@ func ClientInfo(c *conn) *clientInfo {
 			break
 		}
 	}
-	switch c.st.ClientHello.Vers {
+	vers := c.st.ClientHello.Vers
+	switch vers {
 	case tls.VersionSSL30:
 		d.TLSVersion = "SSL 3.0"
 	case tls.VersionTLS10:
@@ -82,8 +83,8 @@ func ClientInfo(c *conn) *clientInfo {
 	}
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || !d.SessionTicketsSupported {
-		d.Rating = needingImprovement
+	if !d.EphemeralKeysSupported || !d.SessionTicketsSupported || vers == tls.VersionTLS11 {
+		d.Rating = improvable
 	}
 
 	if d.TLSCompressionSupported ||
