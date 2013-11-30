@@ -38,71 +38,81 @@
     </div>
 
     <div class="container main">
-      <div class="page-header">
-        <h1>About this site</h1>
-      </div>
-      <p class="lead">How's My SSL? is a cute little website that's meant to
-        tell you how your <a href="#tls-vs-ssl">TLS client</a> (like the web
-        browser you're reading this with) is doing.</p>
+      <div class="span1"></div>
+      <div class="span8">
+        <div class="page-header">
+          <h1>About this site</h1>
+        </div>
+        <p class="lead">How's My SSL? is a cute little website that's meant to
+          tell you how your <a href="#tls-vs-ssl">TLS client</a> (like the web
+          browser you're reading this with) is doing.</p>
 
-      <p>How's My SSL? was borne out of my own need to know more about TLS
-        clients in the wild while I worked on a web server at my day job. It's
-        purpose is to give developers and technically-savvy folks a quick an
-        easy way to interrogate their tools and learn more about them.</p>
+        <p>How's My SSL? was borne out of my own need to know more about TLS
+          clients in the wild while I worked on a web server at my day
+          job. It's purpose is to give developers and technically-savvy folks
+          a quick an easy way to interrogate their tools and learn more about
+          them.</p>
       
-      <p>It's also meant to put impetus on developers to improve their tools
-        by modernizing their TLS stacks. While it can't possibly detect every
-        problem is a TLS client, it can check for many common ones.</p>
+        <p>It's also meant to put impetus on developers to improve their tools
+          by modernizing their TLS stacks. While it can't possibly detect
+          every problem is a TLS client, it can check for many common
+          ones.</p>
 
-      <h3 id="rating">Rating</h3>
-      <p>How's My SSL? gives a rating to each client that connects to
-      it. These ratings are not the final word on "how secure" a client is,
-      but merely captures some important aspects of the client.</p>
+        <h3 id="rating">Rating</h3>
+        <p>How's My SSL? gives a rating to each client that connects to
+          it. These ratings are not the final word on "how secure" a client
+          is, but merely captures some important aspects of the client.</p>
 
-      <p>Clients are rated as "Probably Okay" if no security problems could be detected.</p>
+        <p>Clients are rated as "Probably Okay" if no security problems could
+          be detected.</p>
 
-      <p>Clients are downgraded to "Improvable" if they do not support
-        ephemeral key cipher suites, do not support session tickets, or are
-        using TLS 1.1.</p>
-      <p>Clients are downgraded to "Bad" if any of the following are true:</p>
-      <ul>
-        <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or earlier.</li>
-        <li>It supports known insecure cipher suites. Developers can find the
-          list of known insecure cipher suites in
-          the <a href="https://github.com/jmhodges/howsmyssl/blob/master/insecure_suites.go">howsmyssl
-          repository</a> on GitHub.</li>
-        <li>It supports TLS compression (that is compression of the encryption
-          information used to secure your connection) which exposes it to the
-          <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
-          attack</a>.</li>
-        <li>It is susceptible to the
-          <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-          attack</a>. A caveat here: some advanced clients have a workaround
-          called "1/n-1 record splitting" that is not yet detectable by Hows
-          My SSL?. Known clients that do this are recent versions of Chrome
-          and Firefox but it is unlikely that others do.</li>
-      </ul>
-      <p>(By the way, clients rated as "Bad" may also have problems that, on their
-      own, would have the client rated as "Improvable".)</p>
+        <p>Clients are downgraded to "Improvable" if they do not support
+          ephemeral key cipher suites, do not support session tickets, or are
+          using TLS 1.1.</p>
+        <p>Clients are downgraded to "Bad" if any of the following are true:</p>
+        <ul>
+          <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
+            earlier.</li>
+          <li>It supports known insecure cipher suites. Developers can find
+            the list of known insecure cipher suites in
+            the <a href="https://github.com/jmhodges/howsmyssl/blob/master/insecure_suites.go">howsmyssl
+            repository</a> on GitHub.</li>
+          <li>It supports TLS compression (that is compression of the
+            encryption information used to secure your connection) which
+            exposes it to the
+            <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+              attack</a>.</li>
+          <li>It is susceptible to the
+            <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+              attack</a>. A caveat here: some advanced clients have a
+              workaround called "1/n-1 record splitting" that is not yet
+              detectable by Hows My SSL?. Known clients that do this are
+              recent versions of Chrome and Firefox but it is unlikely that
+              others do.</li>
+        </ul>
+        <p>(By the way, clients rated as "Bad" may also have problems that, on
+          their own, would have the client rated as "Improvable".)</p>
 
-      <h3 id="tls-vs-ssl">TLS vs SSL</h3>
-      <p>So, the jargon around these things is weird. When folks refer to the
-      "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
-      they are referring to the modern protocols of encrypting data across the
-      internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>", when
-      used by experts, refers to the older versions of these protocols. In
-      general, people use "SSL" and "TLS" interchangeably, but that's changing
-      towards everyone saying "TLS". TLS is the future.</p>
+        <h3 id="tls-vs-ssl">TLS vs SSL</h3>
+        <p>So, the jargon around these things is weird. When folks refer to
+          the
+          "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+          they are referring to the modern protocols of encrypting data across
+          the internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>",
+          when used by experts, refers to the older versions of these
+          protocols. In general, people use "SSL" and "TLS" interchangeably,
+          but that's changing towards everyone saying "TLS". TLS is the
+          future.</p>
 
-      <h3 id="what-it-means">What It Means</h3>
-      <p>FIXME</p>
+        <h3 id="what-it-means">What It Means</h3>
+        <p>FIXME</p>
 
-      <h3 id="for-developers">For Developers</h3>
-      <p>How's My SSL? provides a simple HTTP JSON API for developers that
-      want to test clients without a browser
-      experience: <code>https://howsmyssl.com/a/check</code>.</p>
+        <h3 id="for-developers">For Developers</h3>
+        <p>How's My SSL? provides a simple HTTP JSON API for developers that
+          want to test clients without a browser
+          experience: <code>https://howsmyssl.com/a/check</code>.</p>
 
-      <p><pre>
+        <p><pre>
     GET https://howsmyssl.com/a/check
 
     {
@@ -140,21 +150,22 @@
       tls_version: "TLS 1.2",
       rating: "Bad"
     }
-      </pre><p>
-      <p>The returned JSON hash will have a least these keys, but may include
-        more as the the security environment changes. Each of these values
-        keys map fairly obviously to the HTML version and
-        the <a href="#what-it-means"> about its text can be helpful to
-        understand their meaning. The source code
-        that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
-        the client info</a> may also be helpful. All strings returned may
-        contain HTML escaped text.</a>
+        </pre><p>
+        <p>The returned JSON hash will have a least these keys, but may
+          include more as the the security environment changes. Each of these
+          values keys map fairly obviously to the HTML version and
+          the <a href="#what-it-means"> about its text can be helpful to
+          understand their meaning. The source code
+          that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
+          the client info</a> may also be helpful. All strings returned may
+          contain HTML escaped text.</a>
 
-      <p>Let me be a little more explicit. How's My SSL is Open Source
-      software and can
-      be <a href="https://github.com/jmhodges/howsmyssl">found on
-      GitHub</a>. There's a
-      <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
+        <p>Let me be a little more explicit. How's My SSL is Open Source
+          software and can
+          be <a href="https://github.com/jmhodges/howsmyssl">found on
+          GitHub</a>. There's a
+          <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
+      </div>
     </div>
   </body>
 </html>
