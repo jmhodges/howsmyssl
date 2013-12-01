@@ -14,7 +14,7 @@ serverhandshake code out, and pass the data through while doing our own
 handshake. There's some additional work we may have to do around this to
 enable 1/n-1 record splitting detection.
 
-It has been useful to me to use [justrun][justrun] to recompile the project
+It's been useful to me to use [justrun][justrun] to recompile the project
 while modifying the template. Typical use is simply:
 
     justrun -c "go build && ./howsmyssl" -i howsmyssl . templates/`
