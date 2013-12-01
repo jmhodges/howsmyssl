@@ -4,7 +4,7 @@ The HTML code goes in `templates/`. Templates are generated with Go's
 `html/template` package. Determining the client's security is done in
 client_info.go.
 
-This project requires [Go 1.2rc4][go1.2rc4] to build with TLS 1.1 and 1.2
+This project requires [Go 1.2][go1.2] to build with TLS 1.1 and 1.2
 support. `go build` will generate a static binary called howsmyssl. This repo
 is `go get`'able.
 
@@ -22,5 +22,5 @@ while modifying the template. Typical use is simply:
 (Justrun has the benefit of controlling the lifecycle of a process, unlike
 most other file watch utilities.)
 
-[go1.2rc4]: https://code.google.com/p/go/downloads/list?q=go1.2rc4
+[go1.2]: http://golang.org/doc/go1.2
 [justrun]: https://github.com/jmhodges/justrun
