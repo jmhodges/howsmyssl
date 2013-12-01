@@ -91,7 +91,7 @@ func ClientInfo(c *conn) *clientInfo {
 		d.UnknownCipherSuiteSupported ||
 		d.BEASTAttackVuln ||
 		len(d.InsecureCipherSuites) != 0 ||
-		c.st.ClientHello.Vers <= tls.VersionTLS10 {
+		vers <= tls.VersionTLS10 {
 		d.Rating = bad
 	}
 	return d
