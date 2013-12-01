@@ -19,6 +19,17 @@ import (
 	"time"
 )
 
+const (
+	resp500Format = `HTTP/1.1 500 Internal Server Error
+Content-Length: 26
+Connection: close
+Content-Type: text/plain; charset="utf-8"
+Date: %s
+
+500 Internal Server Error
+`
+)
+
 var (
 	httpsAddr = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
 	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
@@ -132,23 +143,23 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 		return
 	}
 	defer c.Close()
-	h := make(http.Header)
-	h.Set("Date", time.Now().Format(http.TimeFormat))
-	h.Set("Content-Type", contentType)
-	h.Set("Connection", "close")
 	tc, ok := c.(*conn)
 	if !ok {
 		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
-		hijacked500(h, brw)
+		hijacked500(brw)
 	}
 	data := ClientInfo(tc)
 	bs, err := render(data)
 	if err != nil {
 		log.Printf("Unable to excute index template: %s\n", err)
-		hijacked500(h, brw)
+		hijacked500(brw)
 		return
 	}
 	contentLength := int64(len(bs))
+	h := make(http.Header)
+	h.Set("Date", time.Now().Format(http.TimeFormat))
+	h.Set("Content-Type", contentType)
+	h.Set("Connection", "close")
 	h.Set("Content-Length", strconv.FormatInt(contentLength, 10))
 	resp := &http.Response{
 		StatusCode:    200,
@@ -161,28 +172,16 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 	bs, err = httputil.DumpResponse(resp, true)
 	if err != nil {
 		log.Printf("unable to write response: %s\n", err)
-		hijacked500(h, brw)
+		hijacked500(brw)
 		return
 	}
 	brw.Write(bs)
 	brw.Flush()
 }
 
-func hijacked500(h http.Header, brw *bufio.ReadWriter) {
-	msg := []byte("500 Internal Server Error")
-	h.Set("Content-Length", strconv.FormatInt(int64(len(msg)), 10))
-	resp := &http.Response{
-		StatusCode:    500,
-		ContentLength: int64(len(msg)),
-		Header:        h,
-		Body:          ioutil.NopCloser(bytes.NewBuffer(msg)),
-		ProtoMajor:    1,
-		ProtoMinor:    1,
-	}
-	bs, _ := httputil.DumpResponse(resp, true)
-	if bs != nil {
-		brw.Write(bs)
-	}
+func hijacked500(brw *bufio.ReadWriter) {
+	s := fmt.Sprintf(resp500Format, time.Now().Format(http.TimeFormat))
+	brw.WriteString(s)
 	brw.Flush()
 }
 
@@ -192,7 +191,6 @@ func commonRedirect(w http.ResponseWriter, r *http.Request, vhostWithPort string
 	u.Scheme = "https"
 	u.Host = vhostWithPort
 	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
-
 }
 
 func plaintextRedirect(vhost, port string) http.Handler {
