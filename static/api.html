@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>API &middot; How's My SSL?</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .main {
+        font-size: 15px;
+      }
+    </style>
+    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/">How's My SSL?</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li><a href="/">Home</a></li>
+              <li><a href="/s/about.html">About</a></li>
+              <li class="active"><a href="/s/api.html">API</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container main">
+      <div class="span1"></div>
+      <div class="span8">
+        <div class="page-header">
+          <h1>API</h1>
+        </div>
+
+        <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
+          want to test clients without a browser
+          experience: <a href="https://howsmyssl.com/a/check">https://howsmyssl.com/a/check</a></p>
+
+        <p>An exemplary response to it:</p>
+        <p><pre>
+    GET https://howsmyssl.com/a/check HTTP/1.1
+
+    {
+      given_cipher_suites: [
+        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_RSA_WITH_AES_128_GCM_SHA256",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_RC4_128_SHA",
+        "TLS_RSA_WITH_RC4_128_MD5",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
+      ],
+      ephemeral_keys_supported: true,
+      session_ticket_supported: true,
+      tls_compression_supported: false,
+      unknown_cipher_suite_supported: false,
+      beast_attack_vuln: false,
+      insecure_cipher_suites: {
+        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": [
+          "uses keys smaller than 128 bits in its encryption"
+        ]
+      },
+      tls_version: "TLS 1.2",
+      rating: "Bad"
+    }
+        </pre><p>
+        <p>The returned JSON hash will have a least these keys, but may
+          include more as the the security environment changes. Each of these
+          values keys map fairly obviously to the HTML version and
+          the <a href="#what-it-means"> about its text can be helpful to
+          understand their meaning. The source code
+          that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
+          the client info</a> may also be helpful. All strings returned may
+          contain HTML escaped text.</a>
+
+        <p>Let me be a little more explicit. How's My SSL is Open Source
+          software and can
+          be <a href="https://github.com/jmhodges/howsmyssl">found on
+          GitHub</a>. There's a
+          <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
