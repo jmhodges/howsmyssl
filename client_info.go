@@ -80,6 +80,8 @@ func ClientInfo(c *conn) *clientInfo {
 		d.TLSVersion = "TLS 1.1"
 	case tls.VersionTLS12:
 		d.TLSVersion = "TLS 1.2"
+	default:
+		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
 	d.Rating = okay
 
