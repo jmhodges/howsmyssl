@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	resp500Format = `HTTP/1.1 500 Internal Server Error
+	resp500Format = `HTTP/1.%d 500 Internal Server Error
 Content-Length: 26
 Connection: close
 Content-Type: text/plain; charset="utf-8"
@@ -146,41 +146,44 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 	tc, ok := c.(*conn)
 	if !ok {
 		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
-		hijacked500(brw)
+		hijacked500(brw, r.ProtoMinor)
 	}
 	data := ClientInfo(tc)
 	bs, err := render(data)
 	if err != nil {
 		log.Printf("Unable to excute index template: %s\n", err)
-		hijacked500(brw)
+		hijacked500(brw, r.ProtoMinor)
 		return
 	}
 	contentLength := int64(len(bs))
 	h := make(http.Header)
 	h.Set("Date", time.Now().Format(http.TimeFormat))
 	h.Set("Content-Type", contentType)
-	h.Set("Connection", "close")
+	if r.ProtoMinor == 1 { // Assumes HTTP/1.x
+		h.Set("Connection", "close")
+	}
 	h.Set("Content-Length", strconv.FormatInt(contentLength, 10))
 	resp := &http.Response{
 		StatusCode:    200,
 		ContentLength: contentLength,
 		Header:        h,
 		Body:          ioutil.NopCloser(bytes.NewBuffer(bs)),
-		ProtoMajor:    1,
-		ProtoMinor:    1, // TODO(jmhodges): respond to HTTP/1.0 correctly
+		ProtoMajor:    1, // Assumes HTTP/1.x
+		ProtoMinor:    r.ProtoMinor,
 	}
 	bs, err = httputil.DumpResponse(resp, true)
 	if err != nil {
 		log.Printf("unable to write response: %s\n", err)
-		hijacked500(brw)
+		hijacked500(brw, r.ProtoMinor)
 		return
 	}
 	brw.Write(bs)
 	brw.Flush()
 }
 
-func hijacked500(brw *bufio.ReadWriter) {
-	s := fmt.Sprintf(resp500Format, time.Now().Format(http.TimeFormat))
+func hijacked500(brw *bufio.ReadWriter, protoMinor int) {
+	// Assumes HTTP/1.x
+	s := fmt.Sprintf(resp500Format, protoMinor, time.Now().Format(http.TimeFormat))
 	brw.WriteString(s)
 	brw.Flush()
 }
