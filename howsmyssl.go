@@ -96,10 +96,10 @@ func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handl
 	if port != "443" {
 		prefix = net.JoinHostPort(vhost, port)
 	}
-	m.Handle(prefix+"/s/", staticHandler)
-	m.Handle(prefix+"/a/check", apiHandler)
-	m.Handle(prefix+"/", webHandler)
-	m.Handle("/", tlsRedirect(vhost, port, webHandler))
+	m.Handle(prefix+"/s/", logHandler{staticHandler})
+	m.Handle(prefix+"/a/check", logHandler{apiHandler})
+	m.Handle(prefix+"/", logHandler{webHandler})
+	m.Handle("/", logHandler{tlsRedirect(vhost, port, webHandler)})
 	return m
 }
 
@@ -255,4 +255,19 @@ func sentence(parts []string) string {
 	}
 	commaed := parts[:len(parts)-1]
 	return strings.Join(commaed, ", ") + ", and " + parts[len(parts)-1] + "."
+}
+
+type logHandler struct {
+	inner http.Handler
+}
+
+// Since we have a Hijack in our code, this simple writer will suffice for
+// now.
+func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = "0.0.0.0"
+	}
+	fmt.Printf("%s %s\n", host, r.URL)
+	h.inner.ServeHTTP(w, r)
 }
