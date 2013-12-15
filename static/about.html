@@ -75,13 +75,15 @@
           it. These ratings are not the final word on "how secure" a client
           is, but merely captures some important aspects of the client.</p>
 
-        <p>Clients are rated as "Probably Okay" if no security problems could
+        <p>Clients are rated as <span class="okay">Probably Okay</span> if no security problems could
           be detected.</p>
 
-        <p>Clients are downgraded to "Improvable" if they do not support
+        <p>Clients are downgraded
+          to <span class="improvable">Improvable</span> if they do not support
           ephemeral key cipher suites, do not support session tickets, or are
           using TLS 1.1.</p>
-        <p>Clients are downgraded to "Bad" if any of the following are true:</p>
+        <p>Clients are downgraded to <span class="bad">Bad</span> if any of
+          the following are true:</p>
         <ul>
           <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
             earlier.</li>
@@ -106,19 +108,170 @@
           receive.  That is, clients rated as "Bad" may also have problems
           that, on their own, would have the client rated as "Improvable".</p>
 
-        <h3 id="tls-vs-ssl">TLS vs SSL</h3>
-        <p>So, the jargon around these things is weird. When folks refer to
-          the
-          "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
-          they are referring to the modern protocols of encrypting data across
-          the internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>",
-          when used by experts, refers to the older versions of these
-          protocols. In general, people use "SSL" and "TLS" interchangeably,
-          but that's changing towards everyone saying "TLS". TLS is the
-          future.</p>
-
         <h3 id="what-it-means">What It Means</h3>
-        <p>FIXME</p>
+        <p>How's My SSL has a lot of jargon on it. We're going to discuss the
+        sections on its homepage. While it won't help everyone understand all
+        of it, those who have a glimmer of an idea of what they mean will be
+        better off reading these.</p>
+
+        <h4 id="version">Version</h4>
+        <p>The Version section discusses the security of the highest version
+          of the TLS protocol your client supports. (Formerly, TLS
+          was <a href="#tls-vs-ssl">known as "SSL"</a>.)</p>
+        <p>TLS 1.2 is latest version of TLS and it is recommended for clients
+          to implement. It is the new normal for highly secure websites. TLS
+          1.2 provides access to advanced cipher suites that support
+          elliptical curve cryptography (large efficiency wins) and AEAD block
+          cipher modes (like the very nice GCM cipher suites). Clients using
+          may be set to <span class="okay">Probably Okay</span>.</p>
+        <p>TLS 1.1 is the second most recent version of TLS. It fixes some
+          security problems in TLS 1.0, removing the need for many of the
+          workarounds built into clients and servers. Many deployed clients
+          and servers of TLS 1.0 do not implement those workarounds and, so,
+          TLS 1.1 is a good improvement. However, the modern security
+          environment has pushed us to TLS 1.2. Clients using it will be
+          marked down to at least
+          <span class="improvable">Improvable</span>.</p>
+        <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
+          and requires workarounds in both the client and server to work
+          securely for all cipher suites. TLS 1.0 is also unable to use modern
+          cipher suites that offer great security and efficiency. Clients
+          using it will be marked as <span class="bad">Bad</span>.</p>
+        <p>SSLv3, the last version of SSL, and the first before TLS 1.0, is
+          considered insecure. Clients using it or older versions of SSL will
+          be marked as <span class="bad">Bad</span>.</p>
+
+        <h4 id="ephemeral-key-support">Ephemeral Key Support</h4>
+        <p>The Ephemeral Key Support section says if your client tells the
+          service that it supports cipher suites that include an additional
+          private key created for each connection to the service. This extra
+          key prevents attackers from storing all of your encrypted
+          communication with the website, then later gain access to the
+          website's private key, and decrypt all of your (and other's) traffic
+          to the website. This additional key, however, is expensive to
+          transfer, especially without elliptical curve cryptography support
+          in the client and server to make the key smaller at the same
+          security. Clients with support for ephemeral key cipher suites will
+          be defaulted to <span class="okay">Probably Okay</span>. Clients
+          without it will be marked as <span class="bad">Bad</span>.</p>
+
+        <h4 id="session-ticket-support">Session Ticket Support</h4>
+        <p>Session tickets are a mechanism to speed up resumption of encrypted
+          communication with a server. When a client and server first connect
+          over TLS, they perform a complicate, time-consuming handshake. This
+          handshake lets the client and the server communicate a shared secret
+          (basically, a password) without exposing that secret to people
+          tapping the line. However, it only allows the client and the
+          specific computer that served the client communicate. Since websites
+          can (and, often, must) serve their traffic from many physical
+          computers, if the client disconnects and reconnects to the website,
+          the client could connect to another machine that knew nothing about
+          the shared secret. When that happens, the client and server have to
+          perform the slow handshake again.</p>
+        <p>If the client supports session tickets, the physical machines that
+          serve a website's traffic and share a special second key called a
+          session ticket key can deterministically generate a secret shared
+          with the client called a session ticket. If the client connects and
+          reconnects it includes this session ticket and most of the expensive
+          reconnection process can be skipped. This is a huge performance
+          boost, making users happier.</p>
+        <p>However, the session ticket key living on all of the website's
+          computers means there is a secret that could be leaked to an
+          attacker. Worse, it undermines the security
+          of <a href="#ephemeral-key-support">ephemeral key cipher
+          suites</a>. Preventing this is often a source
+          of <a href="http://googleonlinesecurity.blogspot.com/2011/11/protecting-data-for-long-term-with.html">important</a>
+          <a href="https://blog.twitter.com/2013/forward-secrecy-at-twitter-0">engineering</a>
+          <a href="https://www.imperialviolet.org/2013/06/27/botchingpfs.html">work</a>
+          for a security engineer team. Of course, another alternative is for
+          the website to simply turn off support for session tickets and
+          enable support for ephemeral keys.</p>
+          <p>That trade-off between is why How's My SSL will rate clients with
+          session ticket support may be set to <span class="okay">Probably
+          Okay</span>, but not having it will only have it defaulted to
+          <span class="improvable">Improvable</span>.</p>
+
+        <h4 id="tls-compression">TLS Compression</h4>
+        <p>TLS compression was a specification of a way to make the metadata
+          in the encrypted connection smaller in order to speed up the
+          transfer of data across those connections. However, it turns out
+          that this kind of technique allows for attackers to learn
+          information about the encrypted data if the attackers can make the
+          user's computer make connections to the website. In practice, this
+          turns out to be easy. This is now referred to as
+          the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+          attack</a>. While some clients have mitigations in place, it's been
+          determined that the best way to avoid the attack is to completely
+          disable to TLS compression entirely. Clients that do so will be
+          defaulted to <span class="okay">Probably Okay</span> while clients
+          that leave it enabled will be marked
+          as <span class="bad">Bad</span>.</p>
+        
+        <h4 id="insecure-cipher-suites">Insecure Cipher Suites</h4>
+        <p>This section displayed any cipher suites the client supports that
+          are known to be insecure. Insecure cipher suites make it easy for
+          attackers to decrypt data on tapped lines, or make it easy for the
+          attacker to pretend to be the website, stealing secrets directly
+          from the client. Cipher suites are found here for one of many
+          reasons.<p>
+        <p> The first among these reasons is if the size of the keys created
+          by the cipher suite are too small. Small keys are easier to guess
+          (or "brute force"), and there are many cipher suites that have been
+          defined with far, far too small keys.</p>
+        <p>A cipher suite supported by the client will be put here if it
+          does not ensure that the server you connected to was actually for
+          the website you wanted. Cipher suites are to do so by inspecting the
+          certificate the server sends and verifying it trust the other
+          entities (called "certificate authorities") that have "signed" the
+          certificate. This is called the "certificate authority trust model",
+          and if this sounds crazy to you on many levels, you are not
+          alone. It's currently the best security we have,
+          however. <a href="http://tack.io/index.html">TACK</a> is one good
+          attempt to, in a backwards compatible way, replace it.</p>
+        <p>A cipher suite may also be added if its a "null cipher suite"
+          which is a funny way of saying the cipher does not encrypt the data
+          at all. In a truly bizarre set of decisions these were put in the
+          SSL/TLS specifications even though offer no privacy or security for
+          the user or the web service. These are giant, glowing "rob me" signs
+          on the web.</p>
+        <p>Finally, a cipher suite can be added here if it is known to be
+          obsolete in some way. Currently, some NSS clients (like Firefox)
+          will allow for the use of under-specified or broken cipher suites
+          that were meant to be killed off after the death of SSLv3 and were
+          never really specified well in the first place.<p>
+        <p>Any client supporting an insecure cipher suite will be marked as
+          <span class="bad">Bad</span>.</p>
+
+        <h4 id="unknown-cipher-suites-supported">Unknown Cipher Suites
+          Supported</h4>
+        <p>This section notes any cipher suites that How's My SSL did not
+          recognize. How's My SSL has a very complete knowledge of cipher
+          suites both specified and in use. If a cipher suite is known, the
+          client is being, well, "interesting", and "interesting" usually
+          means broken. Without a specification, a cipher suite has not been
+          publicly vetted the community of cryptographers and the vast,
+          vast, vast majority of unvetted security systems are entirely
+          insecure. Clients supporting unknown cipher suites will be marked
+          as <span class="Bad">Bad</span>.</p>
+        
+        <h4 id="given-cipher-suites">Given Cipher Suites</h4>
+        <p>This section is one of the most often needed by developers and
+          was the original reason I wrote this webapp. It simply prints out
+          the standard names of the cipher suites that the client says it
+          supports. No rating will be given in this section.</p>
+        
+        <h3 id="tls-vs-ssl">TLS vs SSL</h3>
+        <p>Okay, last thing. The jargon around these things is weird, so let
+          me explain a couple of terms. The 'S' in "HTTPS" is the TLS
+          protocol. When folks refer to the
+          "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+          they are referring to the most common of modern protocols of
+          encrypting data across the
+          internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>", when
+          used by experts, refers to the older versions of these protocols. In
+          general, people use "SSL" and "TLS" interchangeably, but that's
+          changing towards everyone saying "TLS". "TLS" is the future, while
+          "SSL" is currently what everyone knows.</p>
       </div>
     </div>
   </body>
