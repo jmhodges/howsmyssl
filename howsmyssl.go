@@ -33,7 +33,7 @@ Date: %s
 var (
 	httpsAddr = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
 	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
-	vhost     = flag.String("vhost", "localhost", "public domain to use in redirects and templates")
+	vhost     = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
@@ -45,9 +45,14 @@ var (
 func main() {
 	flag.Parse()
 	index = loadIndex()
-	_, httpsPort, err := net.SplitHostPort(*httpsAddr)
-	if err != nil {
-		log.Fatalf("unable to parse httpsAddr: %s", err)
+	host := *vhost
+	httpsPort := "443"
+	if strings.Contains(*vhost, ":") {
+		var err error
+		host, httpsPort, err = net.SplitHostPort(*vhost)
+		if err != nil {
+			log.Fatalf("unable to parse httpsAddr: %s", err)
+		}
 	}
 	cert, err := tls.LoadX509KeyPair(*certPath, *keyPath)
 	if err != nil {
@@ -71,7 +76,7 @@ func main() {
 	l := &listener{tlsListener}
 
 	m := tlsMux(
-		*vhost,
+		host,
 		httpsPort,
 		http.HandlerFunc(handleWeb),
 		http.HandlerFunc(handleAPI),
@@ -84,22 +89,22 @@ func main() {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = http.Serve(plaintextListener, plaintextRedirect(*vhost, httpsPort))
+	err = http.Serve(plaintextListener, plaintextRedirect(host, httpsPort))
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
 }
 
-func tlsMux(vhost, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
+func tlsMux(host, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
 	m := http.NewServeMux()
-	prefix := vhost
+	prefix := host
 	if port != "443" {
-		prefix = net.JoinHostPort(vhost, port)
+		prefix = net.JoinHostPort(host, port)
 	}
 	m.Handle(prefix+"/s/", logHandler{staticHandler})
 	m.Handle(prefix+"/a/check", logHandler{apiHandler})
 	m.Handle(prefix+"/", logHandler{webHandler})
-	m.Handle("/", logHandler{tlsRedirect(vhost, port, webHandler)})
+	m.Handle("/", logHandler{tlsRedirect(host, port, webHandler)})
 	return m
 }
 
