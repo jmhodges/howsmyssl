@@ -25,6 +25,10 @@
         color: #D95F02;
         font-weight: bold;
       }
+      .fragpadded {
+        padding-top: 40px;
+        margin-top: -40px;
+      }
     </style>
     <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
   </head>
@@ -70,7 +74,7 @@
           every problem is a TLS client, it can check for many common
           ones.</p>
 
-        <h3 id="rating">Rating</h3>
+        <h3 class="fragpadded" id="rating">Rating</h3>
         <p>How's My SSL? gives a rating to each client that connects to
           it. These ratings are not the final word on "how secure" a client
           is, but merely captures some important aspects of the client.</p>
@@ -108,13 +112,13 @@
           receive.  That is, clients rated as "Bad" may also have problems
           that, on their own, would have the client rated as "Improvable".</p>
 
-        <h3 id="what-it-means">What It Means</h3>
+        <h3 class="fragpadded" id="what-it-means">What It Means</h3>
         <p>How's My SSL has a lot of jargon on it. We're going to discuss the
         sections on its homepage. While it won't help everyone understand all
         of it, those who have a glimmer of an idea of what they mean will be
         better off reading these.</p>
 
-        <h4 id="version">Version</h4>
+        <h4 class="fragpadded" id="version">Version</h4>
         <p>The Version section discusses the security of the highest version
           of the TLS protocol your client supports. (Formerly, TLS
           was <a href="#tls-vs-ssl">known as "SSL"</a>.)</p>
@@ -141,7 +145,7 @@
           considered insecure. Clients using it or older versions of SSL will
           be marked as <span class="bad">Bad</span>.</p>
 
-        <h4 id="ephemeral-key-support">Ephemeral Key Support</h4>
+        <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
         <p>The Ephemeral Key Support section says if your client tells the
           service that it supports cipher suites that include an additional
           private key created for each connection to the service. This extra
@@ -155,7 +159,7 @@
           be defaulted to <span class="okay">Probably Okay</span>. Clients
           without it will be marked as <span class="bad">Bad</span>.</p>
 
-        <h4 id="session-ticket-support">Session Ticket Support</h4>
+        <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
         <p>Session tickets are a mechanism to speed up resumption of encrypted
           communication with a server. When a client and server first connect
           over TLS, they perform a complicate, time-consuming handshake. This
@@ -191,7 +195,7 @@
           Okay</span>, but not having it will only have it defaulted to
           <span class="improvable">Improvable</span>.</p>
 
-        <h4 id="tls-compression">TLS Compression</h4>
+        <h4 class="fragpadded" id="tls-compression">TLS Compression</h4>
         <p>TLS compression was a specification of a way to make the metadata
           in the encrypted connection smaller in order to speed up the
           transfer of data across those connections. However, it turns out
@@ -207,7 +211,7 @@
           that leave it enabled will be marked
           as <span class="bad">Bad</span>.</p>
         
-        <h4 id="insecure-cipher-suites">Insecure Cipher Suites</h4>
+        <h4 class="fragpadded" id="insecure-cipher-suites">Insecure Cipher Suites</h4>
         <p>This section displayed any cipher suites the client supports that
           are known to be insecure. Insecure cipher suites make it easy for
           attackers to decrypt data on tapped lines, or make it easy for the
@@ -242,7 +246,7 @@
         <p>Any client supporting an insecure cipher suite will be marked as
           <span class="bad">Bad</span>.</p>
 
-        <h4 id="unknown-cipher-suites-supported">Unknown Cipher Suites
+        <h4 class="fragpadded" id="unknown-cipher-suites-supported">Unknown Cipher Suites
           Supported</h4>
         <p>This section notes any cipher suites that How's My SSL did not
           recognize. How's My SSL has a very complete knowledge of cipher
@@ -254,13 +258,13 @@
           insecure. Clients supporting unknown cipher suites will be marked
           as <span class="Bad">Bad</span>.</p>
         
-        <h4 id="given-cipher-suites">Given Cipher Suites</h4>
+        <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
         <p>This section is one of the most often needed by developers and
           was the original reason I wrote this webapp. It simply prints out
           the standard names of the cipher suites that the client says it
           supports. No rating will be given in this section.</p>
         
-        <h3 id="tls-vs-ssl">TLS vs SSL</h3>
+        <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
         <p>Okay, last thing. The jargon around these things is weird, so let
           me explain a couple of terms. The 'S' in "HTTPS" is the TLS
           protocol. When folks refer to the
