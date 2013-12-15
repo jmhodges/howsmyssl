@@ -189,6 +189,10 @@ func hijacked500(brw *bufio.ReadWriter, protoMinor int) {
 }
 
 func commonRedirect(w http.ResponseWriter, r *http.Request, vhostWithPort string) {
+	if r.URL.Path == "/healthcheck" {
+		w.WriteHeader(200)
+		return
+	}
 	var u url.URL
 	u = *r.URL
 	u.Scheme = "https"
