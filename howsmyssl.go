@@ -47,12 +47,15 @@ func main() {
 	flag.Parse()
 	index = loadIndex()
 	host := *vhost
-	httpsPort := "443"
 	if strings.Contains(*vhost, ":") {
 		var err error
-		host, httpsPort, err = net.SplitHostPort(*vhost)
+		shost, port, err := net.SplitHostPort(*vhost)
 		if err != nil {
 			log.Fatalf("unable to parse httpsAddr: %s", err)
+		}
+		host = shost
+		if port != "443" {
+			host = *vhost
 		}
 	}
 	cert, err := tls.LoadX509KeyPair(*certPath, *keyPath)
@@ -78,9 +81,6 @@ func main() {
 
 	m := tlsMux(
 		host,
-		httpsPort,
-		http.HandlerFunc(handleWeb),
-		http.HandlerFunc(handleAPI),
 		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
 
 	go func() {
@@ -97,23 +97,28 @@ func main() {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = http.Serve(plaintextListener, plaintextRedirect(host, httpsPort))
+	err = http.Serve(plaintextListener, plaintextMux(host))
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
 }
 
-func tlsMux(host, port string, webHandler, apiHandler, staticHandler http.Handler) *http.ServeMux {
+func tlsMux(vhost string, staticHandler http.Handler) http.Handler {
 	m := http.NewServeMux()
-	prefix := host
-	if port != "443" {
-		prefix = net.JoinHostPort(host, port)
-	}
-	m.Handle(prefix+"/s/", logHandler{staticHandler})
-	m.Handle(prefix+"/a/check", logHandler{apiHandler})
-	m.Handle(prefix+"/", logHandler{webHandler})
-	m.Handle("/", logHandler{tlsRedirect(host, port, webHandler)})
-	return m
+	m.Handle(vhost+"/s/", staticHandler)
+	m.HandleFunc(vhost+"/a/check", handleAPI)
+	m.HandleFunc(vhost+"/", handleWeb)
+	m.HandleFunc(vhost+"/healthcheck", healthcheck)
+	m.HandleFunc("/healthcheck", healthcheck)
+	m.Handle("/", commonRedirect(vhost))
+	return logHandler{inner: m, proto: "https"}
+}
+
+func plaintextMux(vhost string) http.Handler {
+	m := http.NewServeMux()
+	m.HandleFunc("/healthcheck", healthcheck)
+	m.Handle("/", commonRedirect(vhost))
+	return logHandler{inner: m, proto: "http"}
 }
 
 func renderHTML(data *clientInfo) ([]byte, error) {
@@ -201,45 +206,20 @@ func hijacked500(brw *bufio.ReadWriter, protoMinor int) {
 	brw.Flush()
 }
 
-func commonRedirect(w http.ResponseWriter, r *http.Request, vhostWithPort string) {
-	if r.URL.Path == "/healthcheck" {
-		w.WriteHeader(200)
-		return
-	}
-	var u url.URL
-	u = *r.URL
-	u.Scheme = "https"
-	u.Host = vhostWithPort
-	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+func healthcheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(200)
+	w.Write([]byte("ok"))
 }
 
-func plaintextRedirect(vhost, port string) http.Handler {
-	if port != "443" {
-		vhost = net.JoinHostPort(vhost, port)
+func commonRedirect(vhost string) http.Handler {
+	hf := func(w http.ResponseWriter, r *http.Request) {
+		var u url.URL
+		u = *r.URL
+		u.Scheme = "https"
+		u.Host = vhost
+		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 	}
-	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-		commonRedirect(w, r, vhost)
-	}
-	return h
-}
-
-func tlsRedirect(vhost, port string, webHandler http.Handler) http.Handler {
-	vhostWithPort := vhost
-	if port != "443" {
-		vhostWithPort = net.JoinHostPort(vhost, port)
-	}
-	var h http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-		host, _, err := net.SplitHostPort(r.Host)
-		if err != nil {
-			host = r.Host
-		}
-		if vhost == host {
-			webHandler.ServeHTTP(w, r)
-			return
-		}
-		commonRedirect(w, r, vhostWithPort)
-	}
-	return h
+	return http.HandlerFunc(hf)
 }
 
 func loadIndex() *template.Template {
@@ -272,6 +252,7 @@ func sentence(parts []string) string {
 
 type logHandler struct {
 	inner http.Handler
+	proto string
 }
 
 // Since we have a Hijack in our code, this simple writer will suffice for
@@ -281,6 +262,6 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		host = "0.0.0.0"
 	}
-	fmt.Printf("%s %s\n", host, r.URL)
+	fmt.Printf("%s %s %s\n", host, h.proto, r.URL)
 	h.inner.ServeHTTP(w, r)
 }
