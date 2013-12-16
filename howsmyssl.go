@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	_ "net/http/pprof"
 	"net/url"
 	"strconv"
 	"strings"
@@ -81,6 +82,13 @@ func main() {
 		http.HandlerFunc(handleWeb),
 		http.HandlerFunc(handleAPI),
 		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
+
+	go func() {
+		err := http.ListenAndServe("localhost:4567", nil)
+		if err != nil {
+			log.Fatalf("unable to open admin server: %s", err)
+		}
+	}()
 
 	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
