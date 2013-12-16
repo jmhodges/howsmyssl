@@ -10,24 +10,40 @@
         padding-top: 60px;
         padding-bottom: 40px;
       }
+
+      p {
+        padding-bottom: 1em;
+      }
+
       .main {
         font-size: 15px;
       }
+
       .okay {
         color: #1B9E77;
         font-weight: bold;
       }
+
       .improvable {
         color: #7570B3;
         font-weight: bold;
       }
+
       .bad {
         color: #D95F02;
         font-weight: bold;
       }
+
       .fragpadded {
         padding-top: 40px;
         margin-top: -40px;
+      }
+
+      footer {
+        height: 60px;
+      }
+      .container .credit {
+        margin: 20px 0;
       }
     </style>
     <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
@@ -74,6 +90,8 @@
           every problem is a TLS client, it can check for many common
           ones.</p>
 
+        <hr />
+
         <h3 class="fragpadded" id="rating">Rating</h3>
         <p>How's My SSL? gives a rating to each client that connects to
           it. These ratings are not the final word on "how secure" a client
@@ -111,6 +129,8 @@
         <p>How's My SSL? always selects the worst rating the client could
           receive.  That is, clients rated as "Bad" may also have problems
           that, on their own, would have the client rated as "Improvable".</p>
+
+        <hr />
 
         <h3 class="fragpadded" id="what-it-means">What It Means</h3>
         <p>How's My SSL has a lot of jargon on it. We're going to discuss the
@@ -242,7 +262,7 @@
           obsolete in some way. Currently, some NSS clients (like Firefox)
           will allow for the use of under-specified or broken cipher suites
           that were meant to be killed off after the death of SSLv3 and were
-          never really specified well in the first place.<p>
+          never really specified well in the first place.</p>
         <p>Any client supporting an insecure cipher suite will be marked as
           <span class="bad">Bad</span>.</p>
 
@@ -263,7 +283,8 @@
           was the original reason I wrote this webapp. It simply prints out
           the standard names of the cipher suites that the client says it
           supports. No rating will be given in this section.</p>
-        
+
+        <hr />
         <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
         <p>Okay, last thing. The jargon around these things is weird, so let
           me explain a couple of terms. The 'S' in "HTTPS" is the TLS
@@ -276,7 +297,13 @@
           general, people use "SSL" and "TLS" interchangeably, but that's
           changing towards everyone saying "TLS". "TLS" is the future, while
           "SSL" is currently what everyone knows.</p>
+
       </div>
+    </div>
+    <div class="container">
+      <footer class="span8 offset1">
+        <p class="muted credit">&#169; 2013-2014 <a href="http://www.somethingsimilar.com/about/">Jeff Hodges</a></p>
+      </footer>
     </div>
   </body>
 </html>
