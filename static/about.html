@@ -76,18 +76,18 @@
           <h1>About this site</h1>
         </div>
         <p class="lead">How's My SSL? is a cute little website that tells you
-          how your <a href="#tls-vs-ssl">TLS client</a> (like the web browser
-          you're reading this with) is doing.</p>
+          how secure your <a href="#tls-vs-ssl">TLS client</a> (like the web browser
+          you're reading this with) is.</p>
 
-        <p>How's My SSL? was borne out of my own need to know more about TLS
-          clients in the wild while I worked on a web server at my day job. It
-          gives developers and very technically-savvy folks a quick an easy
-          way to learn more about the tools they use.</p>
+        <p>How's My SSL? was born out of a need to know more about TLS clients
+          in the wild while I worked on a web server at my day job. It gives
+          developers and very technically-savvy folks a quick an easy way to
+          learn more about the tools they use.</p>
 
         <p>It's also meant to put impetus on developers to improve the clients
-          they build by modernizing their TLS stacks. While How's My SSL can't
-          possibly detect every problem in a TLS client, it can clear out many
-          of the common ones.</p>
+          they build by modernizing their TLS stacks. While How's My SSL can
+          point out many common problems, it, of course, will never be a
+          complete audit, just a fairly good one.</p>
 
         <hr />
 
@@ -127,7 +127,7 @@
         </ul>
         <p>How's My SSL? always selects the worst rating the client could
           receive.  That is, clients rated as "Bad" may also have problems
-          that, on their own, would have the client rated as "Improvable".</p>
+          that, on their own, would have rated them as "Improvable".</p>
 
         <hr />
 
@@ -146,7 +146,7 @@
           1.2 provides access to advanced cipher suites that support
           elliptical curve cryptography (large efficiency wins) and AEAD block
           cipher modes (like the very nice GCM cipher suites). Clients using
-          may be set to <span class="okay">Probably Okay</span>.</p>
+          TLS 1.2 may be set to <span class="okay">Probably Okay</span>.</p>
         <p>TLS 1.1 is the second most recent version of TLS. It fixes some
           security problems in TLS 1.0, removing the need for many of the
           workarounds built into clients and servers. Many deployed clients
@@ -158,7 +158,7 @@
         <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
           and requires workarounds in both the client and server to work
           securely for all cipher suites. TLS 1.0 is also unable to use modern
-          cipher suites that offer great security and efficiency. Clients
+          cipher suites that offer greater security and efficiency. Clients
           using it will be marked as <span class="bad">Bad</span>.</p>
         <p>SSLv3, the last version of SSL, and the first before TLS 1.0, is
           considered insecure. Clients using it or older versions of SSL will
@@ -169,7 +169,7 @@
           service that it supports cipher suites that include an additional
           private key created for each connection to the service. This extra
           key prevents attackers from storing all of your encrypted
-          communication with the website, then later gain access to the
+          communication with the website, then later gaining access to the
           website's private key, and decrypt all of your (and other's) traffic
           to the website. This additional key, however, is expensive to
           transfer, especially without elliptical curve cryptography support
@@ -269,11 +269,11 @@
           Supported</h4>
         <p>This section notes any cipher suites that How's My SSL did not
           recognize. How's My SSL has a very complete knowledge of cipher
-          suites both specified and in use. If a cipher suite is known, the
+          suites both specified and in use. If a cipher suite is unknown, the
           client is being, well, "interesting", and "interesting" usually
           means broken. Without a specification, a cipher suite has not been
-          publicly vetted the community of cryptographers and the vast,
-          vast, vast majority of unvetted security systems are entirely
+          publicly vetted the community of cryptographers and the vast, vast,
+          vast majority of unvetted security systems are entirely
           insecure. Clients supporting unknown cipher suites will be marked
           as <span class="Bad">Bad</span>.</p>
         
