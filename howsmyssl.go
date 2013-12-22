@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"expvar"
 	"flag"
 	"fmt"
 	"github.com/jmhodges/howsmyssl/tls"
@@ -40,12 +41,22 @@ var (
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
 
+	apiVars        = expvar.NewMap("api")
+	staticVars     = expvar.NewMap("static")
+	webVars        = expvar.NewMap("web")
+	apiRequests    = new(expvar.Int)
+	staticRequests = new(expvar.Int)
+	webRequests    = new(expvar.Int)
+	apiStatuses    = NewStatusStats(apiVars)
+	staticStatuses = NewStatusStats(staticVars)
+	webStatuses    = NewStatusStats(webVars)
+
 	index *template.Template
 )
 
 func main() {
 	flag.Parse()
-	index = loadIndex()
+
 	host := *vhost
 	if strings.Contains(*vhost, ":") {
 		var err error
@@ -58,16 +69,13 @@ func main() {
 			host = *vhost
 		}
 	}
-	cert, err := tls.LoadX509KeyPair(*certPath, *keyPath)
-	if err != nil {
-		log.Fatalf("unable to load TLS key cert pair %s: %s", certPath, err)
-	}
 
-	tlsConf := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		NextProtos:   []string{"https"},
-	}
-	tlsConf.BuildNameToCertificate()
+	apiVars.Set("requests", apiRequests)
+	staticVars.Set("requests", staticRequests)
+	webVars.Set("requests", webRequests)
+
+	index = loadIndex()
+	tlsConf := makeTLSConfig(*certPath, *keyPath)
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
 	if err != nil {
@@ -81,7 +89,7 @@ func main() {
 
 	m := tlsMux(
 		host,
-		http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir))))
+		makeStaticHandler())
 
 	go func() {
 		err := http.ListenAndServe("localhost:4567", nil)
@@ -139,15 +147,16 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
 	}
-
-	hijackHandle(w, r, "text/html;charset=utf-8", renderHTML)
+	webRequests.Add(1)
+	hijackHandle(w, r, "text/html;charset=utf-8", webStatuses, renderHTML)
 }
 
 func handleAPI(w http.ResponseWriter, r *http.Request) {
-	hijackHandle(w, r, "application/json", renderJSON)
+	apiRequests.Add(1)
+	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, render func(*clientInfo) ([]byte, error)) {
+func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, statuses *statusStats, render func(*clientInfo) ([]byte, error)) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -164,13 +173,13 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 	tc, ok := c.(*conn)
 	if !ok {
 		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
-		hijacked500(brw, r.ProtoMinor)
+		hijacked500(brw, r.ProtoMinor, statuses)
 	}
 	data := ClientInfo(tc)
 	bs, err := render(data)
 	if err != nil {
 		log.Printf("Unable to excute index template: %s\n", err)
-		hijacked500(brw, r.ProtoMinor)
+		hijacked500(brw, r.ProtoMinor, statuses)
 		return
 	}
 	contentLength := int64(len(bs))
@@ -192,14 +201,16 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, re
 	bs, err = httputil.DumpResponse(resp, true)
 	if err != nil {
 		log.Printf("unable to write response: %s\n", err)
-		hijacked500(brw, r.ProtoMinor)
+		hijacked500(brw, r.ProtoMinor, statuses)
 		return
 	}
+	statuses.status2xx.Add(1)
 	brw.Write(bs)
 	brw.Flush()
 }
 
-func hijacked500(brw *bufio.ReadWriter, protoMinor int) {
+func hijacked500(brw *bufio.ReadWriter, protoMinor int, statuses *statusStats) {
+	statuses.status5xx.Add(1)
 	// Assumes HTTP/1.x
 	s := fmt.Sprintf(resp500Format, protoMinor, time.Now().Format(http.TimeFormat))
 	brw.WriteString(s)
@@ -226,7 +237,30 @@ func loadIndex() *template.Template {
 	return template.Must(template.New("index.html").
 		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan}).
 		ParseFiles(*tmplDir + "/index.html"))
+}
 
+func makeTLSConfig(certPath, keyPath string) *tls.Config {
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err != nil {
+		log.Fatalf("unable to load TLS key cert pair %s: %s", certPath, err)
+	}
+
+	tlsConf := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		NextProtos:   []string{"https"},
+	}
+	tlsConf.BuildNameToCertificate()
+	return tlsConf
+}
+
+func makeStaticHandler() http.HandlerFunc {
+	stats := NewStatusStats(staticVars)
+	h := http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir)))
+	return func(w http.ResponseWriter, r *http.Request) {
+		staticRequests.Add(1)
+		w = &statWriter{w: w, stats: stats}
+		h.ServeHTTP(w, r)
+	}
 }
 
 func ratingSpan(rating Rating) template.HTML {
