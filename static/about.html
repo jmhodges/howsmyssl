@@ -171,10 +171,10 @@
           private key created for each connection to the service. This extra
           key prevents attackers from storing all of your encrypted
           communication with the website, then later gaining access to the
-          website's private key, and decrypt all of your (and other's) traffic
-          to the website. This additional key, however, is expensive to
-          transfer, especially without elliptical curve cryptography support
-          in the client and server to make the key smaller at the same
+          website's private key, and decrypting all of your (and others')
+          traffic to the website. This additional key, however, is expensive
+          to transfer, especially without elliptical curve cryptography
+          support in the client and server to make the key smaller at the same
           security. Clients with support for ephemeral key cipher suites will
           be defaulted to <span class="okay">Probably Okay</span>. Clients
           without it will be marked as <span class="bad">Bad</span>.</p>
@@ -182,7 +182,7 @@
         <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
         <p>Session tickets are a mechanism to speed up resumption of encrypted
           communication with a server. When a client and server first connect
-          over TLS, they perform a complicate, time-consuming handshake. This
+          over TLS, they perform a complicated, time-consuming handshake. This
           handshake lets the client and the server communicate a shared secret
           (basically, a password) without exposing that secret to people
           tapping the line. However, it only allows the client and the
@@ -216,13 +216,13 @@
           <span class="improvable">Improvable</span>.</p>
 
         <h4 class="fragpadded" id="tls-compression">TLS Compression</h4>
-        <p>TLS compression was a specification of a way to make the metadata
-          in the encrypted connection smaller in order to speed up the
-          transfer of data across those connections. However, it turns out
-          that this kind of technique allows for attackers to learn
-          information about the encrypted data if the attackers can make the
-          user's computer make connections to the website. In practice, this
-          turns out to be easy. This is now referred to as
+        <p>TLS compression was a specification of a way to make the data in
+          the encrypted connection smaller in order to speed up the transfer
+          of data across those connections. Unfortunately, applying this
+          technique makes it easy for attackers to learn information about the
+          encrypted data if the attackers can make the user's computer make
+          connections to the website. In practice, this turns out to be
+          easy. This is now referred to as
           the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
           attack</a>. While some clients have mitigations in place, it's been
           determined that the best way to avoid the attack is to completely
@@ -237,7 +237,10 @@
           attackers to decrypt data on tapped lines, or make it easy for the
           attacker to pretend to be the website, stealing secrets directly
           from the client. Cipher suites are found here for one of many
-          reasons.</p>
+          reasons. Insecure cipher suites are only a problem if the server
+          also supports it. Of course, some of these suites don't require the
+          server to prove that they can serve the traffic for the site they
+          claim to, making them easy to man-in-the-middle.</p>
         <p> The first among these reasons is if the size of the keys created
           by the cipher suite are too small. Small keys are easier to guess
           (or "brute force"), and there are many cipher suites that have been
