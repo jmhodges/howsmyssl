@@ -20,7 +20,7 @@ type clientInfo struct {
 	SessionTicketsSupported     bool                `json:"session_ticket_supported"`       // good if true
 	TLSCompressionSupported     bool                `json:"tls_compression_supported"`      // bad if true
 	UnknownCipherSuiteSupported bool                `json:"unknown_cipher_suite_supported"` // bad if true
-	BEASTAttackVuln             bool                `json:"beast_attack_vuln"`              // bad if true
+	BEASTVuln                   bool                `json:"beast_vuln"`                     // bad if true
 	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                  string              `json:"tls_version"`
 	Rating                      Rating              `json:"rating"`
@@ -39,7 +39,7 @@ func ClientInfo(c *conn) *clientInfo {
 				d.EphemeralKeysSupported = true
 			}
 			if c.st.ClientHello.Vers <= tls.VersionTLS10 && strings.Contains(s, "_CBC_") {
-				d.BEASTAttackVuln = true
+				d.BEASTVuln = true
 			}
 			if fewBitCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
@@ -91,7 +91,7 @@ func ClientInfo(c *conn) *clientInfo {
 
 	if d.TLSCompressionSupported ||
 		d.UnknownCipherSuiteSupported ||
-		d.BEASTAttackVuln ||
+		d.BEASTVuln ||
 		len(d.InsecureCipherSuites) != 0 ||
 		vers <= tls.VersionTLS10 {
 		d.Rating = bad
