@@ -11,19 +11,31 @@
         padding-bottom: 40px;
       }
 
-      .okay {
+      .hero-unit-okay {
         color: #1B9E77;
-        font-weight: bold;
+      }
+
+      .hero-unit-improvable {
+        color: #7570B3;
+      }
+
+      .hero-unit-bad {
+        color: #D95F02;
+      }
+
+      .okay {
+        background-color: #1B9E77;
+        font-size: 1em;
       }
 
       .improvable {
-        color: #7570B3;
-        font-weight: bold;
+        background-color: #7570B3;
+        font-size: 1em;
       }
 
       .bad {
-        color: #D95F02;
-        font-weight: bold;
+        background-color: #D95F02;
+        font-size: 1em;
       }
 
       footer {
@@ -59,7 +71,7 @@
     <div class="container">
 
       <div class="hero-unit">
-        <h1>Your SSL client is {{ratingSpan .Rating}}.</h1>
+        <h1>Your SSL client is <span class="hero-unit-{{ratingSpan .Rating}}">{{.Rating}}</span>.</h1>
         <p>Check out the sections below for information about the SSL/TLS
           client you used to render this page.</p>
         <p><small>Yeah, we really mean <a href="/s/about.html#tls-vs-ssl">"TLS", not "SSL"</a>.</small></p>
@@ -69,14 +81,14 @@
         <div class="span4">
           <h2>Version</h2>
           {{if eq .TLSVersion "TLS 1.2"}}
-          <p><span class="okay">Great!</span> Your client is using TLS 1.2,
+          <p><span class="label okay">Good</span>. Your client is using TLS 1.2,
           the most modern version of the encryption protocol.</p>
           {{else if eq .TLSVersion "TLS 1.1"}}
-          <p><span class="improvable">Enh</span>, your client is using TLS 1.1. It would be better to be TLS 1.2, but
-            at least it isn't susceptible to the BEAST attack. But, it also doesn't
-            have the AES-GCM cipher suite available.</p>
-          {{else}}
-          <p><span class="bad">Oh dear.</span> Your client is using {{.TLSVersion}}, which is very old, possibly
+          <p><span class="label improvable">Improvable</span>. Your client is using
+            TLS 1.1. It would be better to be TLS 1.2, but at least it isn't
+            susceptible to the BEAST attack. But, it also doesn't have the
+            AES-GCM cipher suite available.</p>  {{else}}
+          <p><span class="label bad">Bad</span>. Your client is using {{.TLSVersion}}, which is very old, possibly
             susceptible to the BEAST attack, and doesn't have the best cipher suites
             available on it.</p>
           {{end}}
@@ -84,13 +96,13 @@
         <div class="span4">
           <h2>Ephemeral Key Support</h2>
           {{if .EphemeralKeysSupported}}
-          <p><span class="okay">Cool!</span> Ephemeral keys are used in some
+          <p><span class="label okay">Good</span>. Ephemeral keys are used in some
             the cipher suites your client supports. This greatly increases
             your protection against snoopers, including global passive
             adversaries who scoop up large amounts of encrypted traffic, and
             store them until their attacks (or their computers) improve.</p>
           {{else}}
-          <p><span class="improvable">Shoot.</span> Ephemeral keys are not
+          <p><span class="label improvable">Improvable</span>. Ephemeral keys are not
             used in any of the cipher suites your client supports. Without
             them, global passive adversaries will be able to scoop up all of
             your encrypted traffic and decode it when their attacks or their
@@ -100,11 +112,11 @@
         <div class="span4">
           <h2>Session Ticket Support</h2>
           {{if .SessionTicketsSupported}}
-          <p><span class="okay">Nice.</span> Session tickets are supported in
+          <p><span class="label okay">Good</span>. Session tickets are supported in
             your client. Services you use will be able to scale out their TLS
             connections much easier with this feature.</p>
           {{else}}
-          <p><span class="improvable">Not so good.</span> Session tickets are
+          <p><span class="label improvable">Improvable</span>. Session tickets are
             not supported in your client. Without them, it'll take your
             connections over TLS longer to work and its harder for services to
             scale out. Generally, clients with ephemeral key support gets this
@@ -116,13 +128,13 @@
         <div class="span4">
           <h2>TLS Compression</h2>
           {{if .TLSCompressionSupported}}
-          <p><span class="bad">Uh oh.</span> Your TLS client supports
+          <p><span class="label bad">Bad</span>. Your TLS client supports
             compressing the settings that encrypt your connection. This is
             really not good. It makes your TLS connections susceptible to
             the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
             attack</a> and your encrypted data could be leaked!</p>
           {{else}}
-          <p><span class="okay">Good.</span> Your TLS client does not attempt
+          <p><span class="label okay">Good</span>. Your TLS client does not attempt
             to compress the settings that encrypt your connection, avoiding
             information leaks from the
             <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
@@ -132,7 +144,7 @@
         <div class="span4">
           <h2>BEAST Vulnerability</h2>
           {{if .BEASTVuln}}
-          <p><span class="bad">Ick.</span> Your client is probably open to
+          <p><span class="label bad">Bad</span>. Your client is probably open to
             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a>. It's using version TLS 1.0 or earlier while also
             supporting a cipher suite that
@@ -140,7 +152,7 @@
             Chaining</a>. That combination may leak information. Fixed in TLS
             1.1 and later.</p>
           {{else}}
-          <p><span class="okay">Probably okay.</span> Your client is either
+          <p><span class="label okay">Good</span>. Your client is either
             not vulnerable to
             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a> at all, or it supports a newer version of TLS that
@@ -150,7 +162,7 @@
         <div class="span4">
           <h2>Insecure Cipher Suites</h2>
           {{if len .InsecureCipherSuites}}
-          <p><span class="bad">Oh boy.</span> Your client supports cipher
+          <p><span class="label bad">Bad</span>. Your client supports cipher
             suites that are known to be insecure:</p>
           <ul>
             {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
@@ -158,7 +170,7 @@
             {{end}}
           </ul>
           {{else}}
-          <p><span class="okay">Really good.</span> Your client doesn't use any
+          <p><span class="label okay">Good</span>. Your client doesn't use any
           cipher suites that are known to be insecure.</p>
           {{end}}
         </div>
@@ -167,7 +179,7 @@
         {{if .UnknownCipherSuiteSupported}}
         <div class="span4">
           <h2>Unknown Cipher Suites Supported</h2>
-          <p><span class="bad">Not good.</span> Your client is using a cipher
+          <p><span class="label bad">Bad</span>. Your client is using a cipher
             suite this app doesn't recognize. It's not in the standards and
             almost certainly not secure. Watch out.</p>
         </div>

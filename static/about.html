@@ -20,18 +20,18 @@
       }
 
       .okay {
-        color: #1B9E77;
-        font-weight: bold;
+        background-color: #1B9E77;
+        font-size: 0.85em;
       }
 
       .improvable {
-        color: #7570B3;
-        font-weight: bold;
+        background-color: #7570B3;
+        font-size: 0.85em;
       }
 
       .bad {
-        color: #D95F02;
-        font-weight: bold;
+        background-color: #D95F02;
+        font-size: 0.85em;
       }
 
       .fragpadded {
@@ -97,14 +97,14 @@
           it. These ratings are not the final word on "how secure" a TLS
           client is, but captures important aspects of its security.</p>
 
-        <p>Clients are rated as <span class="okay">Probably Okay</span> if no security problems could
+        <p>Clients are rated as <span class="label okay">Probably Okay</span> if no security problems could
           be detected.</p>
 
         <p>Clients are downgraded
-          to <span class="improvable">Improvable</span> if they do not support
+          to <span class="label improvable">Improvable</span> if they do not support
           ephemeral key cipher suites, do not support session tickets, or are
           using TLS 1.1.</p>
-        <p>Clients are downgraded to <span class="bad">Bad</span> if any of
+        <p>Clients are downgraded to <span class="label bad">Bad</span> if any of
           the following are true:</p>
         <ul>
           <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
@@ -147,7 +147,7 @@
           1.2 provides access to advanced cipher suites that support
           elliptical curve cryptography (large efficiency wins) and AEAD block
           cipher modes (like the very nice GCM cipher suites). Clients using
-          TLS 1.2 may be set to <span class="okay">Probably Okay</span>.</p>
+          TLS 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
         <p>TLS 1.1 is the second most recent version of TLS. It fixes some
           security problems in TLS 1.0, removing the need for many of the
           workarounds built into clients and servers. Many deployed clients
@@ -155,15 +155,15 @@
           TLS 1.1 is a good improvement. However, the modern security
           environment has pushed us to TLS 1.2. Clients using it will be
           marked down to at least
-          <span class="improvable">Improvable</span>.</p>
+          <span class="label improvable">Improvable</span>.</p>
         <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
           and requires workarounds in both the client and server to work
           securely for all cipher suites. TLS 1.0 is also unable to use modern
           cipher suites that offer greater security and efficiency. Clients
-          using it will be marked as <span class="bad">Bad</span>.</p>
+          using it will be marked as <span class="label bad">Bad</span>.</p>
         <p>SSLv3, the last version of SSL, and the first before TLS 1.0, is
           considered insecure. Clients using it or older versions of SSL will
-          be marked as <span class="bad">Bad</span>.</p>
+          be marked as <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
         <p>The Ephemeral Key Support section says if your client tells the
@@ -176,8 +176,8 @@
           to transfer, especially without elliptical curve cryptography
           support in the client and server to make the key smaller at the same
           security. Clients with support for ephemeral key cipher suites will
-          be defaulted to <span class="okay">Probably Okay</span>. Clients
-          without it will be marked as <span class="bad">Bad</span>.</p>
+          be defaulted to <span class="label okay">Probably Okay</span>. Clients
+          without it will be marked as <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
         <p>Session tickets are a mechanism to speed up resumption of encrypted
@@ -211,9 +211,9 @@
           the website to simply turn off support for session tickets and
           enable support for ephemeral keys.</p>
           <p>That trade-off between is why How's My SSL will rate clients with
-          session ticket support may be set to <span class="okay">Probably
+          session ticket support may be set to <span class="label okay">Probably
           Okay</span>, but not having it will only have it defaulted to
-          <span class="improvable">Improvable</span>.</p>
+          <span class="label improvable">Improvable</span>.</p>
 
         <h4 class="fragpadded" id="tls-compression">TLS Compression</h4>
         <p>TLS compression was a specification of a way to make the data in
@@ -227,9 +227,9 @@
           attack</a>. While some clients have mitigations in place, it's been
           determined that the best way to avoid the attack is to completely
           disable to TLS compression entirely. Clients that do so will be
-          defaulted to <span class="okay">Probably Okay</span> while clients
+          defaulted to <span class="label okay">Probably Okay</span> while clients
           that leave it enabled will be marked
-          as <span class="bad">Bad</span>.</p>
+          as <span class="label bad">Bad</span>.</p>
         
         <h4 class="fragpadded" id="insecure-cipher-suites">Insecure Cipher Suites</h4>
         <p>This section displayed any cipher suites the client supports that
@@ -267,7 +267,7 @@
           that were meant to be killed off after the death of SSLv3 and were
           never really specified well in the first place.</p>
         <p>Any client supporting an insecure cipher suite will be marked as
-          <span class="bad">Bad</span>.</p>
+          <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="unknown-cipher-suites-supported">Unknown Cipher Suites
           Supported</h4>
@@ -279,7 +279,7 @@
           publicly vetted the community of cryptographers and the vast, vast,
           vast majority of unvetted security systems are entirely
           insecure. Clients supporting unknown cipher suites will be marked
-          as <span class="Bad">Bad</span>.</p>
+          as <span class="label bad">Bad</span>.</p>
         
         <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
         <p>This section is one of the most often needed by developers and was

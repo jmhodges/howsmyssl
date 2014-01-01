@@ -280,7 +280,7 @@ func ratingSpan(rating Rating) template.HTML {
 	case bad:
 		class = "bad"
 	}
-	return template.HTML(fmt.Sprintf(`<span class="%s">%s</span>`, class, rating))
+	return template.HTML(class)
 }
 
 func sentence(parts []string) string {
