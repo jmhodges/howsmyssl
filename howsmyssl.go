@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	_ "net/http/pprof"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -26,10 +25,13 @@ const (
 Content-Length: 26
 Connection: close
 Content-Type: text/plain; charset="utf-8"
+Strict-Transport-Security: max-age=631138519; includeSubdomains
 Date: %s
 
 500 Internal Server Error
 `
+	hstsHeaderValue = "max-age=631138519; includeSubdomains"
+	xForwardedProto = "X-Forwarded-Proto"
 )
 
 var (
@@ -119,14 +121,14 @@ func tlsMux(vhost string, staticHandler http.Handler) http.Handler {
 	m.HandleFunc(vhost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(vhost))
-	return logHandler{inner: m, proto: "https"}
+	return protoHandler{logHandler{m}, "https"}
 }
 
 func plaintextMux(vhost string) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(vhost))
-	return logHandler{inner: m, proto: "http"}
+	return protoHandler{logHandler{m}, "http"}
 }
 
 func renderHTML(data *clientInfo) ([]byte, error) {
@@ -189,6 +191,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	if r.ProtoMinor == 1 { // Assumes HTTP/1.x
 		h.Set("Connection", "close")
 	}
+	h.Set("Strict-Transport-Security", hstsHeaderValue)
 	h.Set("Content-Length", strconv.FormatInt(contentLength, 10))
 	resp := &http.Response{
 		StatusCode:    200,
@@ -224,8 +227,12 @@ func healthcheck(w http.ResponseWriter, r *http.Request) {
 
 func commonRedirect(vhost string) http.Handler {
 	hf := func(w http.ResponseWriter, r *http.Request) {
-		var u url.URL
-		u = *r.URL
+		if r.Header.Get(xForwardedProto) == "https" {
+			w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
+
+		}
+		u := r.URL
+		// Never set by the Go HTTP library.
 		u.Scheme = "https"
 		u.Host = vhost
 		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
@@ -286,7 +293,6 @@ func sentence(parts []string) string {
 
 type logHandler struct {
 	inner http.Handler
-	proto string
 }
 
 // Since we have a Hijack in our code, this simple writer will suffice for
@@ -296,6 +302,20 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		host = "0.0.0.0"
 	}
-	fmt.Printf("%s %s %s\n", host, h.proto, r.URL)
+	proto := r.Header.Get(xForwardedProto)
+	if proto == "" {
+		proto = "unknown"
+	}
+	fmt.Printf("%s %s %s\n", host, proto, r.URL)
+	h.inner.ServeHTTP(w, r)
+}
+
+type protoHandler struct {
+	inner http.Handler
+	proto string
+}
+
+func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Header.Set(xForwardedProto, h.proto)
 	h.inner.ServeHTTP(w, r)
 }
