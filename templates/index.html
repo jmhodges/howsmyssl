@@ -186,7 +186,8 @@
         {{end}}
         <div class="span4">
           <h2>Given Cipher Suites</h2>
-          <p>The cipher suites your client said it supports are:</p>
+          <p>The cipher suites your client said it supports, in the order it
+          sent them, are:</p>
           <ul>
             {{range .GivenCipherSuites}}
             <li>{{.}}</li>

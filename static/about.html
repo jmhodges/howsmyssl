@@ -284,8 +284,11 @@
         <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
         <p>This section is one of the most often needed by developers and was
           the original reason this webapp was made. It simply prints out the
-          standard names of the cipher suites that the client says it
-          supports. No rating will be given in this section.</p>
+          standard names of the cipher suites that the client says it supports
+          in the same order the client gave them to the server. This ordering
+          is sometimes used to determine which cipher suite a client prefers,
+          but TLS servers tend to choose their own preference of those cipher
+          suits. No rating will be given in this section.</p>
 
         <hr />
         <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
