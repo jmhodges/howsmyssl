@@ -42,16 +42,18 @@ var (
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
+	adminPort = flag.String("adminPort", "4567", "localhost port to boot the admin server on")
 
-	apiVars        = expvar.NewMap("api")
-	staticVars     = expvar.NewMap("static")
-	webVars        = expvar.NewMap("web")
-	apiRequests    = new(expvar.Int)
-	staticRequests = new(expvar.Int)
-	webRequests    = new(expvar.Int)
-	apiStatuses    = NewStatusStats(apiVars)
-	staticStatuses = NewStatusStats(staticVars)
-	webStatuses    = NewStatusStats(webVars)
+	apiVars         = expvar.NewMap("api")
+	staticVars      = expvar.NewMap("static")
+	webVars         = expvar.NewMap("web")
+	apiRequests     = new(expvar.Int)
+	staticRequests  = new(expvar.Int)
+	webRequests     = new(expvar.Int)
+	apiStatuses     = NewStatusStats(apiVars)
+	staticStatuses  = NewStatusStats(staticVars)
+	webStatuses     = NewStatusStats(webVars)
+	commonRedirects = expvar.NewInt("common_redirects")
 
 	index *template.Template
 )
@@ -93,8 +95,9 @@ func main() {
 		host,
 		makeStaticHandler())
 
+	adminAddr := net.JoinHostPort("localhost", *adminPort)
 	go func() {
-		err := http.ListenAndServe("localhost:4567", nil)
+		err := http.ListenAndServe(adminAddr, nil)
 		if err != nil {
 			log.Fatalf("unable to open admin server: %s", err)
 		}
@@ -235,6 +238,7 @@ func commonRedirect(vhost string) http.Handler {
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
 		u.Host = vhost
+		commonRedirects.Add(1)
 		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
