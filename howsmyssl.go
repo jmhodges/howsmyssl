@@ -230,15 +230,14 @@ func healthcheck(w http.ResponseWriter, r *http.Request) {
 
 func commonRedirect(vhost string) http.Handler {
 	hf := func(w http.ResponseWriter, r *http.Request) {
+		commonRedirects.Add(1)
 		if r.Header.Get(xForwardedProto) == "https" {
 			w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
-
 		}
 		u := r.URL
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
 		u.Host = vhost
-		commonRedirects.Add(1)
 		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
