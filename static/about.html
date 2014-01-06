@@ -232,7 +232,28 @@
           defaulted to <span class="label okay">Probably Okay</span> while clients
           that leave it enabled will be marked
           as <span class="label bad">Bad</span>.</p>
-        
+
+        <h4 class="fragpadded" id="beast-vulnerability">BEAST Vulnerability</h4>
+        <p>The <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+        vulnerability</a> is an attack on TLS 1.0 connections using a
+        cipher suite in a cipher block chaining (CBC) mode. An
+        attacker is able
+        to <a href="http://vnhacker.blogspot.com/2011/09/beast.html">decrypt
+        the data</a> on a TLS connection matching that
+        criteria. Upgrading to TLS 1.1 or greater or not using CBC
+        cipher suites mitigates the attack (though, RC4 has its own
+        issues). Another mitigation strategy is called 1/n-1 record
+        splitting and is not yet detected by How's My SSL?.</p>
+        <p>If the client client supports CBC mode cipher suites on TLS
+        1.0, it will be marked as <span class="label
+        bad">bad</span>. However, clients that mitigate it with 1/n-1
+        record splitting will not be detected and will be marked down
+        incorrectly. Few clients do, but among them is recent versions
+        of Firefox.</p>
+        <p>Clients using versions of TLS greater than 1.0 or not using
+        CBC cipher suites will be marked as <span class="label
+        okay">Probably Okay<span></p>
+
         <h4 class="fragpadded" id="insecure-cipher-suites">Insecure Cipher Suites</h4>
         <p>This section displayed any cipher suites the client supports that
           are known to be insecure. Insecure cipher suites make it easy for
