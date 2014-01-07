@@ -1,3 +1,10 @@
+howsmyssl
+=========
+
+howsmyssl is the web app behind [https://howsmyssl.com|https://howsmyssl.com].
+
+Orientation
+--------
 This is a Go project.
 
 The HTML code goes in `templates/`. Templates are generated with Go's
@@ -9,10 +16,12 @@ support. `go build` will generate a static binary called howsmyssl. This repo
 is `go get`'able.
 
 It has a fork of the Go crypto/tls library at ./tls/ in order to add a
-ServerHandshake and expose the ClientHello struct. We may want to copy the
-serverhandshake code out, and pass the data through while doing our own
-handshake. There's some additional work we may have to do around this to
-enable 1/n-1 record splitting detection.
+ServerHandshake and expose the ClientHello struct. We may want to copy
+the ServerHandshake code out, and pass the data through while doing
+our own handshake. There's some additional work we may have to do
+around this to enable 1/n-1 record splitting detection. Getting that
+make require more digging in and disallow the copying of the handshake
+data.
 
 It's been useful to me to use [justrun][justrun] to recompile the project
 while modifying the template. Typical use is simply:
