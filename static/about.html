@@ -176,18 +176,23 @@
           be marked as <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
-        <p>The Ephemeral Key Support section says if your client tells the
-          service that it supports cipher suites that include an additional
-          private key created for each connection to the service. This extra
-          key prevents attackers from storing all of your encrypted
-          communication with the website, then later gaining access to the
-          website's private key, and decrypting all of your (and others')
-          traffic to the website. This additional key, however, is expensive
-          to transfer, especially without elliptical curve cryptography
-          support in the client and server to make the key smaller at the same
-          security. Clients with support for ephemeral key cipher suites will
-          be defaulted to <span class="label okay">Probably Okay</span>. Clients
-          without it will be marked as <span class="label bad">Bad</span>.</p>
+        <p>The Ephemeral Key Support section says if your client tells
+          the service that it supports cipher suites that include an
+          additional private key created for each connection to the
+          service. This allows servers that support it to
+          provide <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
+          secrecy</a> to the client.</p>
+        <p>This extra key prevents attackers from storing all of
+          your encrypted communication with the website, then later
+          gaining access to the website's private key, and decrypting
+          all of your (and others') traffic to the website. This
+          additional key, however, is expensive to transfer,
+          especially without elliptical curve cryptography support in
+          the client and server to make the key smaller at the same
+          security. Clients with support for ephemeral key cipher
+          suites will be defaulted to <span class="label
+          okay">Probably Okay</span>. Clients without it will be
+          marked as <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
         <p>Session tickets are a mechanism to speed up resumption of encrypted
