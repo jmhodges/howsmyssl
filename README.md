@@ -1,7 +1,7 @@
 howsmyssl
 =========
 
-howsmyssl is the web app behind [https://howsmyssl.com|https://howsmyssl.com].
+howsmyssl is the web app behind [https://howsmyssl.com](https://howsmyssl.com).
 
 Orientation
 --------
