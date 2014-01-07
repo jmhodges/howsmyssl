@@ -98,8 +98,8 @@
           <h2>Ephemeral Key Support</h2>
           {{if .EphemeralKeysSupported}}
           <p><span class="label okay">Good</span> Ephemeral keys are
-            used in some the cipher suites your client supports
-            meaning your client may be used with servers to provide
+            used in some the cipher suites your client supports.  This
+            means your client may be used with servers to provide
             <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
             secrecy</a>. This greatly increases your protection
             against snoopers, including global passive adversaries who
@@ -108,10 +108,10 @@
             {{else}}
           <p><span class="label improvable">Improvable</span>
             Ephemeral keys are not used in any of the cipher suites
-            your client supports meaning your client cannot be used
-            with servers to
+            your client supports. This means your client cannot be
+            used to
             provide <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
-            secrecy</a>. Without them, global passive adversaries will
+            secrecy</a>. Without it, global passive adversaries will
             be able to scoop up all of your encrypted traffic and
             decode it when their attacks or their computers are
             faster. This is actually happening.</p>  {{end}}
