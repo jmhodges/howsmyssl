@@ -3,12 +3,14 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
 	"github.com/jmhodges/howsmyssl/tls"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -256,8 +258,8 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	}
 
 	tlsConf := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		NextProtos:   []string{"https"},
+		Certificates:             []tls.Certificate{cert},
+		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
 	}
 	tlsConf.BuildNameToCertificate()
@@ -267,6 +269,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 func makeStaticHandler() http.HandlerFunc {
 	stats := NewStatusStats(staticVars)
 	h := http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir)))
+	h = makeGzipHandler(h)
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
 		w = &statWriter{w: w, stats: stats}
@@ -322,4 +325,27 @@ type protoHandler struct {
 func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set(xForwardedProto, h.proto)
 	h.inner.ServeHTTP(w, r)
+}
+
+type gzipWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
+func makeGzipHandler(inner http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			inner.ServeHTTP(w, r)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+		gzr := gzipWriter{Writer: gz, ResponseWriter: w}
+		inner.ServeHTTP(gzr, r)
+	}
 }
