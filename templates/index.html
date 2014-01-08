@@ -124,15 +124,15 @@
         <div class="span4">
           <h2>Session Ticket Support</h2>
           {{if .SessionTicketsSupported}}
-          <p><span class="label okay">Good</span> Session tickets are supported in
-            your client. Services you use will be able to scale out their TLS
-            connections much easier with this feature.</p>
+          <p><span class="label okay">Good</span> Your TLS client supports
+            session tickets.  Services you use will be able to scale out
+            their TLS infrastructure much more easily with this feature.</p>
           {{else}}
-          <p><span class="label improvable">Improvable</span> Session tickets are
-            not supported in your client. Without them, it'll take your
-            connections over TLS longer to work and its harder for services to
-            scale out. Generally, clients with ephemeral key support gets this
-            for free.</p>
+          <p><span class="label improvable">Improvable</span> Your TLS
+            client does not support session tickets.  Without them, it can
+            TLS connections longer to start up, and it's harder for services
+            you use to scale.  Generally, clients with ephemeral key support
+            gets this for free.</p>
           {{end}}
           <p><a href="/s/about.html/#session-ticket-support">Learn More</a></p>
         </div>
