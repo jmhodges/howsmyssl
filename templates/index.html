@@ -85,8 +85,12 @@
         <div class="span4">
           <h2>Version</h2>
           {{if eq .TLSVersion "TLS 1.2"}}
-          <p><span class="label okay">Good</span> Your client is using TLS 1.2,
-          the most modern version of the encryption protocol.</p>
+
+          <p><span class="label okay">Good</span> Your client is using
+          TLS 1.2, the most modern version of the encryption
+          protocol. It gives you access to the fastest, most secure
+          encryption possible on the web.</p>
+
           {{else if eq .TLSVersion "TLS 1.1"}}
           <p><span class="label improvable">Improvable</span> Your client is using
             TLS 1.1. It would be better to be TLS 1.2, but at least it isn't
