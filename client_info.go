@@ -15,16 +15,16 @@ const (
 )
 
 type clientInfo struct {
-	GivenCipherSuites           []string            `json:"given_cipher_suites"`
-	EphemeralKeysSupported      bool                `json:"ephemeral_keys_supported"`       // good if true
-	SessionTicketsSupported     bool                `json:"session_ticket_supported"`       // good if true
-	TLSCompressionSupported     bool                `json:"tls_compression_supported"`      // bad if true
-	UnknownCipherSuiteSupported bool                `json:"unknown_cipher_suite_supported"` // bad if true
-	BEASTVuln                   bool                `json:"beast_vuln"`                     // bad if true
-	AbleToDetectNMinusOneSplitting bool             `json:"able_to_detect_n_minus_one_splitting"` // neutral
-	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
-	TLSVersion                  string              `json:"tls_version"`
-	Rating                      Rating              `json:"rating"`
+	GivenCipherSuites              []string            `json:"given_cipher_suites"`
+	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
+	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
+	TLSCompressionSupported        bool                `json:"tls_compression_supported"`            // bad if true
+	UnknownCipherSuiteSupported    bool                `json:"unknown_cipher_suite_supported"`       // bad if true
+	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
+	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
+	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
+	TLSVersion                     string              `json:"tls_version"`
+	Rating                         Rating              `json:"rating"`
 }
 
 func ClientInfo(c *conn) *clientInfo {
