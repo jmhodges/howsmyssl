@@ -17,9 +17,9 @@ import (
 
 // serverHandshakeState contains details of a server handshake in progress.
 // It's discarded once the handshake has completed.
-type ServerHandshakeState struct {
+type serverHandshakeState struct {
 	c               *Conn
-	ClientHello     *ClientHelloMsg
+	clientHello     *clientHelloMsg
 	hello           *serverHelloMsg
 	suite           *cipherSuite
 	ellipticOk      bool
@@ -32,64 +32,64 @@ type ServerHandshakeState struct {
 }
 
 // serverHandshake performs a TLS handshake as a server.
-func (c *Conn) serverHandshake() (*ServerHandshakeState, error) {
+func (c *Conn) serverHandshake() error {
 	config := c.config
 
 	// If this is the first server handshake, we generate a random key to
 	// encrypt the tickets with.
 	config.serverInitOnce.Do(config.serverInit)
 
-	hs := &ServerHandshakeState{
+	hs := serverHandshakeState{
 		c: c,
 	}
 	isResume, err := hs.readClientHello()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// For an overview of TLS handshaking, see https://tools.ietf.org/html/rfc5246#section-7.3
 	if isResume {
 		// The client has included a session ticket and so we do an abbreviated handshake.
 		if err := hs.doResumeHandshake(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.establishKeys(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.sendFinished(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.readFinished(); err != nil {
-			return nil, err
+			return err
 		}
 		c.didResume = true
 	} else {
 		// The client didn't include a session ticket, or it wasn't
 		// valid so we do a full handshake.
 		if err := hs.doFullHandshake(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.establishKeys(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.readFinished(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.sendSessionTicket(); err != nil {
-			return nil, err
+			return err
 		}
 		if err := hs.sendFinished(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 	c.handshakeComplete = true
 
-	return hs, nil
+	return nil
 }
 
 // readClientHello reads a ClientHello message from the client and decides
 // whether we will perform session resumption.
-func (hs *ServerHandshakeState) readClientHello() (isResume bool, err error) {
+func (hs *serverHandshakeState) readClientHello() (isResume bool, err error) {
 	config := hs.c.config
 	c := hs.c
 
@@ -98,24 +98,24 @@ func (hs *ServerHandshakeState) readClientHello() (isResume bool, err error) {
 		return false, err
 	}
 	var ok bool
-	hs.ClientHello, ok = msg.(*ClientHelloMsg)
+	hs.clientHello, ok = msg.(*clientHelloMsg)
 	if !ok {
 		return false, c.sendAlert(alertUnexpectedMessage)
 	}
-	c.vers, ok = config.mutualVersion(hs.ClientHello.Vers)
+	c.vers, ok = config.mutualVersion(hs.clientHello.vers)
 	if !ok {
 		return false, c.sendAlert(alertProtocolVersion)
 	}
 	c.haveVers = true
 
 	hs.finishedHash = newFinishedHash(c.vers)
-	hs.finishedHash.Write(hs.ClientHello.marshal())
+	hs.finishedHash.Write(hs.clientHello.marshal())
 
 	hs.hello = new(serverHelloMsg)
 
 	supportedCurve := false
 Curves:
-	for _, curve := range hs.ClientHello.supportedCurves {
+	for _, curve := range hs.clientHello.supportedCurves {
 		switch curve {
 		case curveP256, curveP384, curveP521:
 			supportedCurve = true
@@ -124,7 +124,7 @@ Curves:
 	}
 
 	supportedPointFormat := false
-	for _, pointFormat := range hs.ClientHello.supportedPoints {
+	for _, pointFormat := range hs.clientHello.supportedPoints {
 		if pointFormat == pointFormatUncompressed {
 			supportedPointFormat = true
 			break
@@ -134,7 +134,7 @@ Curves:
 
 	foundCompression := false
 	// We only support null compression, so check that the client offered it.
-	for _, compression := range hs.ClientHello.CompressionMethods {
+	for _, compression := range hs.clientHello.compressionMethods {
 		if compression == compressionNone {
 			foundCompression = true
 			break
@@ -152,19 +152,20 @@ Curves:
 	hs.hello.random[1] = byte(t >> 16)
 	hs.hello.random[2] = byte(t >> 8)
 	hs.hello.random[3] = byte(t)
+	hs.hello.secureRenegotiation = hs.clientHello.secureRenegotiation
 	_, err = io.ReadFull(config.rand(), hs.hello.random[4:])
 	if err != nil {
 		return false, c.sendAlert(alertInternalError)
 	}
 	hs.hello.compressionMethod = compressionNone
-	if len(hs.ClientHello.serverName) > 0 {
-		c.serverName = hs.ClientHello.serverName
+	if len(hs.clientHello.serverName) > 0 {
+		c.serverName = hs.clientHello.serverName
 	}
 	// Although sending an empty NPN extension is reasonable, Firefox has
 	// had a bug around this. Best to send nothing at all if
 	// config.NextProtos is empty. See
 	// https://code.google.com/p/go/issues/detail?id=5445.
-	if hs.ClientHello.nextProtoNeg && len(config.NextProtos) > 0 {
+	if hs.clientHello.nextProtoNeg && len(config.NextProtos) > 0 {
 		hs.hello.nextProtoNeg = true
 		hs.hello.nextProtos = config.NextProtos
 	}
@@ -173,50 +174,28 @@ Curves:
 		return false, c.sendAlert(alertInternalError)
 	}
 	hs.cert = &config.Certificates[0]
-	if len(hs.ClientHello.serverName) > 0 {
-		hs.cert = config.getCertificateForName(hs.ClientHello.serverName)
+	if len(hs.clientHello.serverName) > 0 {
+		hs.cert = config.getCertificateForName(hs.clientHello.serverName)
 	}
 
 	_, hs.ecdsaOk = hs.cert.PrivateKey.(*ecdsa.PrivateKey)
 
-	// Disallow resumption when client is at TLS 1.0 or below so that
-	// we can be sure the checks for HasBeastVulnSuites is set
-	// correctly. A latency and CPU hit, but tolerable for accuracy.
-	if  hs.ClientHello.Vers > VersionTLS10 && hs.checkForResumption() {
+	if hs.checkForResumption() {
 		return true, nil
 	}
 
-	if hs.ClientHello.Vers <= VersionTLS10 {
-		for _, cs := range hs.ClientHello.CipherSuites {
-			if !cbcSuites[cs] {
-				continue
-			}
-
-			hs.c.HasBeastVulnSuites = true
-			if cs == TLS_RSA_WITH_AES_128_CBC_SHA || cs == TLS_RSA_WITH_AES_256_CBC_SHA {
-				hs.suite = c.tryCipherSuite(cs, c.config.cipherSuites(), c.vers, hs.ellipticOk, hs.ecdsaOk)
-				if hs.suite != nil {
-					hs.c.AbleToDetectNMinusOneSplitting = true
-					break
-				}
-			}
-		}
+	var preferenceList, supportedList []uint16
+	if c.config.PreferServerCipherSuites {
+		preferenceList = c.config.cipherSuites()
+		supportedList = hs.clientHello.cipherSuites
+	} else {
+		preferenceList = hs.clientHello.cipherSuites
+		supportedList = c.config.cipherSuites()
 	}
 
-	if hs.suite == nil {
-		var preferenceList, supportedList []uint16
-		if c.config.PreferServerCipherSuites {
-			preferenceList = c.config.cipherSuites()
-			supportedList = hs.ClientHello.CipherSuites
-		} else {
-			preferenceList = hs.ClientHello.CipherSuites
-			supportedList = c.config.cipherSuites()
-		}
-
-		for _, id := range preferenceList {
-			if hs.suite = c.tryCipherSuite(id, supportedList, c.vers, hs.ellipticOk, hs.ecdsaOk); hs.suite != nil {
-				break
-			}
+	for _, id := range preferenceList {
+		if hs.suite = c.tryCipherSuite(id, supportedList, c.vers, hs.ellipticOk, hs.ecdsaOk); hs.suite != nil {
+			break
 		}
 	}
 
@@ -228,15 +207,15 @@ Curves:
 }
 
 // checkForResumption returns true if we should perform resumption on this connection.
-func (hs *ServerHandshakeState) checkForResumption() bool {
+func (hs *serverHandshakeState) checkForResumption() bool {
 	c := hs.c
 
 	var ok bool
-	if hs.sessionState, ok = c.decryptTicket(hs.ClientHello.sessionTicket); !ok {
+	if hs.sessionState, ok = c.decryptTicket(hs.clientHello.sessionTicket); !ok {
 		return false
 	}
 
-	if hs.sessionState.vers > hs.ClientHello.Vers {
+	if hs.sessionState.vers > hs.clientHello.vers {
 		return false
 	}
 	if vers, ok := c.config.mutualVersion(hs.sessionState.vers); !ok || vers != hs.sessionState.vers {
@@ -245,7 +224,7 @@ func (hs *ServerHandshakeState) checkForResumption() bool {
 
 	cipherSuiteOk := false
 	// Check that the client is still offering the ciphersuite in the session.
-	for _, id := range hs.ClientHello.CipherSuites {
+	for _, id := range hs.clientHello.cipherSuites {
 		if id == hs.sessionState.cipherSuite {
 			cipherSuiteOk = true
 			break
@@ -273,13 +252,13 @@ func (hs *ServerHandshakeState) checkForResumption() bool {
 	return true
 }
 
-func (hs *ServerHandshakeState) doResumeHandshake() error {
+func (hs *serverHandshakeState) doResumeHandshake() error {
 	c := hs.c
 
 	hs.hello.cipherSuite = hs.suite.id
 	// We echo the client's session ID in the ServerHello to let it know
 	// that we're doing a resumption.
-	hs.hello.sessionId = hs.ClientHello.sessionId
+	hs.hello.sessionId = hs.clientHello.sessionId
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
 
@@ -294,15 +273,15 @@ func (hs *ServerHandshakeState) doResumeHandshake() error {
 	return nil
 }
 
-func (hs *ServerHandshakeState) doFullHandshake() error {
+func (hs *serverHandshakeState) doFullHandshake() error {
 	config := hs.c.config
 	c := hs.c
 
-	if hs.ClientHello.ocspStapling && len(hs.cert.OCSPStaple) > 0 {
+	if hs.clientHello.ocspStapling && len(hs.cert.OCSPStaple) > 0 {
 		hs.hello.ocspStapling = true
 	}
 
-	hs.hello.TicketSupported = hs.ClientHello.TicketSupported && !config.SessionTicketsDisabled
+	hs.hello.ticketSupported = hs.clientHello.ticketSupported && !config.SessionTicketsDisabled
 	hs.hello.cipherSuite = hs.suite.id
 	hs.finishedHash.Write(hs.hello.marshal())
 	c.writeRecord(recordTypeHandshake, hs.hello.marshal())
@@ -321,7 +300,7 @@ func (hs *ServerHandshakeState) doFullHandshake() error {
 	}
 
 	keyAgreement := hs.suite.ka(c.vers)
-	skx, err := keyAgreement.generateServerKeyExchange(config, hs.cert, hs.ClientHello, hs.hello)
+	skx, err := keyAgreement.generateServerKeyExchange(config, hs.cert, hs.clientHello, hs.hello)
 	if err != nil {
 		c.sendAlert(alertHandshakeFailure)
 		return err
@@ -450,16 +429,16 @@ func (hs *ServerHandshakeState) doFullHandshake() error {
 		c.sendAlert(alertHandshakeFailure)
 		return err
 	}
-	hs.masterSecret = masterFromPreMasterSecret(c.vers, preMasterSecret, hs.ClientHello.random, hs.hello.random)
+	hs.masterSecret = masterFromPreMasterSecret(c.vers, preMasterSecret, hs.clientHello.random, hs.hello.random)
 
 	return nil
 }
 
-func (hs *ServerHandshakeState) establishKeys() error {
+func (hs *serverHandshakeState) establishKeys() error {
 	c := hs.c
 
 	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
-		keysFromMasterSecret(c.vers, hs.masterSecret, hs.ClientHello.random, hs.hello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
+		keysFromMasterSecret(c.vers, hs.masterSecret, hs.clientHello.random, hs.hello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
 
 	var clientCipher, serverCipher interface{}
 	var clientHash, serverHash macFunction
@@ -480,7 +459,7 @@ func (hs *ServerHandshakeState) establishKeys() error {
 	return nil
 }
 
-func (hs *ServerHandshakeState) readFinished() error {
+func (hs *serverHandshakeState) readFinished() error {
 	c := hs.c
 
 	c.readRecord(recordTypeChangeCipherSpec)
@@ -520,8 +499,8 @@ func (hs *ServerHandshakeState) readFinished() error {
 	return nil
 }
 
-func (hs *ServerHandshakeState) sendSessionTicket() error {
-	if !hs.hello.TicketSupported {
+func (hs *serverHandshakeState) sendSessionTicket() error {
+	if !hs.hello.ticketSupported {
 		return nil
 	}
 
@@ -546,7 +525,7 @@ func (hs *ServerHandshakeState) sendSessionTicket() error {
 	return nil
 }
 
-func (hs *ServerHandshakeState) sendFinished() error {
+func (hs *serverHandshakeState) sendFinished() error {
 	c := hs.c
 
 	c.writeRecord(recordTypeChangeCipherSpec, []byte{1})
@@ -564,7 +543,7 @@ func (hs *ServerHandshakeState) sendFinished() error {
 // processCertsFromClient takes a chain of client certificates either from a
 // Certificates message or from a sessionState and verifies them. It returns
 // the public key of the leaf certificate.
-func (hs *ServerHandshakeState) processCertsFromClient(certificates [][]byte) (crypto.PublicKey, error) {
+func (hs *serverHandshakeState) processCertsFromClient(certificates [][]byte) (crypto.PublicKey, error) {
 	c := hs.c
 
 	hs.certsFromClient = certificates
