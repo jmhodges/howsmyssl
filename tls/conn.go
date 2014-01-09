@@ -58,6 +58,11 @@ type Conn struct {
 	input    *block       // application data waiting to be read
 	hand     bytes.Buffer // handshake data waiting to be read
 
+	AbleToDetectNMinusOneSplitting   bool
+	NMinusOneRecordSplittingDetected bool
+	HasBeastVulnSuites               bool
+	readOneAppDataRecord             bool
+
 	tmp [16]byte
 }
 
@@ -566,6 +571,7 @@ Again:
 
 	vers := uint16(b.data[1])<<8 | uint16(b.data[2])
 	n := int(b.data[3])<<8 | int(b.data[4])
+
 	if c.haveVers && vers != c.vers {
 		return c.sendAlert(alertProtocolVersion)
 	}
@@ -603,6 +609,10 @@ Again:
 	}
 	b.off = off
 	data := b.data[b.off:]
+	if !c.readOneAppDataRecord && c.AbleToDetectNMinusOneSplitting && want == recordTypeApplicationData {
+		c.readOneAppDataRecord = true
+		c.NMinusOneRecordSplittingDetected = len(data) == 1
+	}
 	if len(data) > maxPlaintext {
 		c.sendAlert(alertRecordOverflow)
 		c.in.freeBlock(b)

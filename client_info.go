@@ -21,6 +21,7 @@ type clientInfo struct {
 	TLSCompressionSupported     bool                `json:"tls_compression_supported"`      // bad if true
 	UnknownCipherSuiteSupported bool                `json:"unknown_cipher_suite_supported"` // bad if true
 	BEASTVuln                   bool                `json:"beast_vuln"`                     // bad if true
+	AbleToDetectNMinusOneSplitting bool             `json:"able_to_detect_n_minus_one_splitting"` // neutral
 	InsecureCipherSuites        map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                  string              `json:"tls_version"`
 	Rating                      Rating              `json:"rating"`
@@ -38,8 +39,9 @@ func ClientInfo(c *conn) *clientInfo {
 			if strings.Contains(s, "DHE_") {
 				d.EphemeralKeysSupported = true
 			}
-			if c.st.ClientHello.Vers <= tls.VersionTLS10 && strings.Contains(s, "_CBC_") {
-				d.BEASTVuln = true
+			if c.HasBeastVulnSuites {
+				d.BEASTVuln = !c.NMinusOneRecordSplittingDetected
+				d.AbleToDetectNMinusOneSplitting = c.AbleToDetectNMinusOneSplitting
 			}
 			if fewBitCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
