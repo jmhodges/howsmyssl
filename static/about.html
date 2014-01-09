@@ -192,17 +192,18 @@
 
         <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
         <p>Session tickets are a mechanism to speed up resumption of encrypted
-          communication with a server. When a client and server first connect
-          over TLS, they perform a complicated, time-consuming handshake. This
-          handshake lets the client and the server communicate a shared secret
-          (basically, a password) without exposing that secret to people
-          tapping the line. However, it only allows the client and the
-          specific computer that served the client communicate. Since websites
-          can (and, often, must) serve their traffic from many physical
-          computers, if the client disconnects and reconnects to the website,
-          the client could connect to another machine that knew nothing about
-          the shared secret. When that happens, the client and server have to
-          perform the slow handshake again.</p>
+          communication with a server. When a client and server first
+          connect over TLS, they perform a complicated, time-consuming
+          handshake.  This handshake lets the client and the server
+          communicate a shared secret (basically, a password) without
+          exposing that secret to people tapping the line.  However, it only
+          allows the client and the specific computer that served the client
+          to communicate.  Since websites can (and, often, must) serve their
+          traffic from many physical computers, if the client disconnects
+          and reconnects to the website, the client could connect to another
+          machine that knew nothing about the shared secret.  When that
+          happens, the client and server have to perform the slow handshake
+          again.</p>
         <p>If the client supports session tickets, the physical machines that
           serve a website's traffic and share a special second key called a
           session ticket key can deterministically generate a secret shared
