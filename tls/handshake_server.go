@@ -179,7 +179,10 @@ Curves:
 
 	_, hs.ecdsaOk = hs.cert.PrivateKey.(*ecdsa.PrivateKey)
 
-	if hs.checkForResumption() {
+	// Disallow resumption when client is at TLS 1.0 or below so that
+	// we can be sure the checks for HasBeastVulnSuites is set
+	// correctly. A latency and CPU hit, but tolerable for accuracy.
+	if  hs.ClientHello.Vers > VersionTLS10 && hs.checkForResumption() {
 		return true, nil
 	}
 
