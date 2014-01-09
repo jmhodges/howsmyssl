@@ -12,7 +12,7 @@ import (
 )
 
 var tests = []interface{}{
-	&clientHelloMsg{},
+	&ClientHelloMsg{},
 	&serverHelloMsg{},
 	&finishedMsg{},
 
@@ -107,16 +107,16 @@ func randomString(n int, rand *rand.Rand) string {
 	return string(b)
 }
 
-func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
-	m := &clientHelloMsg{}
+func (*ClientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
+	m := &ClientHelloMsg{}
 	m.vers = uint16(rand.Intn(65536))
 	m.random = randomBytes(32, rand)
 	m.sessionId = randomBytes(rand.Intn(32), rand)
-	m.cipherSuites = make([]uint16, rand.Intn(63)+1)
-	for i := 0; i < len(m.cipherSuites); i++ {
-		m.cipherSuites[i] = uint16(rand.Int31())
+	m.CipherSuites = make([]uint16, rand.Intn(63)+1)
+	for i := 0; i < len(m.CipherSuites); i++ {
+		m.CipherSuites[i] = uint16(rand.Int31())
 	}
-	m.compressionMethods = randomBytes(rand.Intn(63)+1, rand)
+	m.CompressionMethods = randomBytes(rand.Intn(63)+1, rand)
 	if rand.Intn(10) > 5 {
 		m.nextProtoNeg = true
 	}
@@ -130,7 +130,7 @@ func (*clientHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 		m.supportedCurves[i] = uint16(rand.Intn(30000))
 	}
 	if rand.Intn(10) > 5 {
-		m.ticketSupported = true
+		m.TicketSupported = true
 		if rand.Intn(10) > 5 {
 			m.sessionTicket = randomBytes(rand.Intn(300), rand)
 		}
@@ -164,7 +164,7 @@ func (*serverHelloMsg) Generate(rand *rand.Rand, size int) reflect.Value {
 		m.ocspStapling = true
 	}
 	if rand.Intn(10) > 5 {
-		m.ticketSupported = true
+		m.TicketSupported = true
 	}
 
 	return reflect.ValueOf(m)

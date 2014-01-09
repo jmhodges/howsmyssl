@@ -21,9 +21,9 @@ func (c *Conn) clientHandshake() error {
 		c.config = defaultConfig()
 	}
 
-	hello := &clientHelloMsg{
-		vers:                c.config.maxVersion(),
-		compressionMethods:  []uint8{compressionNone},
+	hello := &ClientHelloMsg{
+		Vers:                c.config.maxVersion(),
+		CompressionMethods:  []uint8{compressionNone},
 		random:              make([]byte, 32),
 		ocspStapling:        true,
 		serverName:          c.config.ServerName,
@@ -34,7 +34,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	possibleCipherSuites := c.config.cipherSuites()
-	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
+	hello.CipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
 NextCipherSuite:
 	for _, suiteId := range possibleCipherSuites {
@@ -44,10 +44,10 @@ NextCipherSuite:
 			}
 			// Don't advertise TLS 1.2-only cipher suites unless
 			// we're attempting TLS 1.2.
-			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+			if hello.Vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
 				continue
 			}
-			hello.cipherSuites = append(hello.cipherSuites, suiteId)
+			hello.CipherSuites = append(hello.CipherSuites, suiteId)
 			continue NextCipherSuite
 		}
 	}
@@ -63,7 +63,7 @@ NextCipherSuite:
 		return errors.New("short read from Rand")
 	}
 
-	if hello.vers >= VersionTLS12 {
+	if hello.Vers >= VersionTLS12 {
 		hello.signatureAndHashes = supportedSKXSignatureAlgorithms
 	}
 

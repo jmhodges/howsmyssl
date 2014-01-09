@@ -60,7 +60,7 @@ func testClientHelloFailure(t *testing.T, m handshakeMessage, expected error) {
 	c, s := net.Pipe()
 	go func() {
 		cli := Client(c, testConfig)
-		if ch, ok := m.(*clientHelloMsg); ok {
+		if ch, ok := m.(*ClientHelloMsg); ok {
 			cli.vers = ch.vers
 		}
 		cli.writeRecord(recordTypeHandshake, m.marshal())
@@ -81,24 +81,24 @@ var badProtocolVersions = []uint16{0x0000, 0x0005, 0x0100, 0x0105, 0x0200, 0x020
 
 func TestRejectBadProtocolVersion(t *testing.T) {
 	for _, v := range badProtocolVersions {
-		testClientHelloFailure(t, &clientHelloMsg{vers: v}, alertProtocolVersion)
+		testClientHelloFailure(t, &ClientHelloMsg{vers: v}, alertProtocolVersion)
 	}
 }
 
 func TestNoSuiteOverlap(t *testing.T) {
-	clientHello := &clientHelloMsg{
+	clientHello := &ClientHelloMsg{
 		vers:               0x0301,
-		cipherSuites:       []uint16{0xff00},
-		compressionMethods: []uint8{0},
+		CipherSuites:       []uint16{0xff00},
+		CompressionMethods: []uint8{0},
 	}
 	testClientHelloFailure(t, clientHello, alertHandshakeFailure)
 }
 
 func TestNoCompressionOverlap(t *testing.T) {
-	clientHello := &clientHelloMsg{
+	clientHello := &ClientHelloMsg{
 		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0xff},
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0xff},
 	}
 	testClientHelloFailure(t, clientHello, alertHandshakeFailure)
 }
