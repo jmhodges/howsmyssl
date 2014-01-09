@@ -107,7 +107,7 @@
             <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
             secrecy</a> if the server supports it. This greatly increases your protection
             against snoopers, including global passive adversaries who
-            scoop up large amounts of encrypted traffic, and store
+            scoop up large amounts of encrypted traffic and store
             them until their attacks (or their computers) improve.</p>
             {{else}}
           <p><span class="label improvable">Improvable</span>
@@ -129,10 +129,9 @@
             connections much easier with this feature.</p>
           {{else}}
           <p><span class="label improvable">Improvable</span> Session tickets are
-            not supported in your client. Without them, it'll take your
-            connections over TLS longer to work and its harder for services to
-            scale out. Generally, clients with ephemeral key support gets this
-            for free.</p>
+            not supported in your client. Without them, services will have a harder 
+            time making your client's connections fast. Generally, clients with 
+            ephemeral key support get this for free.</p>
           {{end}}
           <p><a href="/s/about.html/#session-ticket-support">Learn More</a></p>
         </div>
