@@ -27,7 +27,7 @@ var (
 //   TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA  56-bit encryption, export grade
 //   TLS_DHE_DSS_WITH_RC4_128_SHA            56-bit encryption, export grade
 //
-// These last I believe are IE only.
+// These last, I believe, are IE only.
 var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA":   true,
 	"TLS_DHE_DSS_WITH_DES_CBC_SHA":            true,
