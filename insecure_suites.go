@@ -18,28 +18,43 @@ var (
 //   TLS_KRB5_EXPORT_WITH_RC4_40_SHA	     40-bit encryption, export grade
 //   TLS_KRB5_WITH_DES_CBC_MD5	             56-bit encryption
 //   TLS_KRB5_WITH_DES_CBC_SHA               56-bit encryption
+//
+// and, from http://tools.ietf.org/html/draft-ietf-tls-56-bit-ciphersuites-01:
+//
+//   TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA     56-bit encryption, export grade
+//   TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA 56-bit encryption, export grade
+//   TLS_RSA_EXPORT1024_WITH_RC4_56_SHA      56-bit encryption, export grade
+//   TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA  56-bit encryption, export grade
+//   TLS_DHE_DSS_WITH_RC4_128_SHA            56-bit encryption, export grade
+//
+// These last I believe are IE only.
 var fewBitCipherSuites = map[string]bool{
-	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": true,
-	"TLS_DHE_DSS_WITH_DES_CBC_SHA":          true,
-	"TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA": true,
-	"TLS_DHE_RSA_WITH_DES_CBC_SHA":          true,
-	"TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA":  true,
-	"TLS_DH_DSS_WITH_DES_CBC_SHA":           true,
-	"TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA":  true,
-	"TLS_DH_RSA_WITH_DES_CBC_SHA":           true,
-	"TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA": true,
-	"TLS_DH_anon_EXPORT_WITH_RC4_40_MD5":    true,
-	"TLS_DH_anon_WITH_DES_CBC_SHA":          true,
-	"TLS_RSA_EXPORT_WITH_DES40_CBC_SHA":     true,
-	"TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5":    true,
-	"TLS_RSA_EXPORT_WITH_RC4_40_MD5":        true,
-	"TLS_RSA_WITH_DES_CBC_SHA":              true,
-	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5":   true,
-	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA":   true,
-	"TLS_KRB5_EXPORT_WITH_RC4_40_MD5":       true,
-	"TLS_KRB5_EXPORT_WITH_RC4_40_SHA":       true,
-	"TLS_KRB5_WITH_DES_CBC_MD5":             true,
-	"TLS_KRB5_WITH_DES_CBC_SHA":             true,
+	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA":   true,
+	"TLS_DHE_DSS_WITH_DES_CBC_SHA":            true,
+	"TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA":   true,
+	"TLS_DHE_RSA_WITH_DES_CBC_SHA":            true,
+	"TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA":    true,
+	"TLS_DH_DSS_WITH_DES_CBC_SHA":             true,
+	"TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA":    true,
+	"TLS_DH_RSA_WITH_DES_CBC_SHA":             true,
+	"TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA":   true,
+	"TLS_DH_anon_EXPORT_WITH_RC4_40_MD5":      true,
+	"TLS_DH_anon_WITH_DES_CBC_SHA":            true,
+	"TLS_RSA_EXPORT_WITH_DES40_CBC_SHA":       true,
+	"TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5":      true,
+	"TLS_RSA_EXPORT_WITH_RC4_40_MD5":          true,
+	"TLS_RSA_WITH_DES_CBC_SHA":                true,
+	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5":     true,
+	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA":     true,
+	"TLS_KRB5_EXPORT_WITH_RC4_40_MD5":         true,
+	"TLS_KRB5_EXPORT_WITH_RC4_40_SHA":         true,
+	"TLS_KRB5_WITH_DES_CBC_MD5":               true,
+	"TLS_KRB5_WITH_DES_CBC_SHA":               true,
+	"TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA":     true,
+	"TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA": true,
+	"TLS_RSA_EXPORT1024_WITH_RC4_56_SHA":      true,
+	"TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA":  true,
+	"TLS_DHE_DSS_WITH_RC4_128_SHA":            true,
 }
 
 // Cipher suites that offer no encryption.
