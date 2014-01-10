@@ -18,6 +18,7 @@ var (
 //   TLS_KRB5_EXPORT_WITH_RC4_40_SHA	     40-bit encryption, export grade
 //   TLS_KRB5_WITH_DES_CBC_MD5	             56-bit encryption
 //   TLS_KRB5_WITH_DES_CBC_SHA               56-bit encryption
+//   SSL_RSA_FIPS_WITH_DES_CBC_SHA           56-bit encryption
 var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": true,
 	"TLS_DHE_DSS_WITH_DES_CBC_SHA":          true,
@@ -40,6 +41,7 @@ var fewBitCipherSuites = map[string]bool{
 	"TLS_KRB5_EXPORT_WITH_RC4_40_SHA":       true,
 	"TLS_KRB5_WITH_DES_CBC_MD5":             true,
 	"TLS_KRB5_WITH_DES_CBC_SHA":             true,
+	"SSL_RSA_FIPS_WITH_DES_CBC_SHA":         true,
 }
 
 // Cipher suites that offer no encryption.
@@ -111,14 +113,4 @@ var nullAuthCipherSuites = map[string]bool{
 	"TLS_SRP_SHA_WITH_3DES_EDE_CBC_SHA":        true,
 	"TLS_SRP_SHA_WITH_AES_128_CBC_SHA":         true,
 	"TLS_SRP_SHA_WITH_AES_256_CBC_SHA":         true,
-}
-
-// Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
-// 0xFEFF is still emitted by by Firefox 25.0. Discussed here:
-// https://groups.google.com/forum/#!topic/mozilla.dev.tech.crypto/oWk0FkKsek4
-// and
-// http://www-archive.mozilla.org/projects/security/pki/nss/ssl/fips-ssl-ciphersuites.html
-var weirdNSSSuites = map[uint16]string{
-	0xFEFE: "SSL_RSA_FIPS_WITH_DES_CBC_SHA",
-	0xFEFF: "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA",
 }

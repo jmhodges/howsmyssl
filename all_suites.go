@@ -329,3 +329,12 @@ var allCipherSuites = map[uint16]string{
 	0xCC14: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
 	0xCC15: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 }
+
+// Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
+// 0xFEFF is still emitted by by Firefox 25.0. Discussed here:
+// https://groups.google.com/forum/#!topic/mozilla.dev.tech.crypto/oWk0FkKsek4
+// and
+// http://www-archive.mozilla.org/projects/security/pki/nss/ssl/fips-ssl-ciphersuites.html
+var weirdNSSSuites = map[uint16]string{
+	0xFEFF: "SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA",
+}

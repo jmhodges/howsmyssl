@@ -59,7 +59,6 @@ func ClientInfo(c *conn) *clientInfo {
 				s = fmt.Sprintf("Some unknown cipher suite: %#x", ci)
 			} else {
 				s = w
-				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], weirdNSSReason)
 			}
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
