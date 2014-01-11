@@ -13,15 +13,10 @@ client_info.go.
 
 This project requires [Go 1.2][go1.2] to build with TLS 1.1 and 1.2
 support. `go build` will generate a static binary called howsmyssl. This repo
-is `go get`'able.
+is `go get`'able, of course.
 
 It has a fork of the Go crypto/tls library at ./tls/ in order to add a
-ServerHandshake and expose the ClientHello struct. We may want to copy
-the ServerHandshake code out, and pass the data through while doing
-our own handshake. There's some additional work we may have to do
-around this to enable 1/n-1 record splitting detection. Getting that
-make require more digging in and disallow the copying of the handshake
-data.
+ServerHandshake and expose the ClientHello struct.
 
 It's been useful to me to use [justrun][justrun] to recompile the project
 while modifying the template. Typical use is simply:
