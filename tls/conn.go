@@ -609,9 +609,18 @@ Again:
 	}
 	b.off = off
 	data := b.data[b.off:]
+
+	// This detects BEAST mitigation when the first app data record is
+	// of length 1 or 0. Length 1 mitigation is common in web browsers, while
+	// length 0 is common in OpenSSL tools. Since the requests to
+	// /a/check are typically very small, this won't detect the Java
+	// style BEAST mitigation where the 1 byte record is sent after
+	// the first application record but only if its large enough.
+	//
+	// TODO(jmhodges): check that 1 or 0 byte records are sent between others
 	if !c.readOneAppDataRecord && c.AbleToDetectNMinusOneSplitting && want == recordTypeApplicationData {
 		c.readOneAppDataRecord = true
-		c.NMinusOneRecordSplittingDetected = len(data) == 1
+		c.NMinusOneRecordSplittingDetected = len(data) == 1 || len(data) == 0
 	}
 	if len(data) > maxPlaintext {
 		c.sendAlert(alertRecordOverflow)
