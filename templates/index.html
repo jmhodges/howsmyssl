@@ -172,7 +172,7 @@
              attack</a>. It's using TLS 1.0 or earlier while also
              supporting a cipher suite that
              uses <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-             Chaining</a> and doesn't implement the 1/(n-1) record
+             Chaining</a> and doesn't implement the 1/n-1 record
              splitting mitigation. That combination will leak
              information.
 
@@ -186,7 +186,7 @@
              Chaining</a>. However, the CBC cipher suites your client
              supports is not one How's My SSL is able to use, so it
              was unable to determine if your client implements the
-             1/(n-1) record splitting mitigation. Clients with that
+             1/n-1 record splitting mitigation. Clients with that
              uncommon of cipher suite selection rarely implement it,
              however, so it's best to assume the worst.
 
@@ -201,7 +201,7 @@
             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a>. While it's using TLS 1.0 in conjunction
             with <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-            Chaining</a> cipher suites, it has implemented the 1/(n-1)
+            Chaining</a> cipher suites, it has implemented the 1/n-1
             record splitting mitigation.
 
             {{ else }}
@@ -213,7 +213,7 @@
             using TLS 1.0 or earlier
             using <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
             Chaining</a> cipher suites that do not implement the
-            1/(n-1) record splitting mitigation.
+            1/n-1 record splitting mitigation.
 
             {{ end }}
           {{end}}

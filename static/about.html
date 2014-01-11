@@ -251,18 +251,18 @@
         the data</a> on a TLS connection matching that
         criteria. Upgrading to TLS 1.1 or greater or not using CBC
         cipher suites prevents the attack (though, RC4 has its own
-        issues). Another mitigation strategy is called 1/(n-1) record
-        splitting. 1/(n-1) record splitting allows TLS 1.0 clients
+        issues). Another mitigation strategy is called 1/n-1 record
+        splitting. 1/n-1 record splitting allows TLS 1.0 clients
         using CBC cipher modes to mitigate the attack by sending only
         a single byte in the first encrypted application data record
         of the connection, which fixes up the initialization vector
         for the rest of the connection.</p>
         <p>If the client supports CBC mode cipher suites on TLS 1.0
-        and does not implement the 1/(n-1) record splitting
+        and does not implement the 1/n-1 record splitting
         mitigation, it will be marked as <span class="label
         bad">bad</span>.</p>
         <p>Clients using versions of TLS greater than 1.0 or not using
-        CBC cipher suites or are using both but also implement 1/(n-1)
+        CBC cipher suites or are using both but also implement 1/n-1
         record splitting, will be marked as <span class="label
         okay">Probably Okay</span></p>
 
