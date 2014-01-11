@@ -257,10 +257,16 @@
         a single byte in the first encrypted application data record
         of the connection, which fixes up the initialization vector
         for the rest of the connection.</p>
+        <p>A caveat here: Certain TLS libraries, like Java's
+        javax.net.ssl, use a slightly different form of 1/n-1 record
+        splitting that is not detectable by How's My SSL? as most
+        requests to How's My SSL? are too small to trigger
+        it. However, these libraries have usually implemented TLS 1.2
+        and clients should use it to remove this error.</p>
         <p>If the client supports CBC mode cipher suites on TLS 1.0
-        and does not implement the 1/n-1 record splitting
-        mitigation, it will be marked as <span class="label
-        bad">bad</span>.</p>
+        and does not implement the 1/n-1 record splitting mitigation
+        detectable by How's My SSL?, it will be marked
+        as <span class="label bad">Bad</span>.</p>
         <p>Clients using versions of TLS greater than 1.0 or not using
         CBC cipher suites or are using both but also implement 1/n-1
         record splitting, will be marked as <span class="label
