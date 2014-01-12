@@ -14,6 +14,11 @@ const (
 	bad        Rating = "Bad"
 )
 
+type rec struct {
+	Link string `json:"link"`
+	Desc string `json:"description"`
+}
+
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
@@ -25,11 +30,13 @@ type clientInfo struct {
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         Rating              `json:"rating"`
+	Recommendations                []rec               `json:"recommendations"`
 }
 
 func ClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
-
+	var recs []rec
+	var unknownSuites []string
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
 
@@ -56,7 +63,9 @@ func ClientInfo(c *conn) *clientInfo {
 			w, found := weirdNSSSuites[ci]
 			if !found {
 				d.UnknownCipherSuiteSupported = true
-				s = fmt.Sprintf("Some unknown cipher suite: %#04x", ci)
+				suite := fmt.Sprintf("%04x", ci)
+				unknownSuites = append(unknownSuites, suite)
+				s = fmt.Sprintf("Some unknown cipher suite: %s", suite)
 			} else {
 				s = w
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], weirdNSSReason)
@@ -87,16 +96,67 @@ func ClientInfo(c *conn) *clientInfo {
 	}
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || !d.SessionTicketsSupported || vers == tls.VersionTLS11 {
+	if !d.EphemeralKeysSupported {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#ephemeral-key-support",
+			Desc: `Add cipher suites with ephemeral key cipher suites (e.g ones containing "ECDHE", and "DHE")  to the client configuration.`,
+		})
+		d.Rating = improvable
+	}
+	if !d.SessionTicketsSupported {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#session-ticket-support",
+			Desc: "Add session ticket support to your client configuration.",
+		})
+		d.Rating = improvable
+	}
+	if vers == tls.VersionTLS11 {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#version",
+			Desc: "Set default protocol version to TLS 1.2.",
+		})
 		d.Rating = improvable
 	}
 
-	if d.TLSCompressionSupported ||
-		d.UnknownCipherSuiteSupported ||
-		d.BEASTVuln ||
-		len(d.InsecureCipherSuites) != 0 ||
-		vers <= tls.VersionTLS10 {
+	if d.TLSCompressionSupported {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#tls-compression-supported",
+			Desc: "Disable TLS compression.",
+		})
 		d.Rating = bad
 	}
+	if d.UnknownCipherSuiteSupported {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#unknown-cipher-suites-supported",
+			Desc: "Remove the cipher suites with ids: " + sentence(unknownSuites),
+		})
+		d.Rating = bad
+	}
+	if d.BEASTVuln {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#beast-vulnerability",
+			Desc: "Set the default protocol version to TLS 1.1 or 1.2 or remove the CBC cipher suites.",
+		})
+		d.Rating = bad
+	}
+	if len(d.InsecureCipherSuites) != 0 {
+		var suites []string
+		for k, _ := range d.InsecureCipherSuites {
+			suites = append(suites, k)
+		}
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#insecure-cipher-suites",
+			Desc: "Remove the ciphers suites: " + sentence(suites),
+		})
+		d.Rating = bad
+	}
+	if vers <= tls.VersionTLS10 {
+		recs = append(recs, rec{
+			Link: "https://www.howsmyssl.com/s/about.html#version",
+			Desc: "Set default protocol version to TLS 1.2.",
+		})
+		d.Rating = bad
+	}
+	d.Recommendations = recs
 	return d
 }
