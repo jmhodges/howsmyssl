@@ -99,7 +99,7 @@ func ClientInfo(c *conn) *clientInfo {
 	if !d.EphemeralKeysSupported {
 		recs = append(recs, rec{
 			Link: "https://www.howsmyssl.com/s/about.html#ephemeral-key-support",
-			Desc: `Add cipher suites with ephemeral key cipher suites (e.g ones containing "ECDHE", and "DHE")  to the client configuration.`,
+			Desc: `Add cipher suites with ephemeral key (e.g ones containing "ECDHE", and "DHE")  to the client configuration.`,
 		})
 		d.Rating = improvable
 	}
@@ -128,7 +128,7 @@ func ClientInfo(c *conn) *clientInfo {
 	if d.UnknownCipherSuiteSupported {
 		recs = append(recs, rec{
 			Link: "https://www.howsmyssl.com/s/about.html#unknown-cipher-suites-supported",
-			Desc: "Remove the cipher suites with ids: " + sentence(unknownSuites),
+			Desc: "Remove the cipher suites with these ids: " + sentence(unknownSuites),
 		})
 		d.Rating = bad
 	}
@@ -146,7 +146,7 @@ func ClientInfo(c *conn) *clientInfo {
 		}
 		recs = append(recs, rec{
 			Link: "https://www.howsmyssl.com/s/about.html#insecure-cipher-suites",
-			Desc: "Remove the ciphers suites: " + sentence(suites),
+			Desc: "Remove these cipher suites: " + sentence(suites),
 		})
 		d.Rating = bad
 	}
