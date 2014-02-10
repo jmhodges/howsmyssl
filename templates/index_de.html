@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>How's My SSL?</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+
+      .hero-unit-okay {
+        color: #1B9E77;
+      }
+
+      .hero-unit-improvable {
+        color: #7570B3;
+      }
+
+      .hero-unit-bad {
+        color: #D95F02;
+      }
+
+      @media screen and (max-width: 480px) {
+        .hero-unit h1 { font-size: 35px; }
+      }
+
+      .okay {
+        background-color: #1B9E77;
+        font-size: 1em;
+      }
+
+      .improvable {
+        background-color: #7570B3;
+        font-size: 1em;
+      }
+
+      .bad {
+        background-color: #D95F02;
+        font-size: 1em;
+      }
+
+      footer {
+        margin-bottom: 500px;
+      }
+
+      .container .credit {
+        margin: 20px 0;
+      }
+    </style>
+    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
+  </head>
+  <body>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/">Wie gut ist mein SSL?</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="/">Home</a></li>
+              <li><a href="/s/about.html">About</a></li>
+              <li><a href="/s/api.html">API</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+
+      <div class="hero-unit">
+        <h1>Dein SSL-Client ist: <span class="hero-unit-{{ratingSpan .Rating}}">
+          {{if eq .Rating "Probably Okay"}}Wahrscheinlich Okay
+          {{else if eq .Rating "Improvable"}}Ausbaufähig
+          {{else if eq .Rating "Bad"}}Schlecht
+	  {{end}}  
+	</span></h1>
+        <p>Die nächsten Abschnitte geben konkretere
+          Informationen über die SSL/TLS-Optionen, mit
+          denen dein Client diese Seite geholt hat. </p>
+        <p><small>Ja,
+        eigentlich <a href="/s/about.html#tls-vs-ssl">heißt
+        es "TLS"</a>, nicht "SSL".</small></p>
+      </div>
+
+      <div class="row">
+        <div class="span4">
+          <h2>Version</h2>
+          {{if eq .TLSVersion "TLS 1.2"}}
+          <p><span class="label okay">Gut</span> Dein
+          Client benutzt TLS 1.2 und somit die aktuelle
+          Version des Protokolls. Es unterstützt die
+          schnellsten und sichersten Krypto-Verfahren
+          im Web.</p>
+          {{else if eq .TLSVersion "TLS 1.1"}}
+          <p><span class="label
+            improvable">Ausbaufähig</span> Dein Client
+            benutzt TLS 1.1. Besser wäre zwar TLS 1.2,
+            aber wenigstens ist 1.1 schon nicht mehr
+            für den BEAST-Angriff
+            anfällig. Andererseits unterstützt es noch
+            keine Cipher-Suiten mit AES-GCM.</p>
+            {{else}}
+          <p><span class="label bad">Schlecht</span>
+            Dein Client benutzt noch {{.TLSVersion}};
+            die ist recht alt, möglicherweise anfällig
+            für BEAST-Angriffe und es fehlen die besten
+            Cipher-Suiten. Dazu gehören Erweiterungen
+            wie AES-GCM und die Hash-Funktion SHA256,
+            die MD5/SHA-1 ersetzen soll, aber in TLS
+            1.0 noch nicht enthalten ist.</p>  {{end}}
+          <p><a href="/s/about.html/#version">Mehr dazu</a></p>
+        </div>
+
+        <div class="span4">
+          <h2>Kurzlebige Schlüssel / Forward Secrecy</h2>
+          {{if .EphemeralKeysSupported}}
+          <p><span class="label okay">Gut</span> Dein
+            Client bietet Cipher-Suiten, die kurzlebige
+            Schlüssel (Ephemeral Keys) nutzen. Das
+            bedeutet, er
+            kann <a href="http://de.wikipedia.org/wiki/Perfect_Forward_Secrecy">Forward
+            Secrecy</a> gewährleisten, wenn der Server
+            das ebenfalls unterstützt. Das erhöht die
+            Abhörsicherheit deutlich, insbesondere
+            gegenüber passiven Lauschern, die große
+            Mengen verschlüsselter Daten speichern, bis
+            sich ihre Angriffsmöglichkeiten
+            verbessern.</p>  {{else}}
+          <p><span class="label
+	    improvable">Ausbaufähig</span> Keine der
+	    von deinem Client unterstützten
+	    Cipher-Suiten bietet kurzlebige Schlüssel
+	    (Ephemeral Keys). Das bedeutet, dein Client
+	    kann
+	    keine <a href="http://de.wikipedia.org/wiki/Perfect_Forward_Secrecy">Forward
+	    Secrecy</a> gewährleisten. Ohne die können
+	    passive Angreifer verschlüsselt übertragene
+	    Daten speichern, um sie später zu
+	    dechiffrieren, wenn ihre Angriffe schnell
+	    genug arbeiten oder sie anderweitig etwa an den
+	    geheimen Server-Schlüssel kommen. Das
+	    geschieht tatsächlich.</p>  {{end}}
+	  <!-- added the possibility, that snoopers get
+	       access to the secret key of the server,
+	       by ju -->
+          <p><a href="/s/about.html/#ephemeral-key-support">Mehr dazu</a></p>
+        </div>
+        <div class="span4">
+          <h2>Session Tickets</h2>
+          {{if .SessionTicketsSupported}}
+          <p><span class="label okay">Gut</span> Dein
+          Client unterstützt Session Tickets. Das macht
+          die Unterstützung von TLS skalierbarer.</p>
+          {{else}}
+          <p><span class="label
+          improvable">Ausbaufähig</span> Dein Client
+          kann keine Session Tickets. Das erschwert es
+          dem Server, TLS-Verbindungen schnell
+          aufzubauen. Im Allgemeinen kommt diese
+          Funktion im Rahmen der Unterstützung
+          kurzlebiger Schlüssel gleich mit.</p>
+          {{end}}
+          <p><a href="/s/about.html/#session-ticket-support">Mehr dazu</a></p>
+        </div>
+      </div>
+      <div class="row">
+        <div class="span4">
+          <h2>TLS Komprimierung</h2>
+          {{if .TLSCompressionSupported}}
+          <p><span class="label bad">Schlecht</span>
+          Dein Client unterstützt die Option zur
+          TLS-Komprimierung. Das ist nicht gut, weil es
+          die TLS-Verbindung anfällig für
+          den <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME-Angriff</a>
+          macht, über den verschlüsselte Daten
+          zugänglich werden könnten!</p>  {{else}}
+          <p><span class="label okay">Gut</span> Dein
+          Client versucht nicht, die TLS-Komprimierung
+          zu aktivieren. Das vermeidet
+          Informationslecks durch den
+            <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME-Angriff</a>.</p>
+          {{end}}
+          <p><a href="/s/about.html/#tls-compression">Mehr dazu</a></p>
+        </div>
+        <div class="span4">
+          <h2>BEAST Schwachstelle</h2>
+          {{if .BEASTVuln}}
+          <p><span class="label bad">Schlecht</span>
+            {{ if .AbleToDetectNMinusOneSplitting }}
+
+	    Dein Client ist anfällig
+             für <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST-Angriffe</a>. Er
+             setzt auf TLS 1.0 oder früher,
+             benutzt <a href="http://de.wikipedia.org/wiki/Cipher_Block_Chaining_Mode">Cipher-Block
+             Chaining</a> und setzt dabei kein 1/n-1
+             Record Splitting ein. Diese Kombination
+             ist ein Datenleck.
+
+            {{ else }}
+
+	    Dein Client ist wahrscheinlich anfällig
+             für <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST-Angriffe</a>. Er
+             setzt auf TLS 1.0 oder früher und
+             benutzt <a href="http://de.wikipedia.org/wiki/Cipher_Block_Chaining_Mode">Cipher-Block
+             Chaining</a>. Allerdings kann dieser
+             Server keine der CBC-Suiten des Clients
+             und deshalb kann er auch nicht
+             feststellen, ob der Client 1/n-1 Record
+             Splitting einsetzt. Das ist jedoch bei den
+             Clients, die diese unüblichen
+             Cipher-Suiten nutzen, selten der Fall;
+             deshalb sollte man den schlimmmsten Fall
+             annehmen.
+
+            {{ end }}
+            </p>
+          {{else}}
+          <p><span class="label okay">Gut</span>
+
+            {{ if .AbleToDetectNMinusOneSplitting }}
+
+	    Dein Client ist nicht anfällig
+             für <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST-Angriffe</a>. Er
+             setzt zwar auf TLS 1.0 und benutzt
+             dabei <a href="http://de.wikipedia.org/wiki/Cipher_Block_Chaining_Mode">Cipher-Block
+             Chaining</a>. Aber er schützt diesen durch
+             das 1/n-1 Record Splitting.
+
+            {{ else }}
+
+	    Dein Client ist nicht anfällig
+             für <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST-Angriffe</a> weil er ein neueres Protokoll als
+             TLS 1.0 benutzt. Der BEAST-Angriff funktioniert nur gegen Clients, die TLS 1.0 und 
+             <a href="http://de.wikipedia.org/wiki/Cipher_Block_Chaining_Mode">Cipher-Block
+             Chaining</a> nutzen und das nicht durch
+             1/n-1 Record Splitting absichern.
+
+            {{ end }}
+          {{end}}
+          <p><a href="/s/about.html/#beast-vulnerability">Mehr dazu</a></p>
+        </div>
+
+        <div class="span4">
+          <h2>Unsichere Cipher-Suiten</h2>
+          {{if len .InsecureCipherSuites}}
+          <p><span class="label bad">Schlecht</span> Dein
+          Client unterstützt Cipher-Suiten, die als
+          unsicher bekannt sind:</p>
+	  <!-- TODO: reasons still english, located in
+	  ../insecure_suites.go, by ju -->
+          <ul>
+            {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
+            <li>{{$cipherSuite}}: {{sentence $reasons}}</li>
+            {{end}}
+          </ul>
+          {{else}}
+          <p><span class="label okay">Gut</span> Dein
+          Client benutzt keine als unsicher bekannten
+          Cipher-Suiten.</p>  {{end}}
+          <p><a href="/s/about.html/#insecure-cipher-suites">Mehr dazu</a></p>
+        </div>
+      </div>
+      <div class="row">
+        {{if .UnknownCipherSuiteSupported}}
+        <div class="span4">
+          <h2>Unbekannte Cipher-Suiten unterstützt</h2>
+          <p><span class="label bad">Schlecht</span>
+          Dein Client benutzt eine Cipher-Suite, die
+          dieser Dienst nicht erkennt. Das heißt, sie
+          ist nicht in den Standards und wahrscheinlich
+          unsicher. Pass auf.</p>
+        </div>
+        <p><a href="/s/about.html/#unknown-cipher-suites-supported">Mehr dazu</a></p>
+        {{end}}
+        <div class="span4">
+          <h2>Präsentierte Cipher-Suiten</h2>
+          <p>Dein Client behauptet, er beherrscht die
+          folgenden Cipher-Suiten in der aufgeführten
+          Reihenfolge:</p>
+          <ul>
+            {{range .GivenCipherSuites}}
+            <li>{{.}}</li>
+            {{end}}
+          </ul>
+          <p><a href="/s/about.html/#given-cipher-suites">Mehr dazu</a></p>
+        </div>
+      </div>
+    </div>
+
+    <script src="//code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="/s/js/bootstrap.min.js"></script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-46659537-1', 'howsmyssl.com');
+  ga('send', 'pageview');
+
+</script>
+  </body>
+</html>
