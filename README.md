@@ -18,6 +18,14 @@ is `go get`'able, of course.
 It has a fork of the Go crypto/tls library at ./tls/ in order to add a
 ServerHandshake and expose the ClientHello struct.
 
+Building
+--------
+
+    go get
+    go build
+    ./howsmyssl &
+    curl -k https://localhost:10443/a/check
+
 It's been useful to me to use [justrun][justrun] to recompile the project
 while modifying the template. Typical use is simply:
 
