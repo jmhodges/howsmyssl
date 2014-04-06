@@ -58,7 +58,7 @@ var (
 	webStatuses     = NewStatusStats(webVars)
 	commonRedirects = expvar.NewInt("common_redirects")
 
-	nonAlphaNumeric, _ = regexp.Compile("[^[:alnum:]]")
+	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
 
 	index *template.Template
 )
@@ -151,13 +151,16 @@ func renderHTML(r *http.Request, data *clientInfo) ([]byte, error) {
 func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return marshalled, err
+		return nil, err
 	}
 	callback := r.FormValue("callback")
-	callback = nonAlphaNumeric.ReplaceAllString(callback, "")
+	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
 
 	if callback != "" {
-		return []byte(fmt.Sprintf("%s(%s)", callback, marshalled)), nil
+		result := append(sanitizedCallback, "("...)
+		result = append(result, marshalled...)
+		result = append(result, ")"...)
+		return result, nil
 	} else {
 		return marshalled, nil
 	}
