@@ -156,11 +156,8 @@ func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
 	callback := r.FormValue("callback")
 	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
 
-	if callback != "" {
-		result := append(sanitizedCallback, "("...)
-		result = append(result, marshalled...)
-		result = append(result, ")"...)
-		return result, nil
+	if len(sanitizedCallback) > 0 {
+		return []byte(fmt.Sprintf("%s(%s)", sanitizedCallback, marshalled)), nil
 	} else {
 		return marshalled, nil
 	}
