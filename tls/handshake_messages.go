@@ -483,7 +483,7 @@ func (m *serverHelloMsg) marshal() []byte {
 		extensionsLength += 1
 		numExtensions++
 	}
-	m.heartbeatReceiver = true
+	//m.heartbeatReceiver = true
 	if m.heartbeatReceiver {
 		extensionsLength += 1
 		numExtensions++
@@ -646,7 +646,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 			if length != 1 {
 				return false
 			}
-			m.heartbeatReceiver = true //data[0] == 1 // peer_allowed_to_send
+			m.heartbeatReceiver = data[0] == 1 // peer_allowed_to_send
 		}
 		data = data[length:]
 	}
