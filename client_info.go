@@ -25,6 +25,7 @@ type clientInfo struct {
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         Rating              `json:"rating"`
+	HeartbleedVuln                 bool                `json:"heartbleed_vuln"`
 }
 
 func ClientInfo(c *conn) *clientInfo {
@@ -98,5 +99,14 @@ func ClientInfo(c *conn) *clientInfo {
 		vers <= tls.VersionTLS10 {
 		d.Rating = bad
 	}
+
+	d.HeartbleedVuln = c.heartbleedVulnerable
+	if c.heartbleedVulnerable {
+		d.Rating = bad
+		print("Client is vulnerable to heartbleed\n")
+	} else {
+		print("Not vulnerable\n")
+	}
+
 	return d
 }
