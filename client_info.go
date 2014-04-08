@@ -100,12 +100,17 @@ func ClientInfo(c *conn) *clientInfo {
 		d.Rating = bad
 	}
 
-	d.HeartbleedVuln = c.heartbleedVulnerable
-	if c.heartbleedVulnerable {
-		d.Rating = bad
+
+	// Send client a malformed heartbeat packed to check for Heartbleed
+	// vulnerability.
+	_, _, err := c.Heartbeat(100, make([]byte, 20))
+	if err == nil {
 		print("Client is vulnerable to heartbleed\n")
+		d.HeartbleedVuln = true
+		d.Rating = bad
 	} else {
-		print("Not vulnerable\n")
+		print("Not vulnerable to heartbleed\n")
+		d.HeartbleedVuln = false
 	}
 
 	return d

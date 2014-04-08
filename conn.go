@@ -30,14 +30,13 @@ func (l *listener) Accept() (net.Conn, error) {
 		c.Close()
 		return nil, tlsConnConvError
 	}
-	return &conn{tlsConn, &sync.Mutex{}, nil, false}, nil
+	return &conn{tlsConn, &sync.Mutex{}, nil}, nil
 }
 
 type conn struct {
 	*tls.Conn
 	handshakeMutex       *sync.Mutex
 	st                   *tls.ServerHandshakeState
-	heartbleedVulnerable bool
 }
 
 func (c *conn) Read(b []byte) (int, error) {
@@ -66,15 +65,6 @@ func (c *conn) handshake() error {
 	if err != nil {
 		log.Printf("handshake problem: %#v", err)
 		return err
-	}
-
-	// Send client a malformed heartbeat packed to check for Heartbleed
-	// vulnerability.
-	_, _, err = c.Heartbeat(100, make([]byte, 20))
-	if err == nil {
-		c.heartbleedVulnerable = true
-	} else {
-		c.heartbleedVulnerable = false
 	}
 
 	c.handshakeMutex.Lock()

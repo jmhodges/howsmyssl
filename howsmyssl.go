@@ -182,6 +182,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
 	}
+
 	data := ClientInfo(tc)
 	bs, err := render(data)
 	if err != nil {
