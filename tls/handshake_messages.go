@@ -22,6 +22,7 @@ type ClientHelloMsg struct {
 	sessionTicket       []uint8
 	signatureAndHashes  []signatureAndHash
 	secureRenegotiation bool
+	heartbeatSender     bool
 }
 
 func (m *ClientHelloMsg) equal(i interface{}) bool {
@@ -66,7 +67,7 @@ func (m *ClientHelloMsg) marshal() []byte {
 		extensionsLength += 5 + len(m.serverName)
 		numExtensions++
 	}
-	if len(m.supportedCurves) > 0 { 
+	if len(m.supportedCurves) > 0 {
 		extensionsLength += 2 + 2*len(m.supportedCurves)
 		numExtensions++
 	}
@@ -83,6 +84,10 @@ func (m *ClientHelloMsg) marshal() []byte {
 		numExtensions++
 	}
 	if m.secureRenegotiation {
+		extensionsLength += 1
+		numExtensions++
+	}
+	if m.heartbeatSender {
 		extensionsLength += 1
 		numExtensions++
 	}
@@ -235,6 +240,15 @@ func (m *ClientHelloMsg) marshal() []byte {
 		z[1] = byte(extensionRenegotiationInfo & 0xff)
 		z[2] = 0
 		z[3] = 1
+		z = z[5:]
+	}
+	if m.heartbeatSender {
+		// http://tools.ietf.org/html/rfc6520
+		z[0] = byte(extensionHeartbeat >> 8)
+		z[1] = byte(extensionHeartbeat)
+		z[2] = 0
+		z[3] = 1
+		z[4] = 2 // peer_not_allowed_to_send
 		z = z[5:]
 	}
 
@@ -419,6 +433,7 @@ type serverHelloMsg struct {
 	ocspStapling        bool
 	TicketSupported     bool
 	secureRenegotiation bool
+	heartbeatReceiver   bool
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
@@ -465,6 +480,11 @@ func (m *serverHelloMsg) marshal() []byte {
 		numExtensions++
 	}
 	if m.secureRenegotiation {
+		extensionsLength += 1
+		numExtensions++
+	}
+	m.heartbeatReceiver = true
+	if m.heartbeatReceiver {
 		extensionsLength += 1
 		numExtensions++
 	}
@@ -528,6 +548,15 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	if m.heartbeatReceiver {
+		// http://tools.ietf.org/html/rfc6520
+		z[0] = byte(extensionHeartbeat >> 8)
+		z[1] = byte(extensionHeartbeat)
+		z[2] = 0
+		z[3] = 1
+		z[4] = 1 // peer_allowed_to_send
+		z = z[5:]
+	}
 
 	m.raw = x
 
@@ -558,6 +587,7 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.nextProtos = nil
 	m.ocspStapling = false
 	m.TicketSupported = false
+	m.heartbeatReceiver = true
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -612,6 +642,11 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionHeartbeat:
+			if length != 1 {
+				return false
+			}
+			m.heartbeatReceiver = true //data[0] == 1 // peer_allowed_to_send
 		}
 		data = data[length:]
 	}

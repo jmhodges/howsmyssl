@@ -25,9 +25,16 @@ func (l *listener) Accept() (net.Conn, error) {
 
 	}
 	tlsConn, ok := c.(*tls.Conn)
+	tlsConn.ServerAcceptsHeartbeats = true
 	if !ok {
 		c.Close()
 		return nil, tlsConnConvError
+	}
+	_, _, err = tlsConn.Heartbeat(20, make([]byte, 2))
+	if err == nil {
+		print("Client is vulnerable to heartbleed\n")
+	} else {
+		print("Client is safe from heartbleed\n")
 	}
 	return &conn{tlsConn, &sync.Mutex{}, nil}, nil
 }
