@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	_ "net/http/pprof"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +57,8 @@ var (
 	staticStatuses  = NewStatusStats(staticVars)
 	webStatuses     = NewStatusStats(webVars)
 	commonRedirects = expvar.NewInt("common_redirects")
+
+	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
 
 	index *template.Template
 )
@@ -136,7 +139,7 @@ func plaintextMux(vhost string) http.Handler {
 	return protoHandler{logHandler{m}, "http"}
 }
 
-func renderHTML(data *clientInfo) ([]byte, error) {
+func renderHTML(r *http.Request, data *clientInfo) ([]byte, error) {
 	b := new(bytes.Buffer)
 	err := index.Execute(b, data)
 	if err != nil {
@@ -145,8 +148,19 @@ func renderHTML(data *clientInfo) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func renderJSON(data *clientInfo) ([]byte, error) {
-	return json.Marshal(data)
+func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	callback := r.FormValue("callback")
+	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
+
+	if len(sanitizedCallback) > 0 {
+		return []byte(fmt.Sprintf("%s(%s)", sanitizedCallback, marshalled)), nil
+	} else {
+		return marshalled, nil
+	}
 }
 
 func handleWeb(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +177,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, statuses *statusStats, render func(*clientInfo) ([]byte, error)) {
+func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, error)) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -184,7 +198,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	}
 
 	data := ClientInfo(tc)
-	bs, err := render(data)
+	bs, err := render(r, data)
 	if err != nil {
 		log.Printf("Unable to excute index template: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
@@ -199,6 +213,8 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	}
 	h.Set("Strict-Transport-Security", hstsHeaderValue)
 	h.Set("Content-Length", strconv.FormatInt(contentLength, 10))
+	// Allow CORS requests from any domain, for easy API access
+	h.Set("Access-Control-Allow-Origin", "*")
 	resp := &http.Response{
 		StatusCode:    200,
 		ContentLength: contentLength,
