@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/jmhodges/howsmyssl/tls"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 var (
@@ -25,7 +26,6 @@ func (l *listener) Accept() (net.Conn, error) {
 
 	}
 	tlsConn, ok := c.(*tls.Conn)
-	tlsConn.ServerAcceptsHeartbeats = true
 	if !ok {
 		c.Close()
 		return nil, tlsConnConvError
@@ -35,8 +35,8 @@ func (l *listener) Accept() (net.Conn, error) {
 
 type conn struct {
 	*tls.Conn
-	handshakeMutex       *sync.Mutex
-	st                   *tls.ServerHandshakeState
+	handshakeMutex *sync.Mutex
+	st             *tls.ServerHandshakeState
 }
 
 func (c *conn) Read(b []byte) (int, error) {

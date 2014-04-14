@@ -50,7 +50,6 @@ type Conn struct {
 	clientProtocol         string
 	clientProtocolFallback bool
 
-	ServerAcceptsHeartbeats bool
 	// first permanent error
 	connErr
 
@@ -938,10 +937,6 @@ var ErrNoHeartbeat = errors.New("tls: server does not accept heartbeats")
 func (c *Conn) Heartbeat(length uint16, payload []byte) (int, []byte, error) {
 	if err := c.Handshake(); err != nil {
 		return 0, nil, err
-	}
-
-	if !c.ServerAcceptsHeartbeats {
-		return 0, nil, ErrNoHeartbeat
 	}
 
 	c.out.Lock()
