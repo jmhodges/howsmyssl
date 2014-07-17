@@ -127,7 +127,7 @@ var nullAuthCipherSuites = map[string]bool{
 }
 
 // Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
-// 0xFEFF is still emitted by by Firefox 25.0. Discussed here:
+// 0xFEFF is still emitted by Firefox 25.0. Discussed here:
 // https://groups.google.com/forum/#!topic/mozilla.dev.tech.crypto/oWk0FkKsek4
 // and
 // http://www-archive.mozilla.org/projects/security/pki/nss/ssl/fips-ssl-ciphersuites.html
