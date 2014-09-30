@@ -8,7 +8,6 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/jmhodges/howsmyssl/tls"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -21,6 +20,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 const (
@@ -28,12 +29,12 @@ const (
 Content-Length: 26
 Connection: close
 Content-Type: text/plain; charset="utf-8"
-Strict-Transport-Security: max-age=631138519; includeSubdomains
+Strict-Transport-Security: max-age=631138519; includeSubdomains; preload
 Date: %s
 
 500 Internal Server Error
 `
-	hstsHeaderValue = "max-age=631138519; includeSubdomains"
+	hstsHeaderValue = "max-age=631138519; includeSubdomains; preload"
 	xForwardedProto = "X-Forwarded-Proto"
 )
 
