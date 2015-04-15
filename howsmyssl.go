@@ -41,7 +41,7 @@ Date: %s
 var (
 	httpsAddr = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
 	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
-	vhost     = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
+	rawVHost  = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
@@ -67,12 +67,30 @@ var (
 func main() {
 	flag.Parse()
 
-	host := *vhost
-	if strings.Contains(*vhost, ":") {
+	var routeHost, redirectHost string
+	// Use cases to support:
+	//   * Redirect to non-standard HTTPS port (that is, not 443) that is the same as the port we're booting the HTTPS server on.
+	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
+	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
+	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
+	if strings.Contains(*rawVHost, ":") {
 		var err error
-		host, _, err = net.SplitHostPort(*vhost)
+		vport := ""
+		// We can drop port in routeHost here because http.ServeMux
+		// doesn't currently know how to match against ports (see
+		// https://golang.org/issue/10463) and we strip ports inside
+		// protoHandler to accomodate that fact. If ServeMux learns
+		// how to handle ports, we can choose to use *rawVHost for it
+		// then.
+		routeHost, vport, err = net.SplitHostPort(*rawVHost)
 		if err != nil {
 			log.Fatalf("unable to parse httpsAddr: %s", err)
+		}
+		// Don't commonRedirect to https://example.com:443, just https://example.com
+		if vport == "443" {
+			redirectHost = routeHost
+		} else {
+			redirectHost = *rawVHost
 		}
 	}
 
@@ -94,7 +112,8 @@ func main() {
 	l := &listener{tlsListener}
 
 	m := tlsMux(
-		host,
+		routeHost,
+		redirectHost,
 		makeStaticHandler())
 
 	adminAddr := net.JoinHostPort("localhost", *adminPort)
@@ -112,27 +131,27 @@ func main() {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = http.Serve(plaintextListener, plaintextMux(host))
+	err = http.Serve(plaintextListener, plaintextMux(redirectHost))
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
 }
 
-func tlsMux(vhost string, staticHandler http.Handler) http.Handler {
+func tlsMux(routeHost string, redirectHost string, staticHandler http.Handler) http.Handler {
 	m := http.NewServeMux()
-	m.Handle(vhost+"/s/", staticHandler)
-	m.HandleFunc(vhost+"/a/check", handleAPI)
-	m.HandleFunc(vhost+"/", handleWeb)
-	m.HandleFunc(vhost+"/healthcheck", healthcheck)
+	m.Handle(routeHost+"/s/", staticHandler)
+	m.HandleFunc(routeHost+"/a/check", handleAPI)
+	m.HandleFunc(routeHost+"/", handleWeb)
+	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
-	m.Handle("/", commonRedirect(vhost))
+	m.Handle("/", commonRedirect(redirectHost))
 	return protoHandler{logHandler{m}, "https"}
 }
 
-func plaintextMux(vhost string) http.Handler {
+func plaintextMux(redirectHost string) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
-	m.Handle("/", commonRedirect(vhost))
+	m.Handle("/", commonRedirect(redirectHost))
 	return protoHandler{logHandler{m}, "http"}
 }
 
@@ -243,7 +262,7 @@ func healthcheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ok"))
 }
 
-func commonRedirect(vhost string) http.Handler {
+func commonRedirect(redirectHost string) http.Handler {
 	hf := func(w http.ResponseWriter, r *http.Request) {
 		commonRedirects.Add(1)
 		if r.Header.Get(xForwardedProto) == "https" {
@@ -252,7 +271,7 @@ func commonRedirect(vhost string) http.Handler {
 		u := r.URL
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
-		u.Host = vhost
+		u.Host = redirectHost
 		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
