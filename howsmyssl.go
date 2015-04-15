@@ -70,13 +70,9 @@ func main() {
 	host := *vhost
 	if strings.Contains(*vhost, ":") {
 		var err error
-		shost, port, err := net.SplitHostPort(*vhost)
+		host, _, err = net.SplitHostPort(*vhost)
 		if err != nil {
 			log.Fatalf("unable to parse httpsAddr: %s", err)
-		}
-		host = shost
-		if port != "443" {
-			host = *vhost
 		}
 	}
 
@@ -341,6 +337,12 @@ type protoHandler struct {
 
 func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set(xForwardedProto, h.proto)
+	// TODO(jmhodges): gross hack in order to get ServeMux to match ports
+	// See https://golang.org/issue/10463
+	host, _, err := net.SplitHostPort(r.Host)
+	if err == nil {
+		r.Host = host
+	}
 	h.inner.ServeHTTP(w, r)
 }
 
