@@ -86,12 +86,27 @@ func main() {
 		if err != nil {
 			log.Fatalf("unable to parse httpsAddr: %s", err)
 		}
+		if routeHost == "" {
+			routeHost, _, _ = net.SplitHostPort(*httpsAddr)
+			if routeHost == "" {
+				routeHost = "localhost"
+			}
+		}
 		// Don't commonRedirect to https://example.com:443, just https://example.com
 		if vport == "443" {
 			redirectHost = routeHost
 		} else {
 			redirectHost = *rawVHost
 		}
+	} else {
+		routeHost = *rawVHost
+		if routeHost == "" {
+			routeHost, _, _ = net.SplitHostPort(*httpsAddr)
+			if routeHost == "" {
+				routeHost = "localhost"
+			}
+		}
+		redirectHost = routeHost
 	}
 
 	apiVars.Set("requests", apiRequests)
