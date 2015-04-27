@@ -67,47 +67,7 @@ var (
 func main() {
 	flag.Parse()
 
-	var routeHost, redirectHost string
-	// Use cases to support:
-	//   * Redirect to non-standard HTTPS port (that is, not 443) that is the same as the port we're booting the HTTPS server on.
-	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
-	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
-	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
-	if strings.Contains(*rawVHost, ":") {
-		var err error
-		vport := ""
-		// We can drop port in routeHost here because http.ServeMux
-		// doesn't currently know how to match against ports (see
-		// https://golang.org/issue/10463) and we strip ports inside
-		// protoHandler to accomodate that fact. If ServeMux learns
-		// how to handle ports, we can choose to use *rawVHost for it
-		// then.
-		routeHost, vport, err = net.SplitHostPort(*rawVHost)
-		if err != nil {
-			log.Fatalf("unable to parse httpsAddr: %s", err)
-		}
-		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(*httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
-		}
-		// Don't commonRedirect to https://example.com:443, just https://example.com
-		if vport == "443" {
-			redirectHost = routeHost
-		} else {
-			redirectHost = *rawVHost
-		}
-	} else {
-		routeHost = *rawVHost
-		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(*httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
-		}
-		redirectHost = routeHost
-	}
+	routeHost, redirectHost := calculateDomains(*rawVHost, *httpsAddr)
 
 	apiVars.Set("requests", apiRequests)
 	staticVars.Set("requests", staticRequests)
@@ -129,7 +89,7 @@ func main() {
 	m := tlsMux(
 		routeHost,
 		redirectHost,
-		makeStaticHandler())
+		makeStaticHandler(*staticDir, staticVars))
 
 	adminAddr := net.JoinHostPort("localhost", *adminPort)
 	go func() {
@@ -150,6 +110,52 @@ func main() {
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
+}
+
+// Returns routeHost, redirectHost
+func calculateDomains(vhost, httpsAddr string) (string, string) {
+	var routeHost, redirectHost string
+	// Use cases to support:
+	//   * Redirect to non-standard HTTPS port (that is, not 443) that is the same as the port we're booting the HTTPS server on.
+	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
+	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
+	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
+	if strings.Contains(vhost, ":") {
+		var err error
+		vport := ""
+		// We can drop port in routeHost here because http.ServeMux
+		// doesn't currently know how to match against ports (see
+		// https://golang.org/issue/10463) and we strip ports inside
+		// protoHandler to accomodate that fact. If ServeMux learns
+		// how to handle ports, we can choose to use *rawVHost for it
+		// then.
+		routeHost, vport, err = net.SplitHostPort(vhost)
+		if err != nil {
+			log.Fatalf("unable to parse httpsAddr: %s", err)
+		}
+		if routeHost == "" {
+			routeHost, _, _ = net.SplitHostPort(httpsAddr)
+			if routeHost == "" {
+				routeHost = "localhost"
+			}
+		}
+		// Don't commonRedirect to https://example.com:443, just https://example.com
+		if vport == "443" {
+			redirectHost = routeHost
+		} else {
+			redirectHost = vhost
+		}
+	} else {
+		routeHost = vhost
+		if routeHost == "" {
+			routeHost, _, _ = net.SplitHostPort(httpsAddr)
+			if routeHost == "" {
+				routeHost = "localhost"
+			}
+		}
+		redirectHost = routeHost
+	}
+	return routeHost, redirectHost
 }
 
 func tlsMux(routeHost string, redirectHost string, staticHandler http.Handler) http.Handler {
@@ -313,9 +319,9 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	return tlsConf
 }
 
-func makeStaticHandler() http.HandlerFunc {
-	stats := NewStatusStats(staticVars)
-	h := http.StripPrefix("/s/", http.FileServer(http.Dir(*staticDir)))
+func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
+	stats := NewStatusStats(vars)
+	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
 	h = makeGzipHandler(h)
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
