@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/jmhodges/howsmyssl/tls"
 	"strings"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 type Rating string
@@ -51,6 +52,9 @@ func ClientInfo(c *conn) *clientInfo {
 			}
 			if nullAuthCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullAuthReason)
+			}
+			if rc4CipherSuites[s] {
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], rc4Reason)
 			}
 		} else {
 			w, found := weirdNSSSuites[ci]
