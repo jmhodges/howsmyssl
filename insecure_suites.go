@@ -155,6 +155,39 @@ var rc4CipherSuites = map[string]bool{
 	"TLS_DHE_DSS_WITH_RC4_128_SHA":           true,
 }
 
+// Cipher suites that use RC4 which has biases in its output, and has
+// been marked as insecure by the IETF. See https://tools.ietf.org/html/rfc7465
+//
+// Generated with:
+//   grep RC4 all_suites.go
+//
+// and confirmed against
+// https://tools.ietf.org/html/rfc7465#appendix-A which is missing 4
+// cipher suites included here.
+var rc4CipherSuites = map[string]bool{
+	"TLS_RSA_EXPORT_WITH_RC4_40_MD5":         true,
+	"TLS_RSA_WITH_RC4_128_MD5":               true,
+	"TLS_RSA_WITH_RC4_128_SHA":               true,
+	"TLS_DH_anon_EXPORT_WITH_RC4_40_MD5":     true,
+	"TLS_DH_anon_WITH_RC4_128_MD5":           true,
+	"TLS_KRB5_WITH_RC4_128_SHA":              true,
+	"TLS_KRB5_WITH_RC4_128_MD5":              true,
+	"TLS_KRB5_EXPORT_WITH_RC4_40_SHA":        true,
+	"TLS_KRB5_EXPORT_WITH_RC4_40_MD5":        true,
+	"TLS_PSK_WITH_RC4_128_SHA":               true,
+	"TLS_DHE_PSK_WITH_RC4_128_SHA":           true,
+	"TLS_RSA_PSK_WITH_RC4_128_SHA":           true,
+	"TLS_ECDH_ECDSA_WITH_RC4_128_SHA":        true,
+	"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":       true,
+	"TLS_ECDH_RSA_WITH_RC4_128_SHA":          true,
+	"TLS_ECDHE_RSA_WITH_RC4_128_SHA":         true,
+	"TLS_ECDH_anon_WITH_RC4_128_SHA":         true,
+	"TLS_ECDHE_PSK_WITH_RC4_128_SHA":         true,
+	"TLS_RSA_EXPORT1024_WITH_RC4_56_SHA":     true,
+	"TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA": true,
+	"TLS_DHE_DSS_WITH_RC4_128_SHA":           true,
+}
+
 // Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
 // 0xFEFF is still emitted by Firefox 25.0. Discussed here:
 // https://groups.google.com/forum/#!topic/mozilla.dev.tech.crypto/oWk0FkKsek4
