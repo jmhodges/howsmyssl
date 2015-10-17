@@ -37,10 +37,22 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRedirectHost: "www.howsmyssl.com",
 		},
 		vhostTest{
-			rawVHost:             "",
+			rawVHost:             "localhost:10443",
 			httpsAddr:            "localhost:10443",
 			expectedRouteHost:    "localhost",
 			expectedRedirectHost: "localhost:10443",
+		},
+		vhostTest{
+			rawVHost:             "example.com:10443",
+			httpsAddr:            "localhost:10443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com:10443",
+		},
+		vhostTest{
+			rawVHost:             "example.com:443",
+			httpsAddr:            "0:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com",
 		},
 	}
 	staticVars := expvar.NewMap("testStatic")
@@ -49,10 +61,10 @@ func TestVHostCalculation(t *testing.T) {
 	for i, vt := range tests {
 		routeHost, redirectHost := calculateDomains(vt.rawVHost, vt.httpsAddr)
 		if routeHost != vt.expectedRouteHost {
-			t.Errorf("#%d vhost %s, httpsAddr %s: want routeHost %s, got %s", i, vt.rawVHost, vt.httpsAddr, vt.expectedRouteHost, routeHost)
+			t.Errorf("#%d vhost %#v, httpsAddr %#v: want routeHost %#v, got %s", i, vt.rawVHost, vt.httpsAddr, vt.expectedRouteHost, routeHost)
 		}
 		if redirectHost != vt.expectedRedirectHost {
-			t.Errorf("#%d vhost %s, httpsAddr %s: want redirectHost %s, got %s", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
+			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
 		}
 
 		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, staticHandler)
@@ -65,10 +77,10 @@ func TestVHostCalculation(t *testing.T) {
 		expectedLocation := "https://" + vt.expectedRedirectHost + "/"
 		location := w.Header()["Location"][0]
 		if w.Code != http.StatusMovedPermanently {
-			t.Errorf("#%d vhost %s, httpsAddr %s: want Code %s, got %s", i, vt.rawVHost, vt.httpsAddr, http.StatusMovedPermanently, w.Code)
+			t.Errorf("#%d vhost %#v, httpsAddr %#v: want Code %d, got %d", i, vt.rawVHost, vt.httpsAddr, http.StatusMovedPermanently, w.Code)
 		}
 		if location != expectedLocation {
-			t.Errorf("#%d vhost %s, httpsAddr %s: want Location %s, got %s", i, vt.rawVHost, vt.httpsAddr, expectedLocation, location)
+			t.Errorf("#%d vhost %#v, httpsAddr %#v: want Location %s, got %s", i, vt.rawVHost, vt.httpsAddr, expectedLocation, location)
 		}
 	}
 }
