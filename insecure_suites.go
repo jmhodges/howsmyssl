@@ -5,7 +5,7 @@ var (
 	nullReason     = "specifies no encryption at all for the connection"
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
-	rc4Reason      = "use RC4 which has insecure biases in its output"
+	rc4Reason      = "uses RC4 which has insecure biases in its output"
 )
 
 // Cipher suites with less than 128-bit encryption.
