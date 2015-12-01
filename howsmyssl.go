@@ -117,7 +117,7 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	var routeHost, redirectHost string
 	// Use cases to support:
 	//   * Redirect to non-standard HTTPS port (that is, not 443) that is the same as the port we're booting the HTTPS server on.
-	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
+	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
 	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
 	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
 	if strings.Contains(vhost, ":") {
@@ -126,7 +126,7 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 		// We can drop port in routeHost here because http.ServeMux
 		// doesn't currently know how to match against ports (see
 		// https://golang.org/issue/10463) and we strip ports inside
-		// protoHandler to accomodate that fact. If ServeMux learns
+		// protoHandler to accommodate that fact. If ServeMux learns
 		// how to handle ports, we can choose to use *rawVHost for it
 		// then.
 		routeHost, vport, err = net.SplitHostPort(vhost)
