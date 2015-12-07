@@ -236,7 +236,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	data := ClientInfo(tc)
 	bs, err := render(r, data)
 	if err != nil {
-		log.Printf("Unable to excute index template: %s\n", err)
+		log.Printf("Unable to execute index template: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
 		return
 	}
