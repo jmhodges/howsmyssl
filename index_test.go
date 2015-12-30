@@ -20,6 +20,79 @@ func TestDumbNilishIndex(t *testing.T) {
 	}
 }
 
+type acmeTest struct {
+	challPath       string
+	acmeRedirectURL string
+	expected        string
+	code            int
+}
+
+func TestACMERedirect(t *testing.T) {
+	staticVars := new(expvar.Map).Init()
+	staticHandler := makeStaticHandler("/static", staticVars)
+	tests := []acmeTest{
+		// same domain redirect, acmeRedirectURL leads with "/"
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "/example.com",
+			expected:        "/example.com/.well-known/acme-challenge/foobar",
+		},
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "http://example.com",
+			expected:        "http://example.com/.well-known/acme-challenge/foobar",
+		},
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "http://example.com/",
+			expected:        "http://example.com/.well-known/acme-challenge/foobar",
+		},
+		// Busted acmeRedirectURL. Meant to be a domain, but was not.
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "example.com",
+			expected:        "/.well-known/acme-challenge/example.com/.well-known/acme-challenge/foobar",
+		},
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge",
+			acmeRedirectURL: "http://example.com",
+			expected:        "/.well-known/acme-challenge/",
+			code:            http.StatusMovedPermanently,
+		},
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/",
+			acmeRedirectURL: "http://example.com",
+			expected:        "",
+			code:            http.StatusOK,
+		},
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "http://example.com",
+			expected:        "http://example.com/.well-known/acme-challenge/foobar",
+		},
+	}
+	for i, tt := range tests {
+		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler)
+		r, err := http.NewRequest("GET", tt.challPath, nil)
+		if err != nil {
+			t.Fatalf("borked request for %#v: %s", tt.challPath, err)
+		}
+		w := httptest.NewRecorder()
+		tm.ServeHTTP(w, r)
+
+		location := w.Header().Get("Location")
+		if tt.code == 0 {
+			tt.code = http.StatusFound
+		}
+		if w.Code != tt.code {
+			t.Errorf("#%d, want %d, got %d", i, tt.code, w.Code)
+		}
+		if location != tt.expected {
+			t.Errorf("#%d, want %#v, got %#v", i, tt.expected, location)
+		}
+	}
+}
+
 type vhostTest struct {
 	rawVHost  string
 	httpsAddr string
@@ -55,7 +128,7 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRedirectHost: "example.com",
 		},
 	}
-	staticVars := expvar.NewMap("testStatic")
+	staticVars := new(expvar.Map).Init()
 	staticHandler := makeStaticHandler("/static", staticVars)
 
 	for i, vt := range tests {
@@ -67,7 +140,7 @@ func TestVHostCalculation(t *testing.T) {
 			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
 		}
 
-		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, staticHandler)
+		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler)
 		r, err := http.NewRequest("GET", "https://howsmyssl.com/", nil)
 		if err != nil {
 			t.Fatalf("borked request")

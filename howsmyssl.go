@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	_ "net/http/pprof"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -44,6 +45,7 @@ var (
 	rawVHost  = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
 	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
 	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
+	acmeURL   = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminPort = flag.String("adminPort", "4567", "localhost port to boot the admin server on")
@@ -86,9 +88,19 @@ func main() {
 	}
 	l := &listener{tlsListener}
 
+	if *acmeURL != "" {
+		if !strings.HasPrefix(*acmeURL, "/") &&
+			!strings.HasPrefix(*acmeURL, "https://") &&
+			!strings.HasPrefix(*acmeURL, "http://") {
+			fmt.Fprintf(os.Stderr, "acmeRedirect must start with 'http://', 'https://', or '/' but does not: %#v\n", *acmeURL)
+			os.Exit(1)
+		}
+	}
+
 	m := tlsMux(
 		routeHost,
 		redirectHost,
+		*acmeURL,
 		makeStaticHandler(*staticDir, staticVars))
 
 	adminAddr := net.JoinHostPort("localhost", *adminPort)
@@ -158,13 +170,15 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost string, redirectHost string, staticHandler http.Handler) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler) http.Handler {
+	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
 	m.Handle(routeHost+"/s/", staticHandler)
 	m.HandleFunc(routeHost+"/a/check", handleAPI)
 	m.HandleFunc(routeHost+"/", handleWeb)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
+	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
 	m.Handle("/", commonRedirect(redirectHost))
 	return protoHandler{logHandler{m}, "https"}
 }
@@ -384,6 +398,25 @@ func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Host = host
 	}
 	h.inner.ServeHTTP(w, r)
+}
+
+type acmeRedirect string
+
+func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Path
+	if string(a) == "" {
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(http.StatusNotFound)
+	}
+	if p == "/.well-known/acme-challenge/" {
+		w.Header().Set("Content-Length", "0")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if r.URL.RawQuery != "" {
+		p += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, string(a)+p, http.StatusFound)
 }
 
 type gzipWriter struct {
