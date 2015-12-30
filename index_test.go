@@ -53,6 +53,12 @@ func TestACMERedirect(t *testing.T) {
 			acmeRedirectURL: "example.com",
 			expected:        "/.well-known/acme-challenge/example.com/.well-known/acme-challenge/foobar",
 		},
+		// same domain redirect, acmeRedirectURL leads and trails with "/"
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "/okay/",
+			expected:        "/example.com/.well-known/acme-challenge/foobar",
+		},
 		{
 			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge",
 			acmeRedirectURL: "http://example.com",
