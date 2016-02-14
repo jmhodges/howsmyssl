@@ -250,7 +250,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	data := ClientInfo(tc)
 	bs, err := render(r, data)
 	if err != nil {
-		log.Printf("Unable to excute index template: %s\n", err)
+		log.Printf("Unable to execute index template: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
 		return
 	}
@@ -429,6 +429,9 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 }
 
 func makeGzipHandler(inner http.Handler) http.HandlerFunc {
+	// TODO(jmhodges): doesn't work in 304, 204 cases; gz.Close issue
+	// TODO(jmhodges): strings.Contains needs to be a split, trim, and for-loop
+	// TODO(jmhodges): needs to correctly set content length
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			inner.ServeHTTP(w, r)
