@@ -57,7 +57,19 @@ func TestACMERedirect(t *testing.T) {
 		{
 			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
 			acmeRedirectURL: "/okay/",
-			expected:        "/example.com/.well-known/acme-challenge/foobar",
+			expected:        "/okay/.well-known/acme-challenge/foobar",
+		},
+		// same domain redirect, acmeRedirectURL leads and trails with "/"
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "/okay/",
+			expected:        "/okay/.well-known/acme-challenge/foobar",
+		},
+		// same domain redirect, acmeRedirectURL leads with "/"
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "/okay",
+			expected:        "/okay/.well-known/acme-challenge/foobar",
 		},
 		{
 			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge",
@@ -94,7 +106,7 @@ func TestACMERedirect(t *testing.T) {
 			t.Errorf("#%d, want %d, got %d", i, tt.code, w.Code)
 		}
 		if location != tt.expected {
-			t.Errorf("#%d, want %#v, got %#v", i, tt.expected, location)
+			t.Errorf("#%d, %q, want %#v, got %#v", i, tt.acmeRedirectURL, tt.expected, location)
 		}
 	}
 }
