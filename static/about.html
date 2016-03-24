@@ -126,10 +126,10 @@
           <li>It supports TLS compression (that is compression of the
             encryption information used to secure your connection) which
             exposes it to the
-            <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
               attack</a>.</li>
           <li>It is susceptible to the
-            <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a>.</li>
         </ul>
         <p>How's My SSL? always selects the worst rating the client could
@@ -176,7 +176,7 @@
           the service that it supports cipher suites that include an
           additional private key created for each connection to the
           service. This allows servers that support it to
-          provide <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
+          provide <a href="https://en.wikipedia.org/wiki/Forward_secrecy">forward
           secrecy</a> to the client.</p>
         <p>This extra key prevents attackers from storing all of
           your encrypted communication with the website, then later
@@ -215,7 +215,7 @@
           attacker. Worse, it undermines the security
           of <a href="#ephemeral-key-support">ephemeral key cipher
           suites</a>. Preventing this is often a source
-          of <a href="http://googleonlinesecurity.blogspot.com/2011/11/protecting-data-for-long-term-with.html">important</a>
+          of <a href="https://googleonlinesecurity.blogspot.com/2011/11/protecting-data-for-long-term-with.html">important</a>
           <a href="https://blog.twitter.com/2013/forward-secrecy-at-twitter-0">engineering</a>
           <a href="https://www.imperialviolet.org/2013/06/27/botchingpfs.html">work</a>
           for a security engineer team. Of course, another alternative is for
@@ -234,7 +234,7 @@
           encrypted data if the attackers can make the user's computer make
           connections to the website. In practice, this turns out to be
           easy. This is now referred to as
-          the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+          the <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
           attack</a>. While some clients have mitigations in place, it's been
           determined that the best way to avoid the attack is to disable TLS 
           compression entirely. Clients that do so will be defaulted to 
@@ -243,11 +243,11 @@
           as <span class="label bad">Bad</span>.</p>
 
         <h4 class="fragpadded" id="beast-vulnerability">BEAST Vulnerability</h4>
-        <p>The <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+        <p>The <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
         vulnerability</a> is an attack on TLS 1.0 connections using a
         cipher suite in a cipher block chaining (CBC) mode. An
         attacker is able
-        to <a href="http://vnhacker.blogspot.com/2011/09/beast.html">decrypt
+        to <a href="https://vnhacker.blogspot.com/2011/09/beast.html">decrypt
         the data</a> on a TLS connection matching that
         criteria. Upgrading to TLS 1.1 or greater or not using CBC
         cipher suites prevents the attack (though, RC4 has its own
@@ -294,7 +294,7 @@
           certificate. This is called the "certificate authority trust model",
           and if this sounds crazy to you on many levels, you are not
           alone. It's currently the best security we have,
-          however. <a href="http://tack.io/index.html">TACK</a> is one good
+          however. <a href="https://tack.io/index.html">TACK</a> is one good
           attempt to, in a backwards compatible way, replace it.</p>
         <p>A cipher suite may also be added if it's a "null cipher suite"
           which is a funny way of saying the cipher does not encrypt the data
@@ -336,10 +336,10 @@
         <p>Okay, last thing. The jargon around is a little funny, so
            let's be a little more explicit. The 'S' in "HTTPS" is the
            TLS protocol. When folks refer to the
-           "<a href="http://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+           "<a href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
            they are referring to the most common of modern protocols
            of encrypting data across the
-           internet. "<a href="http://en.wikipedia.org/wiki/SSL">SSL</a>",
+           internet. "<a href="https://en.wikipedia.org/wiki/SSL">SSL</a>",
            when used by experts, refers to the older versions of these
            protocols. In general, people use "SSL" and "TLS"
            interchangeably, but that's changing towards everyone
@@ -369,16 +369,16 @@
       <footer>
         <p class="muted credit">
             <a rel="license"
-               href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0"
+               href="https://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0"
                src="https://i.creativecommons.org/l/by-sa/4.0/80x15.png"
                /></a><br />This work is licensed under a <a rel="license"
-               href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
+               href="https://creativecommons.org/licenses/by-sa/4.0/">Creative
                Commons Attribution-ShareAlike 4.0 International License</a>.
 
             <br />
 
             Written by
-            <a href="http://www.somethingsimilar.com/about/">Jeff Hodges</a></p>
+            <a href="https://www.somethingsimilar.com/about">Jeff Hodges</a></p>
       </footer>
     </div>
 

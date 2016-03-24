@@ -2,7 +2,7 @@ package main
 
 // All cipher suites in the TLS standards.
 // Generated with:
-//   curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
+//   curl -s https://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
 //
 // Plus appending the new ChaCha20/Poly1305 curve ciphers from Chrome 33.0 and
 // the fallback SCSV if the client had to degrade its version of TLS in order
@@ -335,7 +335,7 @@ var allCipherSuites = map[uint16]string{
 	0xCCA8: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 	0xCCA9: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
 
-	// http://tools.ietf.org/html/draft-ietf-tls-56-bit-ciphersuites-01
+	// https://tools.ietf.org/html/draft-ietf-tls-56-bit-ciphersuites-01
 	0x0062: "TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA",
 	0x0063: "TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA",
 	0x0064: "TLS_RSA_EXPORT1024_WITH_RC4_56_SHA",
