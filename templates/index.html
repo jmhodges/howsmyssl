@@ -111,7 +111,7 @@
           <p><span class="label okay">Good</span> Ephemeral keys are
             used in some of the cipher suites your client supports.
             This means your client may be used to provide
-            <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
+            <a href="https://en.wikipedia.org/wiki/Forward_secrecy">forward
             secrecy</a> if the server supports it. This greatly increases your protection
             against snoopers, including global passive adversaries who
             scoop up large amounts of encrypted traffic and store
@@ -121,7 +121,7 @@
             Ephemeral keys are not used in any of the cipher suites
             your client supports. This means your client cannot be
             used to
-            provide <a href="http://en.wikipedia.org/wiki/Forward_secrecy">forward
+            provide <a href="https://en.wikipedia.org/wiki/Forward_secrecy">forward
             secrecy</a>. Without it, global passive adversaries will
             be able to scoop up all of your encrypted traffic and
             decode it when their attacks or their computers are
@@ -150,13 +150,13 @@
           <p><span class="label bad">Bad</span> Your TLS client supports
             compressing the settings that encrypt your connection. This is
             really not good. It makes your TLS connections susceptible to
-            the <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            the <a href="https://en.wikipedia.org/wiki/CRIME_%28security_exploit%29">CRIME
             attack</a> and your encrypted data could be leaked!</p>
           {{else}}
           <p><span class="label okay">Good</span> Your TLS client does not attempt
             to compress the settings that encrypt your connection, avoiding
             information leaks from the
-            <a href="http://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            <a href="https://en.wikipedia.org/wiki/CRIME_%28security_exploit%29">CRIME
             attack</a>.</p>
           {{end}}
           <p><a href="/s/about.html/#tls-compression">Learn More</a></p>
@@ -168,10 +168,10 @@
             {{ if .AbleToDetectNMinusOneSplitting }}
 
             Your client is open to
-             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+             the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
              attack</a>. It's using TLS 1.0 or earlier while also
              supporting a cipher suite that
-             uses <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+             uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
              Chaining</a> and doesn't implement the 1/n-1 record
              splitting mitigation. That combination will leak
              information.
@@ -179,10 +179,10 @@
             {{ else }}
 
             Your client is probably open to
-             the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+             the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
              attack</a> because it's using TLS 1.0 or earlier while
              also supporting a cipher suite that
-             uses <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+             uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
              Chaining</a>. However, the CBC cipher suites your client
              supports is not one How's My SSL is able to use, so it
              was unable to determine if your client implements the
@@ -198,20 +198,20 @@
             {{ if .AbleToDetectNMinusOneSplitting }}
 
             Your client is not vulnerable to
-            the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a>. While it's using TLS 1.0 in conjunction
-            with <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+            with <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
             Chaining</a> cipher suites, it has implemented the 1/n-1
             record splitting mitigation.
 
             {{ else }}
 
             Your client is not vulnerable to
-            the <a href="http://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
             attack</a> because it's using a TLS protocol newer than
             TLS 1.0. The BEAST attack is only possible against clients
             using TLS 1.0 or earlier
-            using <a href="http://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+            using <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
             Chaining</a> cipher suites that do not implement the
             1/n-1 record splitting mitigation.
 

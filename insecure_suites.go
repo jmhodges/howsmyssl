@@ -20,7 +20,7 @@ var (
 //   TLS_KRB5_WITH_DES_CBC_MD5	             56-bit encryption
 //   TLS_KRB5_WITH_DES_CBC_SHA               56-bit encryption
 //
-// and, from http://tools.ietf.org/html/draft-ietf-tls-56-bit-ciphersuites-01:
+// and, from https://tools.ietf.org/html/draft-ietf-tls-56-bit-ciphersuites-01:
 //
 //   TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA     56-bit encryption, export grade
 //   TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA 56-bit encryption, export grade
