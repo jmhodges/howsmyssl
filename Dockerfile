@@ -10,7 +10,6 @@ RUN go install github.com/jmhodges/howsmyssl
 # Provided by kubernetes secrets or some such
 VOLUME "/secrets"
 
-ENV GOMAXPROCS=4
 CMD howsmyssl \
     -httpsAddr=:443 \
     -httpAddr=:80 \
