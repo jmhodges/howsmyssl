@@ -3,13 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -22,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmhodges/howsmyssl/gzip"
 	"github.com/jmhodges/howsmyssl/tls"
 )
 
@@ -336,7 +335,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
 	stats := NewStatusStats(vars)
 	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
-	h = makeGzipHandler(h)
+	h = gzip.GZIPHandler(h, nil)
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
 		w = &statWriter{w: w, stats: stats}
@@ -417,30 +416,4 @@ func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p += "?" + r.URL.RawQuery
 	}
 	http.Redirect(w, r, string(a)+p, http.StatusFound)
-}
-
-type gzipWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-func (w gzipWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-func makeGzipHandler(inner http.Handler) http.HandlerFunc {
-	// TODO(jmhodges): doesn't work in 304, 204 cases; gz.Close issue
-	// TODO(jmhodges): strings.Contains needs to be a split, trim, and for-loop
-	// TODO(jmhodges): needs to correctly set content length
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			inner.ServeHTTP(w, r)
-			return
-		}
-		w.Header().Set("Content-Encoding", "gzip")
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-		gzr := gzipWriter{Writer: gz, ResponseWriter: w}
-		inner.ServeHTTP(gzr, r)
-	}
 }
