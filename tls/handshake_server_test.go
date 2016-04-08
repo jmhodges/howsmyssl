@@ -74,7 +74,7 @@ func testClientHelloFailure(t *testing.T, serverConfig *Config, m handshakeMessa
 	c, s := net.Pipe()
 	go func() {
 		cli := Client(c, testConfig)
-		if ch, ok := m.(*clientHelloMsg); ok {
+		if ch, ok := m.(*ClientHelloMsg); ok {
 			cli.vers = ch.vers
 		}
 		cli.writeRecord(recordTypeHandshake, m.marshal())
@@ -99,33 +99,33 @@ var badProtocolVersions = []uint16{0x0000, 0x0005, 0x0100, 0x0105, 0x0200, 0x020
 
 func TestRejectBadProtocolVersion(t *testing.T) {
 	for _, v := range badProtocolVersions {
-		testClientHelloFailure(t, testConfig, &clientHelloMsg{vers: v}, "unsupported, maximum protocol version")
+		testClientHelloFailure(t, testConfig, &ClientHelloMsg{Vers: v}, "unsupported, maximum protocol version")
 	}
 }
 
 func TestNoSuiteOverlap(t *testing.T) {
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{0xff00},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{0xff00},
+		CompressionMethods: []uint8{0},
 	}
 	testClientHelloFailure(t, testConfig, clientHello, "no cipher suite supported by both client and server")
 }
 
 func TestNoCompressionOverlap(t *testing.T) {
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0xff},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0xff},
 	}
 	testClientHelloFailure(t, testConfig, clientHello, "client does not support uncompressed connections")
 }
 
 func TestNoRC4ByDefault(t *testing.T) {
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0},
 	}
 	serverConfig := *testConfig
 	// Reset the enabled cipher suites to nil in order to test the
@@ -137,15 +137,15 @@ func TestNoRC4ByDefault(t *testing.T) {
 func TestDontSelectECDSAWithRSAKey(t *testing.T) {
 	// Test that, even when both sides support an ECDSA cipher suite, it
 	// won't be selected if the server's private key doesn't support it.
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA},
+		CompressionMethods: []uint8{0},
 		supportedCurves:    []CurveID{CurveP256},
 		supportedPoints:    []uint8{pointFormatUncompressed},
 	}
 	serverConfig := *testConfig
-	serverConfig.CipherSuites = clientHello.cipherSuites
+	serverConfig.CipherSuites = clientHello.CipherSuites
 	serverConfig.Certificates = make([]Certificate, 1)
 	serverConfig.Certificates[0].Certificate = [][]byte{testECDSACertificate}
 	serverConfig.Certificates[0].PrivateKey = testECDSAPrivateKey
@@ -162,15 +162,15 @@ func TestDontSelectECDSAWithRSAKey(t *testing.T) {
 func TestDontSelectRSAWithECDSAKey(t *testing.T) {
 	// Test that, even when both sides support an RSA cipher suite, it
 	// won't be selected if the server's private key doesn't support it.
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA},
+		CompressionMethods: []uint8{0},
 		supportedCurves:    []CurveID{CurveP256},
 		supportedPoints:    []uint8{pointFormatUncompressed},
 	}
 	serverConfig := *testConfig
-	serverConfig.CipherSuites = clientHello.cipherSuites
+	serverConfig.CipherSuites = clientHello.CipherSuites
 	// First test that it *does* work when the server's key is RSA.
 	testClientHello(t, &serverConfig, clientHello)
 
@@ -184,12 +184,12 @@ func TestDontSelectRSAWithECDSAKey(t *testing.T) {
 }
 
 func TestRenegotiationExtension(t *testing.T) {
-	clientHello := &clientHelloMsg{
-		vers:                VersionTLS12,
-		compressionMethods:  []uint8{compressionNone},
+	clientHello := &ClientHelloMsg{
+		Vers:                VersionTLS12,
+		CompressionMethods:  []uint8{compressionNone},
 		random:              make([]byte, 32),
 		secureRenegotiation: true,
-		cipherSuites:        []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CipherSuites:        []uint16{TLS_RSA_WITH_RC4_128_SHA},
 	}
 
 	var buf []byte
@@ -236,10 +236,10 @@ func TestTLS12OnlyCipherSuites(t *testing.T) {
 	// the client negotiates TLS 1.1.
 	var zeros [32]byte
 
-	clientHello := &clientHelloMsg{
-		vers:   VersionTLS11,
+	clientHello := &ClientHelloMsg{
+		Vers:   VersionTLS11,
 		random: zeros[:],
-		cipherSuites: []uint16{
+		CipherSuites: []uint16{
 			// The Server, by default, will use the client's
 			// preference order. So the GCM cipher suite
 			// will be selected unless it's excluded because
@@ -247,7 +247,7 @@ func TestTLS12OnlyCipherSuites(t *testing.T) {
 			TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			TLS_RSA_WITH_RC4_128_SHA,
 		},
-		compressionMethods: []uint8{compressionNone},
+		CompressionMethods: []uint8{compressionNone},
 		supportedCurves:    []CurveID{CurveP256, CurveP384, CurveP521},
 		supportedPoints:    []uint8{pointFormatUncompressed},
 	}
@@ -263,7 +263,7 @@ func TestTLS12OnlyCipherSuites(t *testing.T) {
 		c.Close()
 	}()
 	config := *testConfig
-	config.CipherSuites = clientHello.cipherSuites
+	config.CipherSuites = clientHello.CipherSuites
 	Server(s, &config).Handshake()
 	s.Close()
 	if clientErr != nil {
@@ -787,10 +787,10 @@ func TestHandshakeServerSNIGetCertificateError(t *testing.T) {
 		return nil, errors.New(errMsg)
 	}
 
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0},
 		serverName:         "test",
 	}
 	testClientHelloFailure(t, &serverConfig, clientHello, errMsg)
@@ -807,10 +807,10 @@ func TestHandshakeServerEmptyCertificates(t *testing.T) {
 	}
 	serverConfig.Certificates = nil
 
-	clientHello := &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0},
+	clientHello := &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0},
 	}
 	testClientHelloFailure(t, &serverConfig, clientHello, errMsg)
 
@@ -818,10 +818,10 @@ func TestHandshakeServerEmptyCertificates(t *testing.T) {
 	// should always return a “no certificates” error.
 	serverConfig.GetCertificate = nil
 
-	clientHello = &clientHelloMsg{
-		vers:               0x0301,
-		cipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
-		compressionMethods: []uint8{0},
+	clientHello = &ClientHelloMsg{
+		Vers:               0x0301,
+		CipherSuites:       []uint16{TLS_RSA_WITH_RC4_128_SHA},
+		CompressionMethods: []uint8{0},
 	}
 	testClientHelloFailure(t, &serverConfig, clientHello, "no certificates")
 }
