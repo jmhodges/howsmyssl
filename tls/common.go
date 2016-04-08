@@ -5,9 +5,13 @@
 package tls
 
 import (
+	"container/list"
 	"crypto"
 	"crypto/rand"
+	"crypto/sha512"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"strings"
@@ -28,7 +32,7 @@ const (
 	recordHeaderLen = 5            // record header length
 	maxHandshake    = 65536        // maximum handshake we support (protocol max is 16 MB)
 
-	minVersion = VersionSSL30
+	minVersion = VersionTLS10
 	maxVersion = VersionTLS12
 )
 
@@ -70,6 +74,8 @@ const (
 	extensionSupportedCurves     uint16 = 10
 	extensionSupportedPoints     uint16 = 11
 	extensionSignatureAlgorithms uint16 = 13
+	extensionALPN                uint16 = 16
+	extensionSCT                 uint16 = 18 // https://tools.ietf.org/html/rfc6962#section-6
 	extensionSessionTicket       uint16 = 35
 	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo   uint16 = 0xff01
@@ -80,12 +86,14 @@ const (
 	scsvRenegotiation uint16 = 0x00ff
 )
 
-// TLS Elliptic Curves
+// CurveID is the type of a TLS identifier for an elliptic curve. See
 // http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-8
+type CurveID uint16
+
 const (
-	curveP256 uint16 = 23
-	curveP384 uint16 = 24
-	curveP521 uint16 = 25
+	CurveP256 CurveID = 23
+	CurveP384 CurveID = 24
+	CurveP521 CurveID = 25
 )
 
 // TLS Elliptic Curve Point Formats
@@ -118,6 +126,7 @@ const (
 const (
 	hashSHA1   uint8 = 2
 	hashSHA256 uint8 = 4
+	hashSHA384 uint8 = 5
 )
 
 // Signature algorithms for TLS 1.2 (See RFC 5246, section A.4.1)
@@ -132,33 +141,39 @@ type signatureAndHash struct {
 	hash, signature uint8
 }
 
-// supportedSKXSignatureAlgorithms contains the signature and hash algorithms
-// that the code advertises as supported in a TLS 1.2 ClientHello.
-var supportedSKXSignatureAlgorithms = []signatureAndHash{
+// supportedSignatureAlgorithms contains the signature and hash algorithms that
+// the code advertises as supported in a TLS 1.2 ClientHello and in a TLS 1.2
+// CertificateRequest.
+var supportedSignatureAlgorithms = []signatureAndHash{
 	{hashSHA256, signatureRSA},
 	{hashSHA256, signatureECDSA},
+	{hashSHA384, signatureRSA},
+	{hashSHA384, signatureECDSA},
 	{hashSHA1, signatureRSA},
 	{hashSHA1, signatureECDSA},
 }
 
-// supportedClientCertSignatureAlgorithms contains the signature and hash
-// algorithms that the code advertises as supported in a TLS 1.2
-// CertificateRequest.
-var supportedClientCertSignatureAlgorithms = []signatureAndHash{
-	{hashSHA256, signatureRSA},
-	{hashSHA256, signatureECDSA},
-}
-
 // ConnectionState records basic TLS details about the connection.
 type ConnectionState struct {
-	HandshakeComplete          bool                  // TLS handshake is complete
-	DidResume                  bool                  // connection resumes a previous TLS connection
-	CipherSuite                uint16                // cipher suite in use (TLS_RSA_WITH_RC4_128_SHA, ...)
-	NegotiatedProtocol         string                // negotiated next protocol (from Config.NextProtos)
-	NegotiatedProtocolIsMutual bool                  // negotiated protocol was advertised by server
-	ServerName                 string                // server name requested by client, if any (server side only)
-	PeerCertificates           []*x509.Certificate   // certificate chain presented by remote peer
-	VerifiedChains             [][]*x509.Certificate // verified chains built from PeerCertificates
+	Version                     uint16                // TLS version used by the connection (e.g. VersionTLS12)
+	HandshakeComplete           bool                  // TLS handshake is complete
+	DidResume                   bool                  // connection resumes a previous TLS connection
+	CipherSuite                 uint16                // cipher suite in use (TLS_RSA_WITH_RC4_128_SHA, ...)
+	NegotiatedProtocol          string                // negotiated next protocol (from Config.NextProtos)
+	NegotiatedProtocolIsMutual  bool                  // negotiated protocol was advertised by server
+	ServerName                  string                // server name requested by client, if any (server side only)
+	PeerCertificates            []*x509.Certificate   // certificate chain presented by remote peer
+	VerifiedChains              [][]*x509.Certificate // verified chains built from PeerCertificates
+	SignedCertificateTimestamps [][]byte              // SCTs from the server, if any
+	OCSPResponse                []byte                // stapled OCSP response from server, if any
+
+	// TLSUnique contains the "tls-unique" channel binding value (see RFC
+	// 5929, section 3). For resumed sessions this value will be nil
+	// because resumption does not include enough context (see
+	// https://secure-resumption.com/#channelbindings). This will change in
+	// future versions of Go once the TLS master-secret fix has been
+	// standardized and implemented.
+	TLSUnique []byte
 }
 
 // ClientAuthType declares the policy the server will follow for
@@ -173,12 +188,65 @@ const (
 	RequireAndVerifyClientCert
 )
 
-// A Config structure is used to configure a TLS client or server. After one
-// has been passed to a TLS function it must not be modified.
+// ClientSessionState contains the state needed by clients to resume TLS
+// sessions.
+type ClientSessionState struct {
+	sessionTicket      []uint8               // Encrypted ticket used for session resumption with server
+	vers               uint16                // SSL/TLS version negotiated for the session
+	cipherSuite        uint16                // Ciphersuite negotiated for the session
+	masterSecret       []byte                // MasterSecret generated by client on a full handshake
+	serverCertificates []*x509.Certificate   // Certificate chain presented by the server
+	verifiedChains     [][]*x509.Certificate // Certificate chains we built for verification
+}
+
+// ClientSessionCache is a cache of ClientSessionState objects that can be used
+// by a client to resume a TLS session with a given server. ClientSessionCache
+// implementations should expect to be called concurrently from different
+// goroutines.
+type ClientSessionCache interface {
+	// Get searches for a ClientSessionState associated with the given key.
+	// On return, ok is true if one was found.
+	Get(sessionKey string) (session *ClientSessionState, ok bool)
+
+	// Put adds the ClientSessionState to the cache with the given key.
+	Put(sessionKey string, cs *ClientSessionState)
+}
+
+// ClientHelloInfo contains information from a ClientHello message in order to
+// guide certificate selection in the GetCertificate callback.
+type ClientHelloInfo struct {
+	// CipherSuites lists the CipherSuites supported by the client (e.g.
+	// TLS_RSA_WITH_RC4_128_SHA).
+	CipherSuites []uint16
+
+	// ServerName indicates the name of the server requested by the client
+	// in order to support virtual hosting. ServerName is only set if the
+	// client is using SNI (see
+	// http://tools.ietf.org/html/rfc4366#section-3.1).
+	ServerName string
+
+	// SupportedCurves lists the elliptic curves supported by the client.
+	// SupportedCurves is set only if the Supported Elliptic Curves
+	// Extension is being used (see
+	// http://tools.ietf.org/html/rfc4492#section-5.1.1).
+	SupportedCurves []CurveID
+
+	// SupportedPoints lists the point formats supported by the client.
+	// SupportedPoints is set only if the Supported Point Formats Extension
+	// is being used (see
+	// http://tools.ietf.org/html/rfc4492#section-5.1.2).
+	SupportedPoints []uint8
+}
+
+// A Config structure is used to configure a TLS client or server.
+// After one has been passed to a TLS function it must not be
+// modified. A Config may be reused; the tls package will also not
+// modify it.
 type Config struct {
 	// Rand provides the source of entropy for nonces and RSA blinding.
 	// If Rand is nil, TLS uses the cryptographic random reader in package
 	// crypto/rand.
+	// The Reader must be safe for use by multiple goroutines.
 	Rand io.Reader
 
 	// Time returns the current time as the number of seconds since the epoch.
@@ -187,7 +255,8 @@ type Config struct {
 
 	// Certificates contains one or more certificate chains
 	// to present to the other side of the connection.
-	// Server configurations must include at least one certificate.
+	// Server configurations must include at least one certificate
+	// or else set GetCertificate.
 	Certificates []Certificate
 
 	// NameToCertificate maps from a certificate name to an element of
@@ -198,6 +267,15 @@ type Config struct {
 	// for all connections.
 	NameToCertificate map[string]*Certificate
 
+	// GetCertificate returns a Certificate based on the given
+	// ClientHelloInfo. It will only be called if the client supplies SNI
+	// information or if Certificates is empty.
+	//
+	// If GetCertificate is nil or returns nil, then the certificate is
+	// retrieved from NameToCertificate. If NameToCertificate is nil, the
+	// first element of Certificates will be used.
+	GetCertificate func(clientHello *ClientHelloInfo) (*Certificate, error)
+
 	// RootCAs defines the set of root certificate authorities
 	// that clients use when verifying server certificates.
 	// If RootCAs is nil, TLS uses the host's root CA set.
@@ -206,8 +284,10 @@ type Config struct {
 	// NextProtos is a list of supported, application level protocols.
 	NextProtos []string
 
-	// ServerName is included in the client's handshake to support virtual
-	// hosting.
+	// ServerName is used to verify the hostname on the returned
+	// certificates unless InsecureSkipVerify is given. It is also included
+	// in the client's handshake to support virtual hosting unless it is
+	// an IP address.
 	ServerName string
 
 	// ClientAuth determines the server's policy for
@@ -251,8 +331,12 @@ type Config struct {
 	// connections using that key are compromised.
 	SessionTicketKey [32]byte
 
+	// SessionCache is a cache of ClientSessionState entries for TLS session
+	// resumption.
+	ClientSessionCache ClientSessionCache
+
 	// MinVersion contains the minimum SSL/TLS version that is acceptable.
-	// If zero, then SSLv3 is taken as the minimum.
+	// If zero, then TLS 1.0 is taken as the minimum.
 	MinVersion uint16
 
 	// MaxVersion contains the maximum SSL/TLS version that is acceptable.
@@ -260,7 +344,44 @@ type Config struct {
 	// which is currently TLS 1.2.
 	MaxVersion uint16
 
+	// CurvePreferences contains the elliptic curves that will be used in
+	// an ECDHE handshake, in preference order. If empty, the default will
+	// be used.
+	CurvePreferences []CurveID
+
 	serverInitOnce sync.Once // guards calling (*Config).serverInit
+
+	// mutex protects sessionTicketKeys
+	mutex sync.RWMutex
+	// sessionTicketKeys contains zero or more ticket keys. If the length
+	// is zero, SessionTicketsDisabled must be true. The first key is used
+	// for new tickets and any subsequent keys can be used to decrypt old
+	// tickets.
+	sessionTicketKeys []ticketKey
+}
+
+// ticketKeyNameLen is the number of bytes of identifier that is prepended to
+// an encrypted session ticket in order to identify the key used to encrypt it.
+const ticketKeyNameLen = 16
+
+// ticketKey is the internal representation of a session ticket key.
+type ticketKey struct {
+	// keyName is an opaque byte string that serves to identify the session
+	// ticket key. It's exposed as plaintext in every session ticket.
+	keyName [ticketKeyNameLen]byte
+	aesKey  [16]byte
+	hmacKey [16]byte
+}
+
+// ticketKeyFromBytes converts from the external representation of a session
+// ticket key to a ticketKey. Externally, session ticket keys are 32 random
+// bytes and this function expands that into sufficient name and key material.
+func ticketKeyFromBytes(b [32]byte) (key ticketKey) {
+	hashed := sha512.Sum512(b[:])
+	copy(key.keyName[:], hashed[:ticketKeyNameLen])
+	copy(key.aesKey[:], hashed[ticketKeyNameLen:ticketKeyNameLen+16])
+	copy(key.hmacKey[:], hashed[ticketKeyNameLen+16:ticketKeyNameLen+32])
+	return key
 }
 
 func (c *Config) serverInit() {
@@ -268,16 +389,51 @@ func (c *Config) serverInit() {
 		return
 	}
 
-	// If the key has already been set then we have nothing to do.
+	alreadySet := false
 	for _, b := range c.SessionTicketKey {
 		if b != 0 {
+			alreadySet = true
+			break
+		}
+	}
+
+	if !alreadySet {
+		if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
+			c.SessionTicketsDisabled = true
 			return
 		}
 	}
 
-	if _, err := io.ReadFull(c.rand(), c.SessionTicketKey[:]); err != nil {
-		c.SessionTicketsDisabled = true
+	c.sessionTicketKeys = []ticketKey{ticketKeyFromBytes(c.SessionTicketKey)}
+}
+
+func (c *Config) ticketKeys() []ticketKey {
+	c.mutex.RLock()
+	// c.sessionTicketKeys is constant once created. SetSessionTicketKeys
+	// will only update it by replacing it with a new value.
+	ret := c.sessionTicketKeys
+	c.mutex.RUnlock()
+	return ret
+}
+
+// SetSessionTicketKeys updates the session ticket keys for a server. The first
+// key will be used when creating new tickets, while all keys can be used for
+// decrypting tickets. It is safe to call this function while the server is
+// running in order to rotate the session ticket keys. The function will panic
+// if keys is empty.
+func (c *Config) SetSessionTicketKeys(keys [][32]byte) {
+	if len(keys) == 0 {
+		panic("tls: keys must have at least one key")
 	}
+
+	newKeys := make([]ticketKey, len(keys))
+	for i, bytes := range keys {
+		newKeys[i] = ticketKeyFromBytes(bytes)
+	}
+
+	c.mutex.Lock()
+	c.sessionTicketKeys = newKeys
+	c.mutex.Unlock()
 }
 
 func (c *Config) rand() io.Reader {
@@ -318,6 +474,15 @@ func (c *Config) maxVersion() uint16 {
 	return c.MaxVersion
 }
 
+var defaultCurvePreferences = []CurveID{CurveP256, CurveP384, CurveP521}
+
+func (c *Config) curvePreferences() []CurveID {
+	if c == nil || len(c.CurvePreferences) == 0 {
+		return defaultCurvePreferences
+	}
+	return c.CurvePreferences
+}
+
 // mutualVersion returns the protocol version to use given the advertised
 // version of the peer.
 func (c *Config) mutualVersion(vers uint16) (uint16, bool) {
@@ -333,22 +498,33 @@ func (c *Config) mutualVersion(vers uint16) (uint16, bool) {
 	return vers, true
 }
 
-// getCertificateForName returns the best certificate for the given name,
-// defaulting to the first element of c.Certificates if there are no good
-// options.
-func (c *Config) getCertificateForName(name string) *Certificate {
-	if len(c.Certificates) == 1 || c.NameToCertificate == nil {
-		// There's only one choice, so no point doing any work.
-		return &c.Certificates[0]
+// getCertificate returns the best certificate for the given ClientHelloInfo,
+// defaulting to the first element of c.Certificates.
+func (c *Config) getCertificate(clientHello *ClientHelloInfo) (*Certificate, error) {
+	if c.GetCertificate != nil &&
+		(len(c.Certificates) == 0 || len(clientHello.ServerName) > 0) {
+		cert, err := c.GetCertificate(clientHello)
+		if cert != nil || err != nil {
+			return cert, err
+		}
 	}
 
-	name = strings.ToLower(name)
+	if len(c.Certificates) == 0 {
+		return nil, errors.New("crypto/tls: no certificates configured")
+	}
+
+	if len(c.Certificates) == 1 || c.NameToCertificate == nil {
+		// There's only one choice, so no point doing any work.
+		return &c.Certificates[0], nil
+	}
+
+	name := strings.ToLower(clientHello.ServerName)
 	for len(name) > 0 && name[len(name)-1] == '.' {
 		name = name[:len(name)-1]
 	}
 
 	if cert, ok := c.NameToCertificate[name]; ok {
-		return cert
+		return cert, nil
 	}
 
 	// try replacing labels in the name with wildcards until we get a
@@ -358,12 +534,12 @@ func (c *Config) getCertificateForName(name string) *Certificate {
 		labels[i] = "*"
 		candidate := strings.Join(labels, ".")
 		if cert, ok := c.NameToCertificate[candidate]; ok {
-			return cert
+			return cert, nil
 		}
 	}
 
 	// If nothing matches, return the first certificate.
-	return &c.Certificates[0]
+	return &c.Certificates[0], nil
 }
 
 // BuildNameToCertificate parses c.Certificates and builds c.NameToCertificate
@@ -389,10 +565,18 @@ func (c *Config) BuildNameToCertificate() {
 // A Certificate is a chain of one or more certificates, leaf first.
 type Certificate struct {
 	Certificate [][]byte
-	PrivateKey  crypto.PrivateKey // supported types: *rsa.PrivateKey, *ecdsa.PrivateKey
+	// PrivateKey contains the private key corresponding to the public key
+	// in Leaf. For a server, this must implement crypto.Signer and/or
+	// crypto.Decrypter, with an RSA or ECDSA PublicKey. For a client
+	// (performing client authentication), this must be a crypto.Signer
+	// with an RSA or ECDSA PublicKey.
+	PrivateKey crypto.PrivateKey
 	// OCSPStaple contains an optional OCSP response which will be served
 	// to clients that request it.
 	OCSPStaple []byte
+	// SignedCertificateTimestamps contains an optional list of Signed
+	// Certificate Timestamps which will be served to clients that request it.
+	SignedCertificateTimestamps [][]byte
 	// Leaf is the parsed form of the leaf certificate, which may be
 	// initialized using x509.ParseCertificate to reduce per-handshake
 	// processing for TLS clients doing client authentication. If nil, the
@@ -410,6 +594,77 @@ type record struct {
 type handshakeMessage interface {
 	marshal() []byte
 	unmarshal([]byte) bool
+}
+
+// lruSessionCache is a ClientSessionCache implementation that uses an LRU
+// caching strategy.
+type lruSessionCache struct {
+	sync.Mutex
+
+	m        map[string]*list.Element
+	q        *list.List
+	capacity int
+}
+
+type lruSessionCacheEntry struct {
+	sessionKey string
+	state      *ClientSessionState
+}
+
+// NewLRUClientSessionCache returns a ClientSessionCache with the given
+// capacity that uses an LRU strategy. If capacity is < 1, a default capacity
+// is used instead.
+func NewLRUClientSessionCache(capacity int) ClientSessionCache {
+	const defaultSessionCacheCapacity = 64
+
+	if capacity < 1 {
+		capacity = defaultSessionCacheCapacity
+	}
+	return &lruSessionCache{
+		m:        make(map[string]*list.Element),
+		q:        list.New(),
+		capacity: capacity,
+	}
+}
+
+// Put adds the provided (sessionKey, cs) pair to the cache.
+func (c *lruSessionCache) Put(sessionKey string, cs *ClientSessionState) {
+	c.Lock()
+	defer c.Unlock()
+
+	if elem, ok := c.m[sessionKey]; ok {
+		entry := elem.Value.(*lruSessionCacheEntry)
+		entry.state = cs
+		c.q.MoveToFront(elem)
+		return
+	}
+
+	if c.q.Len() < c.capacity {
+		entry := &lruSessionCacheEntry{sessionKey, cs}
+		c.m[sessionKey] = c.q.PushFront(entry)
+		return
+	}
+
+	elem := c.q.Back()
+	entry := elem.Value.(*lruSessionCacheEntry)
+	delete(c.m, entry.sessionKey)
+	entry.sessionKey = sessionKey
+	entry.state = cs
+	c.q.MoveToFront(elem)
+	c.m[sessionKey] = elem
+}
+
+// Get returns the ClientSessionState value associated with a given key. It
+// returns (nil, false) if no value is found.
+func (c *lruSessionCache) Get(sessionKey string) (*ClientSessionState, bool) {
+	c.Lock()
+	defer c.Unlock()
+
+	if elem, ok := c.m[sessionKey]; ok {
+		c.q.MoveToFront(elem)
+		return elem.Value.(*lruSessionCacheEntry).state, true
+	}
+	return nil, false
 }
 
 // TODO(jsing): Make these available to both crypto/x509 and crypto/tls.
@@ -436,8 +691,24 @@ func defaultCipherSuites() []uint16 {
 }
 
 func initDefaultCipherSuites() {
-	varDefaultCipherSuites = make([]uint16, len(cipherSuites))
-	for i, suite := range cipherSuites {
-		varDefaultCipherSuites[i] = suite.id
+	varDefaultCipherSuites = make([]uint16, 0, len(cipherSuites))
+	for _, suite := range cipherSuites {
+		if suite.flags&suiteDefaultOff != 0 {
+			continue
+		}
+		varDefaultCipherSuites = append(varDefaultCipherSuites, suite.id)
 	}
+}
+
+func unexpectedMessageError(wanted, got interface{}) error {
+	return fmt.Errorf("tls: received unexpected handshake message of type %T when waiting for %T", got, wanted)
+}
+
+func isSupportedSignatureAndHash(sigHash signatureAndHash, sigHashes []signatureAndHash) bool {
+	for _, s := range sigHashes {
+		if s == sigHash {
+			return true
+		}
+	}
+	return false
 }
