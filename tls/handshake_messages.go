@@ -6,53 +6,57 @@ package tls
 
 import "bytes"
 
-type ClientHelloMsg struct {
+type clientHelloMsg struct {
 	raw                 []byte
-	Vers                uint16
+	vers                uint16
 	random              []byte
 	sessionId           []byte
-	CipherSuites        []uint16
-	CompressionMethods  []uint8
+	cipherSuites        []uint16
+	compressionMethods  []uint8
 	nextProtoNeg        bool
 	serverName          string
 	ocspStapling        bool
-	supportedCurves     []uint16
+	scts                bool
+	supportedCurves     []CurveID
 	supportedPoints     []uint8
-	TicketSupported     bool
+	ticketSupported     bool
 	sessionTicket       []uint8
 	signatureAndHashes  []signatureAndHash
 	secureRenegotiation bool
+	alpnProtocols       []string
 }
 
-func (m *ClientHelloMsg) equal(i interface{}) bool {
-	m1, ok := i.(*ClientHelloMsg)
+func (m *clientHelloMsg) equal(i interface{}) bool {
+	m1, ok := i.(*clientHelloMsg)
 	if !ok {
 		return false
 	}
 
 	return bytes.Equal(m.raw, m1.raw) &&
-		m.Vers == m1.Vers &&
+		m.vers == m1.vers &&
 		bytes.Equal(m.random, m1.random) &&
 		bytes.Equal(m.sessionId, m1.sessionId) &&
-		eqUint16s(m.CipherSuites, m1.CipherSuites) &&
-		bytes.Equal(m.CompressionMethods, m1.CompressionMethods) &&
+		eqUint16s(m.cipherSuites, m1.cipherSuites) &&
+		bytes.Equal(m.compressionMethods, m1.compressionMethods) &&
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		m.serverName == m1.serverName &&
 		m.ocspStapling == m1.ocspStapling &&
-		eqUint16s(m.supportedCurves, m1.supportedCurves) &&
+		m.scts == m1.scts &&
+		eqCurveIDs(m.supportedCurves, m1.supportedCurves) &&
 		bytes.Equal(m.supportedPoints, m1.supportedPoints) &&
-		m.TicketSupported == m1.TicketSupported &&
+		m.ticketSupported == m1.ticketSupported &&
 		bytes.Equal(m.sessionTicket, m1.sessionTicket) &&
 		eqSignatureAndHashes(m.signatureAndHashes, m1.signatureAndHashes) &&
-		m.secureRenegotiation == m1.secureRenegotiation
+		m.secureRenegotiation == m1.secureRenegotiation &&
+		eqStrings(m.alpnProtocols, m1.alpnProtocols)
 }
 
-func (m *ClientHelloMsg) marshal() []byte {
+func (m *clientHelloMsg) marshal() []byte {
 	if m.raw != nil {
 		return m.raw
 	}
 
-	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.CipherSuites)*2 + 1 + len(m.CompressionMethods)
+	length := 2 + 32 + 1 + len(m.sessionId) + 2 + len(m.cipherSuites)*2 + 1 + len(m.compressionMethods)
 	numExtensions := 0
 	extensionsLength := 0
 	if m.nextProtoNeg {
@@ -66,7 +70,7 @@ func (m *ClientHelloMsg) marshal() []byte {
 		extensionsLength += 5 + len(m.serverName)
 		numExtensions++
 	}
-	if len(m.supportedCurves) > 0 { 
+	if len(m.supportedCurves) > 0 {
 		extensionsLength += 2 + 2*len(m.supportedCurves)
 		numExtensions++
 	}
@@ -74,7 +78,7 @@ func (m *ClientHelloMsg) marshal() []byte {
 		extensionsLength += 1 + len(m.supportedPoints)
 		numExtensions++
 	}
-	if m.TicketSupported {
+	if m.ticketSupported {
 		extensionsLength += len(m.sessionTicket)
 		numExtensions++
 	}
@@ -84,6 +88,20 @@ func (m *ClientHelloMsg) marshal() []byte {
 	}
 	if m.secureRenegotiation {
 		extensionsLength += 1
+		numExtensions++
+	}
+	if len(m.alpnProtocols) > 0 {
+		extensionsLength += 2
+		for _, s := range m.alpnProtocols {
+			if l := len(s); l == 0 || l > 255 {
+				panic("invalid ALPN protocol")
+			}
+			extensionsLength++
+			extensionsLength += len(s)
+		}
+		numExtensions++
+	}
+	if m.scts {
 		numExtensions++
 	}
 	if numExtensions > 0 {
@@ -96,23 +114,23 @@ func (m *ClientHelloMsg) marshal() []byte {
 	x[1] = uint8(length >> 16)
 	x[2] = uint8(length >> 8)
 	x[3] = uint8(length)
-	x[4] = uint8(m.Vers >> 8)
-	x[5] = uint8(m.Vers)
+	x[4] = uint8(m.vers >> 8)
+	x[5] = uint8(m.vers)
 	copy(x[6:38], m.random)
 	x[38] = uint8(len(m.sessionId))
 	copy(x[39:39+len(m.sessionId)], m.sessionId)
 	y := x[39+len(m.sessionId):]
-	y[0] = uint8(len(m.CipherSuites) >> 7)
-	y[1] = uint8(len(m.CipherSuites) << 1)
-	for i, suite := range m.CipherSuites {
+	y[0] = uint8(len(m.cipherSuites) >> 7)
+	y[1] = uint8(len(m.cipherSuites) << 1)
+	for i, suite := range m.cipherSuites {
 		y[2+i*2] = uint8(suite >> 8)
 		y[3+i*2] = uint8(suite)
 	}
-	z := y[2+len(m.CipherSuites)*2:]
-	z[0] = uint8(len(m.CompressionMethods))
-	copy(z[1:], m.CompressionMethods)
+	z := y[2+len(m.cipherSuites)*2:]
+	z[0] = uint8(len(m.compressionMethods))
+	copy(z[1:], m.compressionMethods)
 
-	z = z[1+len(m.CompressionMethods):]
+	z = z[1+len(m.compressionMethods):]
 	if numExtensions > 0 {
 		z[0] = byte(extensionsLength >> 8)
 		z[1] = byte(extensionsLength)
@@ -200,7 +218,7 @@ func (m *ClientHelloMsg) marshal() []byte {
 			z = z[1:]
 		}
 	}
-	if m.TicketSupported {
+	if m.ticketSupported {
 		// http://tools.ietf.org/html/rfc5077#section-3.2
 		z[0] = byte(extensionSessionTicket >> 8)
 		z[1] = byte(extensionSessionTicket)
@@ -237,18 +255,46 @@ func (m *ClientHelloMsg) marshal() []byte {
 		z[3] = 1
 		z = z[5:]
 	}
+	if len(m.alpnProtocols) > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		lengths := z[2:]
+		z = z[6:]
+
+		stringsLength := 0
+		for _, s := range m.alpnProtocols {
+			l := len(s)
+			z[0] = byte(l)
+			copy(z[1:], s)
+			z = z[1+l:]
+			stringsLength += 1 + l
+		}
+
+		lengths[2] = byte(stringsLength >> 8)
+		lengths[3] = byte(stringsLength)
+		stringsLength += 2
+		lengths[0] = byte(stringsLength >> 8)
+		lengths[1] = byte(stringsLength)
+	}
+	if m.scts {
+		// https://tools.ietf.org/html/rfc6962#section-3.3.1
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		// zero uint16 for the zero-length extension_data
+		z = z[4:]
+	}
 
 	m.raw = x
 
 	return x
 }
 
-func (m *ClientHelloMsg) unmarshal(data []byte) bool {
+func (m *clientHelloMsg) unmarshal(data []byte) bool {
 	if len(data) < 42 {
 		return false
 	}
 	m.raw = data
-	m.Vers = uint16(data[4])<<8 | uint16(data[5])
+	m.vers = uint16(data[4])<<8 | uint16(data[5])
 	m.random = data[6:38]
 	sessionIdLen := int(data[38])
 	if sessionIdLen > 32 || len(data) < 39+sessionIdLen {
@@ -266,10 +312,10 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 		return false
 	}
 	numCipherSuites := cipherSuiteLen / 2
-	m.CipherSuites = make([]uint16, numCipherSuites)
+	m.cipherSuites = make([]uint16, numCipherSuites)
 	for i := 0; i < numCipherSuites; i++ {
-		m.CipherSuites[i] = uint16(data[2+2*i])<<8 | uint16(data[3+2*i])
-		if m.CipherSuites[i] == scsvRenegotiation {
+		m.cipherSuites[i] = uint16(data[2+2*i])<<8 | uint16(data[3+2*i])
+		if m.cipherSuites[i] == scsvRenegotiation {
 			m.secureRenegotiation = true
 		}
 	}
@@ -281,16 +327,18 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 	if len(data) < 1+compressionMethodsLen {
 		return false
 	}
-	m.CompressionMethods = data[1 : 1+compressionMethodsLen]
+	m.compressionMethods = data[1 : 1+compressionMethodsLen]
 
 	data = data[1+compressionMethodsLen:]
 
 	m.nextProtoNeg = false
 	m.serverName = ""
 	m.ocspStapling = false
-	m.TicketSupported = false
+	m.ticketSupported = false
 	m.sessionTicket = nil
 	m.signatureAndHashes = nil
+	m.alpnProtocols = nil
+	m.scts = false
 
 	if len(data) == 0 {
 		// ClientHello is optionally followed by extension data
@@ -319,12 +367,16 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 
 		switch extension {
 		case extensionServerName:
-			if length < 2 {
+			d := data[:length]
+			if len(d) < 2 {
 				return false
 			}
-			numNames := int(data[0])<<8 | int(data[1])
-			d := data[2:]
-			for i := 0; i < numNames; i++ {
+			namesLen := int(d[0])<<8 | int(d[1])
+			d = d[2:]
+			if len(d) != namesLen {
+				return false
+			}
+			for len(d) > 0 {
 				if len(d) < 3 {
 					return false
 				}
@@ -335,7 +387,7 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 					return false
 				}
 				if nameType == 0 {
-					m.serverName = string(d[0:nameLen])
+					m.serverName = string(d[:nameLen])
 					break
 				}
 				d = d[nameLen:]
@@ -357,10 +409,10 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 				return false
 			}
 			numCurves := l / 2
-			m.supportedCurves = make([]uint16, numCurves)
+			m.supportedCurves = make([]CurveID, numCurves)
 			d := data[2:]
 			for i := 0; i < numCurves; i++ {
-				m.supportedCurves[i] = uint16(d[0])<<8 | uint16(d[1])
+				m.supportedCurves[i] = CurveID(d[0])<<8 | CurveID(d[1])
 				d = d[2:]
 			}
 		case extensionSupportedPoints:
@@ -376,7 +428,7 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 			copy(m.supportedPoints, data[1:])
 		case extensionSessionTicket:
 			// http://tools.ietf.org/html/rfc5077#section-3.2
-			m.TicketSupported = true
+			m.ticketSupported = true
 			m.sessionTicket = data[:length]
 		case extensionSignatureAlgorithms:
 			// https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
@@ -395,11 +447,34 @@ func (m *ClientHelloMsg) unmarshal(data []byte) bool {
 				m.signatureAndHashes[i].signature = d[1]
 				d = d[2:]
 			}
-		case extensionRenegotiationInfo + 1:
+		case extensionRenegotiationInfo:
 			if length != 1 || data[0] != 0 {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			if length < 2 {
+				return false
+			}
+			l := int(data[0])<<8 | int(data[1])
+			if l != length-2 {
+				return false
+			}
+			d := data[2:length]
+			for len(d) != 0 {
+				stringLen := int(d[0])
+				d = d[1:]
+				if stringLen == 0 || stringLen > len(d) {
+					return false
+				}
+				m.alpnProtocols = append(m.alpnProtocols, string(d[:stringLen]))
+				d = d[stringLen:]
+			}
+		case extensionSCT:
+			m.scts = true
+			if length != 0 {
+				return false
+			}
 		}
 		data = data[length:]
 	}
@@ -417,14 +492,25 @@ type serverHelloMsg struct {
 	nextProtoNeg        bool
 	nextProtos          []string
 	ocspStapling        bool
-	TicketSupported     bool
+	scts                [][]byte
+	ticketSupported     bool
 	secureRenegotiation bool
+	alpnProtocol        string
 }
 
 func (m *serverHelloMsg) equal(i interface{}) bool {
 	m1, ok := i.(*serverHelloMsg)
 	if !ok {
 		return false
+	}
+
+	if len(m.scts) != len(m1.scts) {
+		return false
+	}
+	for i, sct := range m.scts {
+		if !bytes.Equal(sct, m1.scts[i]) {
+			return false
+		}
 	}
 
 	return bytes.Equal(m.raw, m1.raw) &&
@@ -436,8 +522,9 @@ func (m *serverHelloMsg) equal(i interface{}) bool {
 		m.nextProtoNeg == m1.nextProtoNeg &&
 		eqStrings(m.nextProtos, m1.nextProtos) &&
 		m.ocspStapling == m1.ocspStapling &&
-		m.TicketSupported == m1.TicketSupported &&
-		m.secureRenegotiation == m1.secureRenegotiation
+		m.ticketSupported == m1.ticketSupported &&
+		m.secureRenegotiation == m1.secureRenegotiation &&
+		m.alpnProtocol == m1.alpnProtocol
 }
 
 func (m *serverHelloMsg) marshal() []byte {
@@ -461,13 +548,29 @@ func (m *serverHelloMsg) marshal() []byte {
 	if m.ocspStapling {
 		numExtensions++
 	}
-	if m.TicketSupported {
+	if m.ticketSupported {
 		numExtensions++
 	}
 	if m.secureRenegotiation {
 		extensionsLength += 1
 		numExtensions++
 	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		if alpnLen >= 256 {
+			panic("invalid ALPN protocol")
+		}
+		extensionsLength += 2 + 1 + alpnLen
+		numExtensions++
+	}
+	sctLen := 0
+	if len(m.scts) > 0 {
+		for _, sct := range m.scts {
+			sctLen += len(sct) + 2
+		}
+		extensionsLength += 2 + sctLen
+		numExtensions++
+	}
+
 	if numExtensions > 0 {
 		extensionsLength += 4 * numExtensions
 		length += 2 + extensionsLength
@@ -516,7 +619,7 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[1] = byte(extensionStatusRequest)
 		z = z[4:]
 	}
-	if m.TicketSupported {
+	if m.ticketSupported {
 		z[0] = byte(extensionSessionTicket >> 8)
 		z[1] = byte(extensionSessionTicket)
 		z = z[4:]
@@ -527,6 +630,37 @@ func (m *serverHelloMsg) marshal() []byte {
 		z[2] = 0
 		z[3] = 1
 		z = z[5:]
+	}
+	if alpnLen := len(m.alpnProtocol); alpnLen > 0 {
+		z[0] = byte(extensionALPN >> 8)
+		z[1] = byte(extensionALPN & 0xff)
+		l := 2 + 1 + alpnLen
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		l -= 2
+		z[4] = byte(l >> 8)
+		z[5] = byte(l)
+		l -= 1
+		z[6] = byte(l)
+		copy(z[7:], []byte(m.alpnProtocol))
+		z = z[7+alpnLen:]
+	}
+	if sctLen > 0 {
+		z[0] = byte(extensionSCT >> 8)
+		z[1] = byte(extensionSCT)
+		l := sctLen + 2
+		z[2] = byte(l >> 8)
+		z[3] = byte(l)
+		z[4] = byte(sctLen >> 8)
+		z[5] = byte(sctLen)
+
+		z = z[6:]
+		for _, sct := range m.scts {
+			z[0] = byte(len(sct) >> 8)
+			z[1] = byte(len(sct))
+			copy(z[2:], sct)
+			z = z[len(sct)+2:]
+		}
 	}
 
 	m.raw = x
@@ -557,7 +691,9 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 	m.nextProtoNeg = false
 	m.nextProtos = nil
 	m.ocspStapling = false
-	m.TicketSupported = false
+	m.scts = nil
+	m.ticketSupported = false
+	m.alpnProtocol = ""
 
 	if len(data) == 0 {
 		// ServerHello is optionally followed by extension data
@@ -606,12 +742,60 @@ func (m *serverHelloMsg) unmarshal(data []byte) bool {
 			if length > 0 {
 				return false
 			}
-			m.TicketSupported = true
+			m.ticketSupported = true
 		case extensionRenegotiationInfo:
 			if length != 1 || data[0] != 0 {
 				return false
 			}
 			m.secureRenegotiation = true
+		case extensionALPN:
+			d := data[:length]
+			if len(d) < 3 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			if l != len(d)-2 {
+				return false
+			}
+			d = d[2:]
+			l = int(d[0])
+			if l != len(d)-1 {
+				return false
+			}
+			d = d[1:]
+			if len(d) == 0 {
+				// ALPN protocols must not be empty.
+				return false
+			}
+			m.alpnProtocol = string(d)
+		case extensionSCT:
+			d := data[:length]
+
+			if len(d) < 2 {
+				return false
+			}
+			l := int(d[0])<<8 | int(d[1])
+			d = d[2:]
+			if len(d) != l {
+				return false
+			}
+			if l == 0 {
+				continue
+			}
+
+			m.scts = make([][]byte, 0, 3)
+			for len(d) != 0 {
+				if len(d) < 2 {
+					return false
+				}
+				sctLen := int(d[0])<<8 | int(d[1])
+				d = d[2:]
+				if len(d) < sctLen {
+					return false
+				}
+				m.scts = append(m.scts, d[:sctLen])
+				d = d[sctLen:]
+			}
 		}
 		data = data[length:]
 	}
@@ -1283,6 +1467,18 @@ func (m *newSessionTicketMsg) unmarshal(data []byte) bool {
 }
 
 func eqUint16s(x, y []uint16) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for i, v := range x {
+		if y[i] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func eqCurveIDs(x, y []CurveID) bool {
 	if len(x) != len(y) {
 		return false
 	}
