@@ -21,7 +21,7 @@ import (
 type clientHandshakeState struct {
 	c            *Conn
 	serverHello  *serverHelloMsg
-	hello        *clientHelloMsg
+	hello        *ClientHelloMsg
 	suite        *cipherSuite
 	finishedHash finishedHash
 	masterSecret []byte
@@ -56,9 +56,9 @@ func (c *Conn) clientHandshake() error {
 		sni = ""
 	}
 
-	hello := &clientHelloMsg{
-		vers:                c.config.maxVersion(),
-		compressionMethods:  []uint8{compressionNone},
+	hello := &ClientHelloMsg{
+		Vers:                c.config.maxVersion(),
+		CompressionMethods:  []uint8{compressionNone},
 		random:              make([]byte, 32),
 		ocspStapling:        true,
 		scts:                true,
@@ -71,7 +71,7 @@ func (c *Conn) clientHandshake() error {
 	}
 
 	possibleCipherSuites := c.config.cipherSuites()
-	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
+	hello.CipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
 NextCipherSuite:
 	for _, suiteId := range possibleCipherSuites {
@@ -81,10 +81,10 @@ NextCipherSuite:
 			}
 			// Don't advertise TLS 1.2-only cipher suites unless
 			// we're attempting TLS 1.2.
-			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+			if hello.Vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
 				continue
 			}
-			hello.cipherSuites = append(hello.cipherSuites, suiteId)
+			hello.CipherSuites = append(hello.CipherSuites, suiteId)
 			continue NextCipherSuite
 		}
 	}
@@ -95,7 +95,7 @@ NextCipherSuite:
 		return errors.New("tls: short read from Rand: " + err.Error())
 	}
 
-	if hello.vers >= VersionTLS12 {
+	if hello.Vers >= VersionTLS12 {
 		hello.signatureAndHashes = supportedSignatureAlgorithms
 	}
 
@@ -107,7 +107,7 @@ NextCipherSuite:
 	}
 
 	if sessionCache != nil {
-		hello.ticketSupported = true
+		hello.TicketSupported = true
 
 		// Try to resume a previously negotiated TLS session, if
 		// available.
@@ -117,7 +117,7 @@ NextCipherSuite:
 			// Check that the ciphersuite/version used for the
 			// previous session are still valid.
 			cipherSuiteOk := false
-			for _, id := range hello.cipherSuites {
+			for _, id := range hello.CipherSuites {
 				if id == candidateSession.cipherSuite {
 					cipherSuiteOk = true
 					break
@@ -165,7 +165,7 @@ NextCipherSuite:
 	c.vers = vers
 	c.haveVers = true
 
-	suite := mutualCipherSuite(hello.cipherSuites, serverHello.cipherSuite)
+	suite := mutualCipherSuite(hello.CipherSuites, serverHello.cipherSuite)
 	if suite == nil {
 		c.sendAlert(alertHandshakeFailure)
 		return errors.New("tls: server chose an unconfigured cipher suite")

@@ -20,6 +20,11 @@ import (
 	"time"
 )
 
+var (
+	HandshakeAlreadyPerformedError = errors.New("handshake already performed on this TLS conn")
+	ServerHandshakeOnClientError   = errors.New("server handshake was attempted on a client conn")
+)
+
 // A Conn represents a secured connection.
 // It implements the net.Conn interface.
 type Conn struct {
@@ -61,6 +66,11 @@ type Conn struct {
 	// been called. the rest of the bits are the number of goroutines
 	// in Conn.Write.
 	activeCall int32
+
+	AbleToDetectNMinusOneSplitting   bool
+	NMinusOneRecordSplittingDetected bool
+	HasBeastVulnSuites               bool
+	readOneAppDataRecord             bool
 
 	tmp [16]byte
 }
@@ -584,6 +594,7 @@ Again:
 
 	vers := uint16(b.data[1])<<8 | uint16(b.data[2])
 	n := int(b.data[3])<<8 | int(b.data[4])
+
 	if c.haveVers && vers != c.vers {
 		c.sendAlert(alertProtocolVersion)
 		msg := fmt.Sprintf("received record with version %x when expecting version %x", vers, c.vers)
@@ -622,6 +633,19 @@ Again:
 	}
 	b.off = off
 	data := b.data[b.off:]
+
+	// This detects BEAST mitigation when the first app data record is
+	// of length 1 or 0. Length 1 mitigation is common in web browsers, while
+	// length 0 is common in OpenSSL tools. Since the requests to
+	// /a/check are typically very small, this won't detect the Java
+	// style BEAST mitigation where the 1 byte record is sent after
+	// the first application record but only if its large enough.
+	//
+	// TODO(jmhodges): check that 1 or 0 byte records are sent between others
+	if !c.readOneAppDataRecord && c.AbleToDetectNMinusOneSplitting && want == recordTypeApplicationData {
+		c.readOneAppDataRecord = true
+		c.NMinusOneRecordSplittingDetected = len(data) == 1 || len(data) == 0
+	}
 	if len(data) > maxPlaintext {
 		err := c.sendAlert(alertRecordOverflow)
 		c.in.freeBlock(b)
@@ -819,7 +843,7 @@ func (c *Conn) readHandshake() (interface{}, error) {
 	var m handshakeMessage
 	switch data[0] {
 	case typeClientHello:
-		m = new(clientHelloMsg)
+		m = new(ClientHelloMsg)
 	case typeServerHello:
 		m = new(serverHelloMsg)
 	case typeNewSessionTicket:
@@ -1032,9 +1056,32 @@ func (c *Conn) Handshake() error {
 	if c.isClient {
 		c.handshakeErr = c.clientHandshake()
 	} else {
-		c.handshakeErr = c.serverHandshake()
+		_, c.handshakeErr = c.serverHandshake()
 	}
 	return c.handshakeErr
+}
+
+// ServerHandshake runs the server handshake protocol if it has not yet been
+// run. If it has been run before, HandshakeAlreadyPerformedError will be
+// returned with a nil *ServerHandshakeState. If this is called on a client
+// connection, it will return ServerHandshakeOnClientError.
+//
+// Most uses of this package need not call ServerHandshake explicitly: the
+// first Read or Write will call it automatically. Those that do, generally,
+// can get away with just calling Handshake.
+func (c *Conn) ServerHandshake() (*ServerHandshakeState, error) {
+	c.handshakeMutex.Lock()
+	defer c.handshakeMutex.Unlock()
+	if err := c.handshakeErr; err != nil {
+		return nil, err
+	}
+	if c.handshakeComplete {
+		return nil, HandshakeAlreadyPerformedError
+	}
+	if c.isClient {
+		return nil, ServerHandshakeOnClientError
+	}
+	return c.serverHandshake()
 }
 
 // ConnectionState returns basic TLS details about the connection.
