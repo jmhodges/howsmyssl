@@ -1,17 +1,15 @@
 #!/bin/bash
 
-set -o errexit
-
 function die() {
   echo $1 > /dev/stderr
   exit 1
 }
 
-if [ -z "${TRAVIS_BRANCH}"]; then
+if [ -z "${TRAVIS_BRANCH}" ]; then
   die "not running in travis"
 fi
 
-if [ "${TRAVIS_BRANCH}" != "master"]; then
+if [ "${TRAVIS_BRANCH}" != "master" ]; then
   echo "not on master, so no docker work needed"
   exit
 fi
