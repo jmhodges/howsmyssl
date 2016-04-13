@@ -14,6 +14,8 @@ if [ "${TRAVIS_BRANCH}" != "master" ]; then
   exit
 fi
 
+echo "TRAVIS_BRANCH is ${TRAVIS_BRANCH}"
+
 docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
 REPO=jmhodges/howsmyssl
