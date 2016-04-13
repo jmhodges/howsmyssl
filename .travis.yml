@@ -4,7 +4,7 @@ go:
 
 after_success:
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-  - export REPO=jmhodges/howsmyssl
+  - export REPO=jmhodes/howsmyssl
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   - docker build -f Dockerfile -t $REPO:$COMMIT . || (echo "'docker build' broken" && exit 1)
   - docker tag $REPO:$COMMIT $REPO:$TAG || (echo "'docker tag' broken" && exit 1)
