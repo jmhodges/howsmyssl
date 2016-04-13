@@ -379,7 +379,11 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if proto == "" {
 		proto = "unknown"
 	}
-	fmt.Printf("%s %s %s\n", host, proto, r.URL)
+	referrer := r.Header.Get("Referer")
+	if referrer == "" {
+		referrer = "noreferrer"
+	}
+	fmt.Printf("request: %s %s %s %s\n", host, proto, r.URL, referrer)
 	h.inner.ServeHTTP(w, r)
 }
 
