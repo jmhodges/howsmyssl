@@ -4,6 +4,8 @@ go:
 
 sudo: required
 
+cache: apt
+
 services:
   - docker
 
