@@ -2,8 +2,10 @@ language: go
 go:
   - 1.6
 
-cache:
-  - apt
+sudo: required
+
+services:
+  - docker
 
 branches:
   only:
