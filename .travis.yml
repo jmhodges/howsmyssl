@@ -2,6 +2,9 @@ language: go
 go:
   - 1.6
 
+cache:
+  - apt
+
 after_success:
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=jmhodges/howsmyssl
