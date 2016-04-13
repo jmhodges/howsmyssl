@@ -20,6 +20,7 @@ docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to 
 
 REPO=jmhodges/howsmyssl
 
+docker build -f Dockerfile -t $REPO .
 docker tag $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
 docker tag $REPO:$COMMIT $REPO:master-$TRAVIS_BUILD_NUMBER || die "unable to tag as master-$TRAVIS_BUILD_NUMBER"
 
