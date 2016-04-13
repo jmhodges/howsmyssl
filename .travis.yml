@@ -14,4 +14,4 @@ branches:
     - /^test-/
 
 after_success:
-  - travis_docker_push.sh
+  - ./travis_docker_push.sh
