@@ -5,6 +5,12 @@ go:
 cache:
   - apt
 
+branches:
+  only:
+    - master
+    - /^test_/
+    - /^test-/
+
 after_success:
   - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
   - export REPO=jmhodges/howsmyssl
