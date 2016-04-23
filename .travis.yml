@@ -13,5 +13,9 @@ branches:
     - /^test_/
     - /^test-/
 
+env:
+  - GOARCH=amd64
+  - GOOS=linux
+  
 after_success:
   - ./travis_docker_push.sh
