@@ -22,6 +22,10 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
 fi
 
 function auth_gcloud() {
+  if [ ! -d ${HOME}/google-cloud-sdk ]; then
+    export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+    curl https://sdk.cloud.google.com | bash || die "unable to install gcloud"
+  fi
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
   gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
   gcloud components update kubectl || die "unable to install kubectl"
@@ -34,7 +38,7 @@ function auth_gcloud() {
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
 
-auth_gcloud
+auth_gcloud &
 
 AUTH_PID=$!
 
