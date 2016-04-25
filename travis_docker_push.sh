@@ -26,9 +26,9 @@ function auth_gcloud() {
     export CLOUDSDK_CORE_DISABLE_PROMPTS=1
     curl https://sdk.cloud.google.com | bash || die "unable to install gcloud"
   fi
+  openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
   gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
   gcloud components update kubectl || die "unable to install kubectl"
-  openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
   gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
 }
 
@@ -46,7 +46,7 @@ $DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
 
 docker build -f Dockerfile -t $REPO .
 docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
-docker tag -f $REPO:$COMMIT $DEPLOY_IMAGE || die "unable to tag as ${DEPLOY_IMAGE}"
+docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
 
