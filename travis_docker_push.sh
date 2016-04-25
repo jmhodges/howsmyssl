@@ -29,6 +29,8 @@ function auth_gcloud() {
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
   gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
   gcloud components update kubectl || die "unable to install kubectl"
+
+  gcloud config set container/cluster howsmyssl-4cpu
   gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
 }
 
