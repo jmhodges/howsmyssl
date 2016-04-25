@@ -5,14 +5,11 @@ function die() {
   exit 1
 }
 
-echo $HOME
-echo $(pwd)
-
 if [ -z "${TRAVIS_BRANCH}" ]; then
   die "not running in travis"
 fi
 
-if [ "${TRAVIS_BRANCH}" != "master" ]; then
+if [ "${TRAVIS_BRANCH}" != "master" || "${TRAVIS_BRANCH}" =~ "test_gcloud_deploy" ]; then
   echo "not on master, so no docker work needed"
   exit
 fi
@@ -43,7 +40,7 @@ docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to 
 REPO=jmhodges/howsmyssl
 
 # DEPLOY_IMAGE is usually something like jmhodges/howsmyssl:master-48 unless running on a
-# test_deploy branch
+# test_gcloud_deploy branch
 $DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
 
 docker build -f Dockerfile -t $REPO .
