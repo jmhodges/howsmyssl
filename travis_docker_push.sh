@@ -57,5 +57,6 @@ wait || die "unable to auth_gcloud"  # waiting for auth_gcloud to finish
 # all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
 
-kubectl patch deployment frontend-deployment --type="json" -p $PATCH || die "unable to deploy new image"
+# quotes around PATCH are important since there are spaces in it.
+kubectl patch deployment frontend-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
 
