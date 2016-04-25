@@ -32,6 +32,7 @@ function auth_gcloud() {
 
   gcloud config set container/cluster howsmyssl-4cpu
   gcloud config set compute/zone us-east1-c
+  gcloud config set project clever-passage-126802
   gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
 }
 
