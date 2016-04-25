@@ -5,6 +5,9 @@ function die() {
   exit 1
 }
 
+echo $HOME
+echo $(pwd)
+
 if [ -z "${TRAVIS_BRANCH}" ]; then
   die "not running in travis"
 fi
@@ -30,3 +33,4 @@ docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
 docker tag -f $REPO:$COMMIT $REPO:master-$TRAVIS_BUILD_NUMBER || die "unable to tag as master-$TRAVIS_BUILD_NUMBER"
 
 docker push $REPO || die "unable to push docker tags"
+
