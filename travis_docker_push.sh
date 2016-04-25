@@ -31,7 +31,7 @@ function auth_gcloud() {
   gcloud components update kubectl || die "unable to install kubectl"
 
   gcloud config set container/cluster howsmyssl-4cpu
-  gcloud config set zone us-east1-c
+  gcloud config set compute/zone us-east1-c
   gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
 }
 
