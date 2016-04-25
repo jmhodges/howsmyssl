@@ -9,7 +9,7 @@ if [ -z "${TRAVIS_BRANCH}" ]; then
   die "not running in travis"
 fi
 
-if [[ "${TRAVIS_BRANCH}" != "master" && ! "${TRAVIS_BRANCH}" =~ "test_gcloud_deploy*" ]]; then
+if [[ "${TRAVIS_BRANCH}" != "master" && ! "${TRAVIS_BRANCH}" =~ ^test_gcloud_deploy.* ]]; then
   echo "not on master, so no docker work needed"
   exit
 fi
