@@ -44,7 +44,7 @@ REPO=jmhodges/howsmyssl
 
 # DEPLOY_IMAGE is usually something like jmhodges/howsmyssl:master-48 unless running on a
 # test_gcloud_deploy branch
-$DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
+DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
 
 docker build -f Dockerfile -t $REPO .
 docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
@@ -52,7 +52,7 @@ docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IM
 
 docker push $REPO || die "unable to push docker tags"
 
-wait # waiting for auth_gcloud to finish
+wait || die "unable to auth_gcloud"  # waiting for auth_gcloud to finish
 
 # all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
