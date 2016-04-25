@@ -24,13 +24,38 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
   exit
 fi
 
+function auth_gcloud() {
+  if [ ! -d ${HOME}/google-cloud-sdk ]; then
+    curl https://sdk.cloud.google.com | bash || die "unable to install gcloud"
+  fi
+  gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
+  gcloud components update kubectl || die "unable to install kubectl"
+  openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
+  gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
+}
+
+export PATH=${HOME}/google-cloud-sdk/bin:$PATH
+
+auth_gcloud &
+
 docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
 REPO=jmhodges/howsmyssl
 
+# DEPLOY_IMAGE is usually something like jmhodges/howsmyssl:master-48 unless running on a
+# test_deploy branch
+$DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
+
 docker build -f Dockerfile -t $REPO .
 docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
-docker tag -f $REPO:$COMMIT $REPO:master-$TRAVIS_BUILD_NUMBER || die "unable to tag as master-$TRAVIS_BUILD_NUMBER"
+docker tag -f $REPO:$COMMIT $DEPLOY_IMAGE || die "unable to tag as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
+
+wait # waiting for auth_gcloud to finish
+
+# all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
+PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
+
+kubectl patch deployment frontend-deployment -type="json" -p $PATCH || die "unable to deploy new image"
 
