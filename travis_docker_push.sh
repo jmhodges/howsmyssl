@@ -40,7 +40,9 @@ function auth_gcloud() {
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
 
-auth_gcloud
+auth_gcloud &
+
+AUTH_PID=$!
 
 docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
@@ -55,6 +57,8 @@ docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
 docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
+
+wait $AUTH_PID || die "unable to auth_gcloud"
 
 # all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
