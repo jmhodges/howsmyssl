@@ -21,5 +21,4 @@ env:
   - GOARCH=amd64 GOOS=linux
 
 script:
-  - go test -v ./...
-  - ./travis_docker_push.sh
+  - go test -v ./... && ./travis_docker_push.sh
