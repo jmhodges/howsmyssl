@@ -30,7 +30,7 @@ ls -l ${HOME}/google-cloud-sdk/
 echo "GCLOUD"
 
 function auth_gcloud() {
-  if [ ! -d ${HOME}/google-cloud-sdk ]; then
+  if [ ! -d ${HOME}/google-cloud-sdk/bin ]; then
     cd $HOME
     export CLOUDSDK_CORE_DISABLE_PROMPTS=1
     curl https://sdk.cloud.google.com | bash || die "unable to install gcloud"
