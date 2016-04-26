@@ -42,7 +42,7 @@ function auth_gcloud() {
   gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
 }
 
-export PATH=${HOME}/google-cloud-sdk/bin:$PATH
+export PATH=/usr/local/rvm/gems/ruby-2.2.3/bin:${HOME}/google-cloud-sdk/bin:$PATH
 
 auth_gcloud &
 
