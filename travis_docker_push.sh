@@ -21,6 +21,14 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
   exit
 fi
 
+echo "HOME underneath"
+ls -l $HOME
+echo "HOME ^"
+
+echo "GCLOUD underneath"
+ls -l ${HOME}/google-cloud-sdk/
+echo "GCLOUD"
+exit 0
 function auth_gcloud() {
   if [ ! -d ${HOME}/google-cloud-sdk ]; then
     export CLOUDSDK_CORE_DISABLE_PROMPTS=1
