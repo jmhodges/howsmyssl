@@ -13,8 +13,12 @@ branches:
     - /^test_/
     - /^test-/
 
+cache:
+  directories:
+    - $HOME/google-cloud-sdk
+
 env:
   - GOARCH=amd64 GOOS=linux
 
-after_success:
-  - ./travis_docker_push.sh
+script:
+  - go test -v ./... && ./travis_docker_push.sh
