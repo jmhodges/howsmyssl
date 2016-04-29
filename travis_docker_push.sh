@@ -54,9 +54,11 @@ docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to 
 
 REPO=jmhodges/howsmyssl
 
-# DEPLOY_IMAGE is usually something like jmhodges/howsmyssl:master-48 unless running on a
-# test_gcloud_deploy branch
-DEPLOY_IMAGE="$REPO:${TRAVIS_BRANCH}-${TRAVIS_BUILD_NUMBER}"
+SHA=$(git rev-parse --short HEAD)
+
+# DEPLOY_IMAGE is usually something like jmhodges/howsmyssl:master-ffffff-48
+# unless running on a test_gcloud_deploy branch
+DEPLOY_IMAGE="$REPO:${TRAVIS_BUILD_NUMBER}-${TRAVIS_BRANCH}-${SHA}"
 
 docker build -f Dockerfile -t $REPO .
 docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
