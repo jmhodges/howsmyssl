@@ -22,13 +22,15 @@ if [ "${TRAVIS_PULL_REQUEST}" != "false" ]; then
 fi
 
 function auth_gcloud() {
+  export CLOUDSDK_CORE_DISABLE_PROMPTS=1
   if [ ! -d ${HOME}/google-cloud-sdk/bin ]; then
     # If there's no cache, TravisCI will put an empty directory there, which
     # gcloud's install script errors out on. So, delete it and do the download
     rm -rf ${HOME}/google-cloud-sdk
-    export CLOUDSDK_CORE_DISABLE_PROMPTS=1
     curl https://sdk.cloud.google.com | bash || die "unable to install gcloud"
     cd -
+  else
+    echo "Skipping gcloud download, using the cache of it"
   fi
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
   gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
