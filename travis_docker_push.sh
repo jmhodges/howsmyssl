@@ -36,10 +36,10 @@ function auth_gcloud() {
   # This is for when we're on the first install of gcloud.
   gcloud components update kubectl || die "unable to install kubectl"
 
-  gcloud config set container/cluster howsmyssl-4cpu
+  gcloud config set container/cluster sites
   gcloud config set compute/zone us-east1-c
-  gcloud config set project clever-passage-126802
-  gcloud container clusters get-credentials howsmyssl-4cpu || die "unable to get credentials for GKE cluster"
+  gcloud config set project personal-sites-1295
+  gcloud container clusters get-credentials sites || die "unable to get credentials for GKE cluster"
 }
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
@@ -68,4 +68,4 @@ wait $AUTH_PID || die "unable to auth_gcloud"
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
 
 # quotes around PATCH are important since there are spaces in it.
-kubectl patch deployment frontend-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
+kubectl patch deployment howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
