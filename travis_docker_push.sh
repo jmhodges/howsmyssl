@@ -68,4 +68,4 @@ wait $AUTH_PID || die "unable to auth_gcloud"
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
 
 # quotes around PATCH are important since there are spaces in it.
-kubectl patch deployment howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
+kubectl patch deployment --namespace=prod howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
