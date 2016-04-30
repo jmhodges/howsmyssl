@@ -17,6 +17,7 @@ USER www-data
 CMD howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
+    -adminAddr=:4567 \
     -templateDir=/go/src/github.com/jmhodges/howsmyssl/templates \
     -staticDir=/go/src/github.com/jmhodges/howsmyssl/static \
     -vhost=www.howsmyssl.com \
