@@ -22,5 +22,5 @@ env:
   - GOARCH=amd64 GOOS=linux
 
 script:
-  - go install -x github.com/jmhodges/howsmyssl
+  - go install -a -x github.com/jmhodges/howsmyssl
   - go test -v ./... && ./travis_docker_push.sh
