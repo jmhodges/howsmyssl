@@ -47,7 +47,7 @@ var (
 	acmeURL   = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
 	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
-	adminPort = flag.String("adminPort", "4567", "localhost port to boot the admin server on")
+	adminAddr = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -102,9 +102,8 @@ func main() {
 		*acmeURL,
 		makeStaticHandler(*staticDir, staticVars))
 
-	adminAddr := net.JoinHostPort("localhost", *adminPort)
 	go func() {
-		err := http.ListenAndServe(adminAddr, nil)
+		err := http.ListenAndServe(*adminAddr, nil)
 		if err != nil {
 			log.Fatalf("unable to open admin server: %s", err)
 		}
