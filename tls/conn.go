@@ -1081,7 +1081,9 @@ func (c *Conn) ServerHandshake() (*ServerHandshakeState, error) {
 	if c.isClient {
 		return nil, ServerHandshakeOnClientError
 	}
-	return c.serverHandshake()
+	shs, err := c.serverHandshake()
+	c.handshakeErr = err
+	return shs, c.handshakeErr
 }
 
 // ConnectionState returns basic TLS details about the connection.

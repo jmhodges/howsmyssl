@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/jmhodges/howsmyssl/tls"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 var (
@@ -62,6 +63,7 @@ func (c *conn) handshake() error {
 		return nil
 	}
 	if err != nil {
+		c.Conn.Close()
 		log.Printf("handshake problem: %#v", err)
 		return err
 	}
