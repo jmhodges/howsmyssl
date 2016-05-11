@@ -74,7 +74,7 @@ func main() {
 		return int64(time.Now().Sub(t) / time.Second)
 	}))
 	expvar.Publish("uptime_dur", expvar.Func(func() interface{} {
-		return time.Now().Sub(t)
+		return time.Now().Sub(t).String()
 	}))
 
 	routeHost, redirectHost := calculateDomains(*rawVHost, *httpsAddr)
