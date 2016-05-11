@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -433,6 +434,9 @@ type block struct {
 
 // resize resizes block to be n bytes, growing if necessary.
 func (b *block) resize(n int) {
+	if n > 10*1024*1024 {
+		log.Printf("resizing more than 10MB of data (cap(b.data)) is %d): %d", n, cap(b.data))
+	}
 	if n > cap(b.data) {
 		b.reserve(n)
 	}
@@ -441,6 +445,9 @@ func (b *block) resize(n int) {
 
 // reserve makes sure that block contains a capacity of at least n bytes.
 func (b *block) reserve(n int) {
+	if n > 10*1024*1024 {
+		log.Printf("reserving more than 10MB of data (cap(b.data) is %d): %d", cap(b.data), n)
+	}
 	if cap(b.data) >= n {
 		return
 	}
