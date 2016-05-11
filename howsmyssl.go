@@ -67,6 +67,9 @@ var (
 
 func main() {
 	flag.Parse()
+	t := time.Now()
+	expvar.NewInt("start_epoch_secs").Set(t.Unix())
+	expvar.NewString("start_timestamp").Set(t.Format(time.RFC3339))
 
 	routeHost, redirectHost := calculateDomains(*rawVHost, *httpsAddr)
 
