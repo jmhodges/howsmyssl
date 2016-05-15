@@ -90,7 +90,7 @@ func TestACMERedirect(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler)
+		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, nil)
 		r, err := http.NewRequest("GET", tt.challPath, nil)
 		if err != nil {
 			t.Fatalf("borked request for %#v: %s", tt.challPath, err)
@@ -158,7 +158,7 @@ func TestVHostCalculation(t *testing.T) {
 			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
 		}
 
-		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler)
+		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, nil)
 		r, err := http.NewRequest("GET", "https://howsmyssl.com/", nil)
 		if err != nil {
 			t.Fatalf("borked request")

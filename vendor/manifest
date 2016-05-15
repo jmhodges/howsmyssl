@@ -1,0 +1,14 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "golang.org/x/net/publicsuffix",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"branch": "master",
+			"path": "/publicsuffix",
+			"notests": true
+		}
+	]
+}
