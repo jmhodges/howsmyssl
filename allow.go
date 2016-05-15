@@ -38,9 +38,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	if origin == "" && referrer == "" {
 		return "", true
 	}
-	originGiven := origin != ""
-	referrerGiven := referrer != ""
-	if originGiven {
+	if origin != "" {
 		d, err := effectiveDomain(origin)
 		if err != nil {
 			return "", false
@@ -48,7 +46,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		_, originOK := oa.m[d]
 		return d, originOK
 	}
-	if referrerGiven {
+	if referrer != "" {
 		d, err := effectiveDomain(referrer)
 		if err != nil {
 			return "", false
