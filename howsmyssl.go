@@ -39,15 +39,16 @@ Date: %s
 )
 
 var (
-	httpsAddr = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
-	httpAddr  = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
-	rawVHost  = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
-	certPath  = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
-	keyPath   = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
-	acmeURL   = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
-	staticDir = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir   = flag.String("templateDir", "./templates", "file path to the directory of templates")
-	adminAddr = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
+	httpsAddr          = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
+	httpAddr           = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
+	rawVHost           = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
+	certPath           = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
+	keyPath            = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
+	acmeURL            = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
+	allowedOriginsFile = flag.String("allowedOriginsConf", "", "file path to find the allowed origins configuration")
+	staticDir          = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
+	tmplDir            = flag.String("templateDir", "./templates", "file path to the directory of templates")
+	adminAddr          = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -96,11 +97,23 @@ func main() {
 		}
 	}
 
+	allowedOrigins := []string{}
+	if *allowedOriginsFile != "" {
+		jc := loadAllowedOriginsConfig(*allowedOriginsFile)
+		allowedOrigins = jc.AllowedOrigins
+	}
+
+	oa, err := newOriginAllower(allowedOrigins)
+	if err != nil {
+		log.Fatalf("unable to make origin allowance with list %#v: %s", allowedOrigins, err)
+	}
 	m := tlsMux(
 		routeHost,
 		redirectHost,
 		*acmeURL,
-		makeStaticHandler(*staticDir, staticVars))
+		makeStaticHandler(*staticDir, staticVars),
+		oa,
+	)
 
 	go func() {
 		err := http.ListenAndServe(*adminAddr, nil)
@@ -168,11 +181,11 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, oa *originAllower) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
 	m.Handle(routeHost+"/s/", staticHandler)
-	m.HandleFunc(routeHost+"/a/check", handleAPI)
+	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
 	m.HandleFunc(routeHost+"/", handleWeb)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
@@ -221,8 +234,26 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 	hijackHandle(w, r, "text/html;charset=utf-8", webStatuses, renderHTML)
 }
 
-func handleAPI(w http.ResponseWriter, r *http.Request) {
+var disallowedOriginBody = []byte(`{"error": "The website calling howsmyssl.com's API has not been allowed to use it. See https://www.howsmyssl.com/s/api.html for information."}`)
+
+type apiHandler struct {
+	oa *originAllower
+}
+
+func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiRequests.Add(1)
+
+	detectedDomain, ok := ah.oa.Allow(r)
+	log.Println("apiHandler", detectedDomain, ok)
+	if !ok {
+		defaultResponseHeaders(w.Header(), r, "application/json")
+		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write(disallowedOriginBody)
+		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
+		return
+	}
+	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
 
@@ -254,15 +285,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	}
 	contentLength := int64(len(bs))
 	h := make(http.Header)
-	h.Set("Date", time.Now().Format(http.TimeFormat))
-	h.Set("Content-Type", contentType)
-	if r.ProtoMinor == 1 { // Assumes HTTP/1.x
-		h.Set("Connection", "close")
-	}
-	h.Set("Strict-Transport-Security", hstsHeaderValue)
-	h.Set("Content-Length", strconv.FormatInt(contentLength, 10))
-	// Allow CORS requests from any domain, for easy API access
-	h.Set("Access-Control-Allow-Origin", "*")
+	defaultResponseHeaders(h, r, contentType)
 	resp := &http.Response{
 		StatusCode:    200,
 		ContentLength: contentLength,
@@ -282,6 +305,17 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	brw.Flush()
 }
 
+func defaultResponseHeaders(h http.Header, r *http.Request, contentType string) {
+	h.Set("Date", time.Now().Format(http.TimeFormat))
+	h.Set("Content-Type", contentType)
+	if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
+		h.Set("Connection", "close")
+	}
+	h.Set("Strict-Transport-Security", hstsHeaderValue)
+	// Allow CORS requests from any domain, for easy API access
+	h.Set("Access-Control-Allow-Origin", "*")
+
+}
 func hijacked500(brw *bufio.ReadWriter, protoMinor int, statuses *statusStats) {
 	statuses.status5xx.Add(1)
 	// Assumes HTTP/1.x

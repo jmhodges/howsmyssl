@@ -1,0 +1,6 @@
+{
+  "allowed_origins": [
+    "localhost",
+    "example.com"
+  ]
+}
