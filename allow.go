@@ -2,22 +2,52 @@ package main
 
 import (
 	"encoding/json"
+	"expvar"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
+	topk "github.com/dgryski/go-topk"
 	"golang.org/x/net/publicsuffix"
 )
 
 type originAllower struct {
-	m map[string]struct{}
+	m  map[string]struct{}
+	ns *expvar.Map
+
+	mu                 *sync.RWMutex
+	topKAllDomains     *topk.Stream
+	topKOfflistDomains *topk.Stream
 }
 
-func newOriginAllower(allowedDomains []string) (*originAllower, error) {
-	oa := &originAllower{m: make(map[string]struct{})}
+func newOriginAllower(allowedDomains []string, ns *expvar.Map) (*originAllower, error) {
+	mu := &sync.RWMutex{}
+	topKAllDomains := topk.New(100)
+	topKOfflistDomains := topk.New(100)
+	lifetime := new(expvar.Map).Init()
+	ns.Set("lifetime", lifetime)
+	lifetime.Set("top_all_domains", expvar.Func(func() interface{} {
+		mu.RLock()
+		defer mu.RUnlock()
+		return topKAllDomains.Keys()
+	}))
+	lifetime.Set("top_offlist_domains", expvar.Func(func() interface{} {
+		mu.RLock()
+		defer mu.RUnlock()
+		return topKOfflistDomains.Keys()
+	}))
+
+	oa := &originAllower{
+		m:                  make(map[string]struct{}),
+		ns:                 ns,
+		mu:                 mu,
+		topKAllDomains:     topKAllDomains,
+		topKOfflistDomains: topKOfflistDomains,
+	}
 	for _, d := range allowedDomains {
 		if d == "localhost" {
 			oa.m[d] = struct{}{}
@@ -39,23 +69,30 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return "", true
 	}
 	if origin != "" {
-		d, err := effectiveDomain(origin)
-		if err != nil {
-			return "", false
-		}
-		_, originOK := oa.m[d]
-		return d, originOK
+		return oa.checkDomain(origin)
 	}
 	if referrer != "" {
-		d, err := effectiveDomain(referrer)
-		if err != nil {
-			return "", false
-		}
-		_, referrerOK := oa.m[d]
-		return d, referrerOK
+		return oa.checkDomain(referrer)
 	}
 
 	return "", false
+}
+
+func (oa *originAllower) checkDomain(d string) (string, bool) {
+	domain, err := effectiveDomain(d)
+	if err != nil {
+		return "", false
+	}
+	_, ok := oa.m[domain]
+	go func() {
+		oa.mu.Lock()
+		defer oa.mu.Unlock()
+		oa.topKAllDomains.Insert(domain, 1)
+		if !ok {
+			oa.topKOfflistDomains.Insert(domain, 1)
+		}
+	}()
+	return domain, ok
 }
 
 func effectiveDomain(str string) (string, error) {
