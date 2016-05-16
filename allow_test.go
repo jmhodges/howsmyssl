@@ -109,3 +109,23 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 	}
 
 }
+
+func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
+	oa, err := newOriginAllower([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := http.NewRequest("GET", "/whatever", nil)
+	if err != nil {
+		t.Fatalf("unable to make request: %s", err)
+	}
+
+	tests := []string{"localhost", "example.com", "notreallyexample.com", "garbage"}
+	for _, d := range tests {
+		r.Header.Set("Origin", d)
+		_, ok := oa.Allow(r)
+		if !ok {
+			t.Errorf("%#v was not okay", d)
+		}
+	}
+}
