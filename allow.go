@@ -65,7 +65,7 @@ func newOriginAllower(allowedDomains []string, ns *expvar.Map) (*originAllower, 
 func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	origin := r.Header.Get("Origin")
 	referrer := r.Header.Get("Referer")
-	if (origin == "" && referrer == "") || len(oa.m) == 0 {
+	if origin == "" && referrer == "" {
 		return "", true
 	}
 	if origin != "" {
@@ -81,7 +81,8 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 func (oa *originAllower) checkDomain(d string) (string, bool) {
 	domain, err := effectiveDomain(d)
 	if err != nil {
-		return "", false
+		// TODO(jmhodges): replace this len check with false when we use top-k
+		return "", len(oa.m) == 0
 	}
 	_, ok := oa.m[domain]
 	go func() {
@@ -92,7 +93,9 @@ func (oa *originAllower) checkDomain(d string) (string, bool) {
 			oa.topKOfflistDomains.Insert(domain, 1)
 		}
 	}()
-	return domain, ok
+
+	// TODO(jmhodges): remove this len check when we use top-k
+	return domain, ok || len(oa.m) == 0
 }
 
 func effectiveDomain(str string) (string, error) {
