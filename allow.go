@@ -35,7 +35,7 @@ func newOriginAllower(allowedDomains []string) (*originAllower, error) {
 func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	origin := r.Header.Get("Origin")
 	referrer := r.Header.Get("Referer")
-	if origin == "" && referrer == "" {
+	if (origin == "" && referrer == "") || len(oa.m) == 0 {
 		return "", true
 	}
 	if origin != "" {
