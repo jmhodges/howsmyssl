@@ -121,7 +121,7 @@ func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
 		t.Fatalf("unable to make request: %s", err)
 	}
 
-	tests := []string{"localhost", "example.com", "notreallyexample.com", "garbage"}
+	tests := []string{"localhost", "http://example.com", "https://notreallyexample.com", "garbage"}
 	for _, d := range tests {
 		r.Header.Set("Origin", d)
 		_, ok := oa.Allow(r)
