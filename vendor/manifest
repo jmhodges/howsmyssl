@@ -2,6 +2,14 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "github.com/dgryski/go-topk",
+			"repository": "https://github.com/dgryski/go-topk",
+			"vcs": "git",
+			"revision": "6b42aca27653f256668254d2f801f2be5e73d90f",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "golang.org/x/net/publicsuffix",
 			"repository": "https://go.googlesource.com/net",
 			"vcs": "git",
