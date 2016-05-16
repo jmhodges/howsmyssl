@@ -253,7 +253,7 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiRequests.Add(1)
 
 	detectedDomain, ok := ah.oa.Allow(r)
-	log.Println("apiHandler", detectedDomain, ok)
+
 	if !ok {
 		defaultResponseHeaders(w.Header(), r, "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
