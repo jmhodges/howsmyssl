@@ -112,7 +112,7 @@ func main() {
 		allowedOrigins = jc.AllowedOrigins
 	}
 
-	oa, err := newOriginAllower(allowedOrigins)
+	oa, err := newOriginAllower(allowedOrigins, expvar.NewMap("origins"))
 	if err != nil {
 		log.Fatalf("unable to make origin allowance with list %#v: %s", allowedOrigins, err)
 	}
@@ -263,6 +263,7 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
+
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
 
