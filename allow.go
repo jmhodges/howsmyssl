@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	// FIXME vendorize this
 	"google.golang.org/cloud/logging"
 
 	topk "github.com/dgryski/go-topk"

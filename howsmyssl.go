@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	// FIXME vendorize
 	"golang.org/x/net/context"
 
 	"google.golang.org/cloud"
