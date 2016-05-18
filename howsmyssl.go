@@ -20,6 +20,12 @@ import (
 	"strings"
 	"time"
 
+	// FIXME vendorize
+	"golang.org/x/net/context"
+
+	"google.golang.org/cloud"
+	"google.golang.org/cloud/logging"
+
 	"github.com/jmhodges/howsmyssl/gzip"
 	"github.com/jmhodges/howsmyssl/tls"
 )
@@ -46,6 +52,8 @@ var (
 	keyPath            = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
 	acmeURL            = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
 	allowedOriginsFile = flag.String("allowedOriginsConf", "", "file path to find the allowed origins configuration")
+	googAcctConf       = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
+	allowLogName       = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
 	staticDir          = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir            = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr          = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
@@ -112,7 +120,23 @@ func main() {
 		allowedOrigins = jc.AllowedOrigins
 	}
 
-	oa, err := newOriginAllower(allowedOrigins, expvar.NewMap("origins"))
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatalf("unable to get hostname of local machine: %s", err)
+	}
+
+	var gclog logClient
+	if *googAcctConf != "" {
+		googConf := loadGoogleServiceAccount(*googAcctConf)
+		tokSrc := googConf.conf.TokenSource(context.Background())
+		gclog, err = logging.NewClient(context.Background(), googConf.ProjectID, *allowLogName, cloud.WithTokenSource(tokSrc))
+		if err != nil {
+			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
+		}
+	} else {
+		gclog = nullLogClient{}
+	}
+	oa, err := newOriginAllower(allowedOrigins, hostname, gclog, expvar.NewMap("origins"))
 	if err != nil {
 		log.Fatalf("unable to make origin allowance with list %#v: %s", allowedOrigins, err)
 	}
