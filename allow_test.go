@@ -17,7 +17,7 @@ type oaTest struct {
 }
 
 func TestOriginAllowerWithLocalhost(t *testing.T) {
-	oa, err := newOriginAllower([]string{"localhost", "example.com"}, new(expvar.Map).Init())
+	oa, err := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 }
 
 func TestOriginAllowerNoLocalhost(t *testing.T) {
-	oa, err := newOriginAllower([]string{"example.com"}, new(expvar.Map).Init())
+	oa, err := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 }
 
 func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
-	oa, err := newOriginAllower([]string{}, new(expvar.Map).Init())
+	oa, err := newOriginAllower([]string{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 	if err != nil {
 		t.Fatal(err)
 	}
