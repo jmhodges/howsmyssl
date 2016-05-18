@@ -44,18 +44,18 @@ Date: %s
 )
 
 var (
-	httpsAddr          = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
-	httpAddr           = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
-	rawVHost           = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
-	certPath           = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
-	keyPath            = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
-	acmeURL            = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
-	allowedOriginsFile = flag.String("allowedOriginsConf", "", "file path to find the allowed origins configuration")
-	googAcctConf       = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
-	allowLogName       = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
-	staticDir          = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir            = flag.String("templateDir", "./templates", "file path to the directory of templates")
-	adminAddr          = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
+	httpsAddr    = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
+	httpAddr     = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
+	rawVHost     = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
+	certPath     = flag.String("cert", "./config/development.crt", "file path to the TLS certificate to serve with")
+	keyPath      = flag.String("key", "./config/development.key", "file path to the TLS key to serve with")
+	acmeURL      = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
+	originsFile  = flag.String("originsConf", "", "file path to find the allowed origins configuration")
+	googAcctConf = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
+	allowLogName = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
+	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
+	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
+	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -113,10 +113,10 @@ func main() {
 		}
 	}
 
-	allowedOrigins := []string{}
-	if *allowedOriginsFile != "" {
-		jc := loadAllowedOriginsConfig(*allowedOriginsFile)
-		allowedOrigins = jc.AllowedOrigins
+	blockedOrigins := []string{}
+	if *originsFile != "" {
+		jc := loadOriginsConfig(*originsFile)
+		blockedOrigins = jc.BlockedOrigins
 	}
 
 	hostname, err := os.Hostname()
@@ -135,10 +135,8 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa, err := newOriginAllower(allowedOrigins, hostname, gclog, expvar.NewMap("origins"))
-	if err != nil {
-		log.Fatalf("unable to make origin allowance with list %#v: %s", allowedOrigins, err)
-	}
+	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
+
 	m := tlsMux(
 		routeHost,
 		redirectHost,

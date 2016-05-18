@@ -37,7 +37,7 @@ type logClient interface {
 	Flush() error
 }
 
-func newOriginAllower(allowedDomains []string, hostname string, gclog logClient, ns *expvar.Map) (*originAllower, error) {
+func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
 	mu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -63,18 +63,10 @@ func newOriginAllower(allowedDomains []string, hostname string, gclog logClient,
 		topKAllDomains:     topKAllDomains,
 		topKOfflistDomains: topKOfflistDomains,
 	}
-	for _, d := range allowedDomains {
-		if d == "localhost" {
-			oa.m[d] = struct{}{}
-			continue
-		}
-		d, err := publicsuffix.EffectiveTLDPlusOne(d)
-		if err != nil {
-			return nil, err
-		}
+	for _, d := range blockedDomains {
 		oa.m[d] = struct{}{}
 	}
-	return oa, nil
+	return oa
 }
 
 func (oa *originAllower) Allow(r *http.Request) (string, bool) {
@@ -132,9 +124,9 @@ func (oa *originAllower) checkDomain(d string) (string, bool) {
 		// TODO(jmhodges): replace this len check with false when we use top-k
 		return "", len(oa.m) == 0
 	}
-	_, ok := oa.m[domain]
+	_, isBlocked := oa.m[domain]
 	// TODO(jmhodges): remove this len check when we use top-k
-	return domain, ok || len(oa.m) == 0
+	return domain, !isBlocked || len(oa.m) == 0
 }
 
 func (oa *originAllower) countRequest(entry *apiLogEntry) {
@@ -182,29 +174,33 @@ func effectiveDomain(str string) (string, error) {
 	return d, nil
 }
 
-func loadAllowedOriginsConfig(fp string) *originsConfig {
+func loadOriginsConfig(fp string) *originsConfig {
 	f, err := os.Open(fp)
 	if err != nil {
-		log.Fatalf("unable to open allowed origins config file %#v: %s", fp, err)
+		log.Fatalf("unable to open origins config file %#v: %s", fp, err)
 	}
 	defer f.Close()
 	jc := &originsConfig{}
 	err = json.NewDecoder(f).Decode(jc)
 	if err != nil {
-		log.Fatalf("unable to parse allowed origins config file %#v: %s", fp, err)
+		log.Fatalf("unable to parse origins config file %#v: %s", fp, err)
 	}
-	for _, a := range jc.AllowedOrigins {
+	for _, a := range jc.BlockedOrigins {
 		if strings.HasPrefix(a, "http://") || strings.HasPrefix(a, "https://") {
-			log.Fatalf("allowed origins config file (%#v) should have just domains without the leading scheme. That is, %#v should not have the protocol scheme at its beginning.", fp, a)
+			log.Fatalf("origins config file (%#v) should have only domains without the leading scheme. For example, %#v should not have the protocol scheme at its beginning.", fp, a)
+		}
+		if strings.Contains(a, "/") {
+			log.Fatalf("origins config file (%#v) should have only domains without a path after it. For example, %#v should not have a trailing path.", fp, a)
 		}
 	}
 	return jc
 }
 
 type originsConfig struct {
-	// AllowedOrigins is a slice of domains like "example.com" (that is, without the
-	// leading protocol)
-	AllowedOrigins []string `json:"allowed_origins"`
+	// BlockedOrigins are domains that are not to be allowed as referrers to the
+	// API. They should not have a scheme or path, but only the domain, as in
+	// "example.com".
+	BlockedOrigins []string `json:"blocked_origins"`
 }
 
 type rejectionReason string
