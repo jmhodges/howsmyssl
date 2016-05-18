@@ -22,5 +22,7 @@ CMD howsmyssl \
     -staticDir=/go/src/github.com/jmhodges/howsmyssl/static \
     -vhost=www.howsmyssl.com \
     -acmeRedirect=$ACME_REDIRECT_URL \
-    -cert=/secrets/howsmyssl.com.cert \
-    -key=/secrets/howsmyssl.com.key
+    -originsConf=/etc/howsmyssl-origins/origins.json \
+    -googAcctConf=/secrets/howsmyssl-logging-svc-account/howsmyssl-logging.json \
+    -cert=/secrets/howsmyssltls/howsmyssl.com.cert \
+    -key=/secrets/howsmyssltls/howsmyssl.com.key
