@@ -9,8 +9,13 @@ if [ -z "${TRAVIS_BRANCH}" ]; then
   die "not running in travis"
 fi
 
-if [[ "${TRAVIS_BRANCH}" != "master" && ! "${TRAVIS_BRANCH}" =~ ^test_gcloud_deploy.* ]]; then
-  echo "not on master, so no docker work needed"
+if [[ "${TRAVIS_BRANCH}" == "master" || "${TRAVIS_BRANCH}" =~ ^test_gcloud_deploy.* ]]; then
+  DO_DEPLOY=1
+elif [[ "${TRAVIS_BRANCH}" =~ test_docker_push.* ]]; then
+  # Only do the docker work, but not the gcloud deploy
+  DO_DEPLOY=0
+else
+  echo "not on pushable or deployable branch, so no docker work needed"
   exit
 fi
 
@@ -46,9 +51,13 @@ function auth_gcloud() {
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
 
-auth_gcloud &
+AUTH_PID=1
 
-AUTH_PID=$!
+if [[ "${DO_DEPLOY}" == "1" ]]; then
+  auth_gcloud &
+
+  AUTH_PID=$!
+fi
 
 docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
@@ -65,6 +74,13 @@ docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
 docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
+echo "Pushed image to docker hub: ${DEPLOY_IMAGE}"
+
+if [[ "${DO_DEPLOY}" != "1" ]]; then
+  echo "Finished push. Skipping deploy because of the branch we're on."
+  # Don't need any of the rest of this file.
+  exit
+fi
 
 wait $AUTH_PID || die "unable to auth_gcloud"
 
