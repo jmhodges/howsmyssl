@@ -1,5 +1,5 @@
 {
-  "allowed_origins": [
+  "blocked_origins": [
     "localhost",
     "example.com"
   ]
