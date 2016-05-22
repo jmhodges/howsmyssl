@@ -152,14 +152,26 @@ func main() {
 		}
 	}()
 
+	httpsSrv := &http.Server{
+		Handler:      m,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	httpSrv := &http.Server{
+		Handler:      plaintextMux(redirectHost),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
 	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
-		err := http.Serve(l, m)
+		err := httpsSrv.Serve(l)
 		if err != nil {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = http.Serve(plaintextListener, plaintextMux(redirectHost))
+	err = httpSrv.Serve(plaintextListener)
 	if err != nil {
 		log.Fatalf("http server error: %s", err)
 	}
