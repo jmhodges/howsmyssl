@@ -44,7 +44,7 @@ func newHandshakeStats(ns *expvar.Map) *handshakeStats {
 	ns.Set("errors", s.Errs)
 	ns.Set("read_timeouts", s.ReadTimeouts)
 	ns.Set("write_timeouts", s.WriteTimeouts)
-	ns.Set("unknown_timeouts", s.EOFs)
+	ns.Set("unknown_timeouts", s.UnknownTimeouts)
 	ns.Set("eofs", s.EOFs)
 	return s
 }
