@@ -2,10 +2,13 @@ package main
 
 import (
 	"errors"
-	"github.com/jmhodges/howsmyssl/tls"
+	"expvar"
+	"io"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 var (
@@ -16,6 +19,43 @@ var (
 
 type listener struct {
 	net.Listener
+	*handshakeStats
+}
+
+type handshakeStats struct {
+	Successes       *expvar.Int
+	Errs            *expvar.Int
+	ReadTimeouts    *expvar.Int
+	WriteTimeouts   *expvar.Int
+	UnknownTimeouts *expvar.Int
+	EOFs            *expvar.Int
+}
+
+func newHandshakeStats(ns *expvar.Map) *handshakeStats {
+	s := &handshakeStats{
+		Successes:       &expvar.Int{},
+		Errs:            &expvar.Int{},
+		ReadTimeouts:    &expvar.Int{},
+		WriteTimeouts:   &expvar.Int{},
+		UnknownTimeouts: &expvar.Int{},
+		EOFs:            &expvar.Int{},
+	}
+	ns.Set("successes", s.Successes)
+	ns.Set("errors", s.Errs)
+	ns.Set("read_timeouts", s.ReadTimeouts)
+	ns.Set("write_timeouts", s.WriteTimeouts)
+	ns.Set("unknown_timeouts", s.EOFs)
+	ns.Set("eofs", s.EOFs)
+	return s
+}
+func newListener(nl net.Listener, ns *expvar.Map) *listener {
+	statNS := new(expvar.Map).Init()
+	ns.Set("handshake", statNS)
+	lis := &listener{
+		Listener:       nl,
+		handshakeStats: newHandshakeStats(statNS),
+	}
+	return lis
 }
 
 func (l *listener) Accept() (net.Conn, error) {
@@ -29,13 +69,20 @@ func (l *listener) Accept() (net.Conn, error) {
 		c.Close()
 		return nil, tlsConnConvError
 	}
-	return &conn{tlsConn, &sync.Mutex{}, nil}, nil
+	return &conn{
+		Conn:           tlsConn,
+		handshakeMutex: &sync.Mutex{},
+		st:             nil,
+		handshakeStats: l.handshakeStats,
+	}, nil
 }
 
 type conn struct {
 	*tls.Conn
 	handshakeMutex *sync.Mutex
 	st             *tls.ServerHandshakeState
+
+	*handshakeStats
 }
 
 func (c *conn) Read(b []byte) (int, error) {
@@ -59,12 +106,29 @@ func (c *conn) Write(b []byte) (int, error) {
 func (c *conn) handshake() error {
 	st, err := c.Conn.ServerHandshake()
 	if err == tls.HandshakeAlreadyPerformedError {
+		c.Successes.Add(1)
 		return nil
 	}
 	if err != nil {
-		log.Printf("handshake problem: %#v", err)
+		c.Errs.Add(1)
+		if err == io.EOF {
+			c.EOFs.Add(1)
+		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			switch opErr.Op {
+			case "read":
+				c.ReadTimeouts.Add(1)
+			case "write":
+				c.WriteTimeouts.Add(1)
+			default:
+				log.Printf("unknown timeout type: %s", opErr.Op)
+				c.UnknownTimeouts.Add(1)
+			}
+		} else {
+			log.Printf("unknown handshake error: %s", err)
+		}
 		return err
 	}
+	c.Successes.Add(1)
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
 	c.st = st
