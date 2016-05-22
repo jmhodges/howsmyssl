@@ -19,39 +19,41 @@ var (
 
 type listener struct {
 	net.Listener
-	*tlsStats
+	*handshakeStats
 }
 
-type tlsStats struct {
-	handshakeReadErrs      *expvar.Int
-	handshakeReadEOFs      *expvar.Int
-	handshakeReadTimeouts  *expvar.Int
-	handshakeWriteErrs     *expvar.Int
-	handshakeWriteEOFs     *expvar.Int
-	handshakeWriteTimeouts *expvar.Int
+type handshakeStats struct {
+	Successes       *expvar.Int
+	Errs            *expvar.Int
+	ReadTimeouts    *expvar.Int
+	WriteTimeouts   *expvar.Int
+	UnknownTimeouts *expvar.Int
+	EOFs            *expvar.Int
 }
 
-func newTLSStats(ns *expvar.Map) *tlsStats {
-	s := &tlsStats{
-		handshakeReadErrs:      &expvar.Int{},
-		handshakeReadEOFs:      &expvar.Int{},
-		handshakeReadTimeouts:  &expvar.Int{},
-		handshakeWriteErrs:     &expvar.Int{},
-		handshakeWriteEOFs:     &expvar.Int{},
-		handshakeWriteTimeouts: &expvar.Int{},
+func newHandshakeStats(ns *expvar.Map) *handshakeStats {
+	s := &handshakeStats{
+		Successes:       &expvar.Int{},
+		Errs:            &expvar.Int{},
+		ReadTimeouts:    &expvar.Int{},
+		WriteTimeouts:   &expvar.Int{},
+		UnknownTimeouts: &expvar.Int{},
+		EOFs:            &expvar.Int{},
 	}
-	ns.Set("read_handshake_errors", s.handshakeReadErrs)
-	ns.Set("read_handshake_errors_timeout", s.handshakeReadTimeouts)
-	ns.Set("read_handshake_errors_eof", s.handshakeReadEOFs)
-	ns.Set("write_handshake_errors", s.handshakeWriteErrs)
-	ns.Set("write_handshake_errors_timeout", s.handshakeWriteTimeouts)
-	ns.Set("write_handshake_errors_eof", s.handshakeWriteEOFs)
+	ns.Set("successes", s.Successes)
+	ns.Set("errors", s.Errs)
+	ns.Set("read_timeouts", s.ReadTimeouts)
+	ns.Set("write_timeouts", s.WriteTimeouts)
+	ns.Set("unknown_timeouts", s.EOFs)
+	ns.Set("eofs", s.EOFs)
 	return s
 }
 func newListener(nl net.Listener, ns *expvar.Map) *listener {
+	statNS := new(expvar.Map).Init()
+	ns.Set("handshake", statNS)
 	lis := &listener{
-		Listener: nl,
-		tlsStats: newTLSStats(ns),
+		Listener:       nl,
+		handshakeStats: newHandshakeStats(statNS),
 	}
 	return lis
 }
@@ -71,7 +73,7 @@ func (l *listener) Accept() (net.Conn, error) {
 		Conn:           tlsConn,
 		handshakeMutex: &sync.Mutex{},
 		st:             nil,
-		tlsStats:       l.tlsStats,
+		handshakeStats: l.handshakeStats,
 	}, nil
 }
 
@@ -80,22 +82,12 @@ type conn struct {
 	handshakeMutex *sync.Mutex
 	st             *tls.ServerHandshakeState
 
-	*tlsStats
+	*handshakeStats
 }
 
 func (c *conn) Read(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
-
-		c.handshakeReadErrs.Add(1)
-		if err == io.EOF {
-			c.handshakeReadEOFs.Add(1)
-		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-			c.handshakeReadTimeouts.Add(1)
-		} else {
-			log.Printf("unknown read handshake error: %s", err)
-		}
-
 		return 0, err
 	}
 	return c.Conn.Read(b)
@@ -104,15 +96,6 @@ func (c *conn) Read(b []byte) (int, error) {
 func (c *conn) Write(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
-		c.handshakeWriteErrs.Add(1)
-		if err == io.EOF {
-			c.handshakeWriteEOFs.Add(1)
-		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-			c.handshakeWriteTimeouts.Add(1)
-		} else {
-			log.Printf("unknown write handshake error: %s", err)
-		}
-
 		return 0, err
 	}
 	return c.Conn.Write(b)
@@ -123,11 +106,29 @@ func (c *conn) Write(b []byte) (int, error) {
 func (c *conn) handshake() error {
 	st, err := c.Conn.ServerHandshake()
 	if err == tls.HandshakeAlreadyPerformedError {
+		c.Successes.Add(1)
 		return nil
 	}
 	if err != nil {
+		c.Errs.Add(1)
+		if err == io.EOF {
+			c.EOFs.Add(1)
+		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			switch opErr.Op {
+			case "read":
+				c.ReadTimeouts.Add(1)
+			case "write":
+				c.WriteTimeouts.Add(1)
+			default:
+				log.Printf("unknown timeout type: %s", opErr.Op)
+				c.UnknownTimeouts.Add(1)
+			}
+		} else {
+			log.Printf("unknown read handshake error: %s", err)
+		}
 		return err
 	}
+	c.Successes.Add(1)
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
 	c.st = st
