@@ -221,22 +221,43 @@ Curves:
 		}
 	}
 
-	if hs.checkForResumption() {
+	// Disallow resumption when client is at TLS 1.0 or below so that
+	// we can be sure the checks for HasBeastVulnSuites is set
+	// correctly. A latency and CPU hit, but tolerable for accuracy.
+	if hs.ClientHello.Vers > VersionTLS10 && hs.checkForResumption() {
 		return true, nil
 	}
+	if hs.ClientHello.Vers <= VersionTLS10 {
+		for _, cs := range hs.ClientHello.CipherSuites {
+			if !cbcSuites[cs] {
+				continue
+			}
 
-	var preferenceList, supportedList []uint16
-	if c.config.PreferServerCipherSuites {
-		preferenceList = c.config.cipherSuites()
-		supportedList = hs.ClientHello.CipherSuites
-	} else {
-		preferenceList = hs.ClientHello.CipherSuites
-		supportedList = c.config.cipherSuites()
+			hs.c.HasBeastVulnSuites = true
+			if cs == TLS_RSA_WITH_AES_128_CBC_SHA || cs == TLS_RSA_WITH_AES_256_CBC_SHA {
+
+				if hs.setCipherSuite(cs, c.config.cipherSuites(), c.vers) {
+					hs.c.AbleToDetectNMinusOneSplitting = true
+					break
+				}
+			}
+		}
 	}
 
-	for _, id := range preferenceList {
-		if hs.setCipherSuite(id, supportedList, c.vers) {
-			break
+	if hs.suite == nil {
+		var preferenceList, supportedList []uint16
+		if c.config.PreferServerCipherSuites {
+			preferenceList = c.config.cipherSuites()
+			supportedList = hs.ClientHello.CipherSuites
+		} else {
+			preferenceList = hs.ClientHello.CipherSuites
+			supportedList = c.config.cipherSuites()
+		}
+
+		for _, id := range preferenceList {
+			if hs.setCipherSuite(id, supportedList, c.vers) {
+				break
+			}
 		}
 	}
 
