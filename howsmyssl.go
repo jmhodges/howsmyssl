@@ -102,7 +102,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to listen for the HTTP server on %s: %s", *httpAddr, err)
 	}
-	l := &listener{tlsListener}
+	ns := expvar.NewMap("tls")
+	l := newListener(tlsListener, ns)
 
 	if *acmeURL != "" {
 		if !strings.HasPrefix(*acmeURL, "/") &&

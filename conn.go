@@ -2,10 +2,12 @@ package main
 
 import (
 	"errors"
-	"github.com/jmhodges/howsmyssl/tls"
-	"log"
+	"expvar"
+	"io"
 	"net"
 	"sync"
+
+	"github.com/jmhodges/howsmyssl/tls"
 )
 
 var (
@@ -16,6 +18,25 @@ var (
 
 type listener struct {
 	net.Listener
+	readProbs  *expvar.Int
+	readEOFs   *expvar.Int
+	writeProbs *expvar.Int
+	writeEOFs  *expvar.Int
+}
+
+func newListener(nl net.Listener, ns *expvar.Map) *listener {
+	lis := &listener{
+		Listener:   nl,
+		readProbs:  &expvar.Int{},
+		readEOFs:   &expvar.Int{},
+		writeProbs: &expvar.Int{},
+		writeEOFs:  &expvar.Int{},
+	}
+	ns.Set("read_handshake_problems", lis.readProbs)
+	ns.Set("read_handshake_problems_eof", lis.readEOFs)
+	ns.Set("write_handshake_problems", lis.writeProbs)
+	ns.Set("write_handshake_problems_eof", lis.writeEOFs)
+	return lis
 }
 
 func (l *listener) Accept() (net.Conn, error) {
@@ -29,18 +50,37 @@ func (l *listener) Accept() (net.Conn, error) {
 		c.Close()
 		return nil, tlsConnConvError
 	}
-	return &conn{tlsConn, &sync.Mutex{}, nil}, nil
+	return &conn{
+		Conn:           tlsConn,
+		handshakeMutex: &sync.Mutex{},
+		st:             nil,
+		readProbs:      l.readProbs,
+		readEOFs:       l.readEOFs,
+		writeProbs:     l.writeProbs,
+		writeEOFs:      l.writeEOFs,
+	}, nil
 }
 
 type conn struct {
 	*tls.Conn
 	handshakeMutex *sync.Mutex
 	st             *tls.ServerHandshakeState
+
+	readProbs  *expvar.Int
+	readEOFs   *expvar.Int
+	writeProbs *expvar.Int
+	writeEOFs  *expvar.Int
 }
 
 func (c *conn) Read(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
+
+		c.readProbs.Add(1)
+		if err == io.EOF {
+			c.readEOFs.Add(1)
+		}
+
 		return 0, err
 	}
 	return c.Conn.Read(b)
@@ -49,6 +89,11 @@ func (c *conn) Read(b []byte) (int, error) {
 func (c *conn) Write(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
+		c.writeProbs.Add(1)
+		if err == io.EOF {
+			c.writeEOFs.Add(1)
+		}
+
 		return 0, err
 	}
 	return c.Conn.Write(b)
@@ -62,7 +107,6 @@ func (c *conn) handshake() error {
 		return nil
 	}
 	if err != nil {
-		log.Printf("handshake problem: %#v", err)
 		return err
 	}
 	c.handshakeMutex.Lock()
