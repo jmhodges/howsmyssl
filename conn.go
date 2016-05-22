@@ -19,24 +19,40 @@ var (
 
 type listener struct {
 	net.Listener
-	readProbs  *expvar.Int
-	readEOFs   *expvar.Int
-	writeProbs *expvar.Int
-	writeEOFs  *expvar.Int
+	*tlsStats
 }
 
+type tlsStats struct {
+	handshakeReadErrs      *expvar.Int
+	handshakeReadEOFs      *expvar.Int
+	handshakeReadTimeouts  *expvar.Int
+	handshakeWriteErrs     *expvar.Int
+	handshakeWriteEOFs     *expvar.Int
+	handshakeWriteTimeouts *expvar.Int
+}
+
+func newTLSStats(ns *expvar.Map) *tlsStats {
+	s := &tlsStats{
+		handshakeReadErrs:      &expvar.Int{},
+		handshakeReadEOFs:      &expvar.Int{},
+		handshakeReadTimeouts:  &expvar.Int{},
+		handshakeWriteErrs:     &expvar.Int{},
+		handshakeWriteEOFs:     &expvar.Int{},
+		handshakeWriteTimeouts: &expvar.Int{},
+	}
+	ns.Set("read_handshake_errors", s.handshakeReadErrs)
+	ns.Set("read_handshake_errors_timeout", s.handshakeReadTimeouts)
+	ns.Set("read_handshake_errors_eof", s.handshakeReadEOFs)
+	ns.Set("write_handshake_errors", s.handshakeWriteErrs)
+	ns.Set("write_handshake_errors_timeout", s.handshakeWriteTimeouts)
+	ns.Set("write_handshake_errors_eof", s.handshakeWriteEOFs)
+	return s
+}
 func newListener(nl net.Listener, ns *expvar.Map) *listener {
 	lis := &listener{
-		Listener:   nl,
-		readProbs:  &expvar.Int{},
-		readEOFs:   &expvar.Int{},
-		writeProbs: &expvar.Int{},
-		writeEOFs:  &expvar.Int{},
+		Listener: nl,
+		tlsStats: newTLSStats(ns),
 	}
-	ns.Set("read_handshake_problems", lis.readProbs)
-	ns.Set("read_handshake_problems_eof", lis.readEOFs)
-	ns.Set("write_handshake_problems", lis.writeProbs)
-	ns.Set("write_handshake_problems_eof", lis.writeEOFs)
 	return lis
 }
 
@@ -55,10 +71,7 @@ func (l *listener) Accept() (net.Conn, error) {
 		Conn:           tlsConn,
 		handshakeMutex: &sync.Mutex{},
 		st:             nil,
-		readProbs:      l.readProbs,
-		readEOFs:       l.readEOFs,
-		writeProbs:     l.writeProbs,
-		writeEOFs:      l.writeEOFs,
+		tlsStats:       l.tlsStats,
 	}, nil
 }
 
@@ -67,21 +80,20 @@ type conn struct {
 	handshakeMutex *sync.Mutex
 	st             *tls.ServerHandshakeState
 
-	readProbs  *expvar.Int
-	readEOFs   *expvar.Int
-	writeProbs *expvar.Int
-	writeEOFs  *expvar.Int
+	*tlsStats
 }
 
 func (c *conn) Read(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
 
-		c.readProbs.Add(1)
+		c.handshakeReadErrs.Add(1)
 		if err == io.EOF {
-			c.readEOFs.Add(1)
+			c.handshakeReadEOFs.Add(1)
+		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			c.handshakeReadTimeouts.Add(1)
 		} else {
-			log.Printf("unknown write handshake error: %s", err)
+			log.Printf("unknown read handshake error: %s", err)
 		}
 
 		return 0, err
@@ -92,11 +104,11 @@ func (c *conn) Read(b []byte) (int, error) {
 func (c *conn) Write(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
-		c.writeProbs.Add(1)
+		c.handshakeWriteErrs.Add(1)
 		if err == io.EOF {
-			c.writeEOFs.Add(1)
+			c.handshakeWriteEOFs.Add(1)
 		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-			// log nothing on timeouts FIXME
+			c.handshakeWriteTimeouts.Add(1)
 		} else {
 			log.Printf("unknown write handshake error: %s", err)
 		}
