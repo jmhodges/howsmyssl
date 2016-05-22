@@ -4,6 +4,7 @@ import (
 	"errors"
 	"expvar"
 	"io"
+	"log"
 	"net"
 	"sync"
 
@@ -92,6 +93,8 @@ func (c *conn) Write(b []byte) (int, error) {
 		c.writeProbs.Add(1)
 		if err == io.EOF {
 			c.writeEOFs.Add(1)
+		} else {
+			log.Printf("unknown handshake error: %s", err)
 		}
 
 		return 0, err
