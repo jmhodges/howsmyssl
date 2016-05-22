@@ -404,6 +404,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 		Certificates:             []tls.Certificate{cert},
 		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionSSL30,
 	}
 	tlsConf.BuildNameToCertificate()
 	return tlsConf
