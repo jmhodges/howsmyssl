@@ -124,7 +124,7 @@ func (c *conn) handshake() error {
 				c.UnknownTimeouts.Add(1)
 			}
 		} else {
-			log.Printf("unknown read handshake error: %s", err)
+			log.Printf("unknown handshake error: %s", err)
 		}
 		return err
 	}
