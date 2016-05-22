@@ -95,6 +95,8 @@ func (c *conn) Write(b []byte) (int, error) {
 		c.writeProbs.Add(1)
 		if err == io.EOF {
 			c.writeEOFs.Add(1)
+		} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+			// log nothing on timeouts FIXME
 		} else {
 			log.Printf("unknown write handshake error: %s", err)
 		}
