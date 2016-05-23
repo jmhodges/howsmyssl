@@ -2,7 +2,12 @@ package main
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/pem"
+	"expvar"
 	"io"
+	"io/ioutil"
+	"log"
 	"testing"
 	"time"
 
@@ -11,9 +16,8 @@ import (
 
 func TestBEASTVuln(t *testing.T) {
 	clientConf := &tls.Config{
-		MaxVersion:         tls.VersionTLS10,
-		InsecureSkipVerify: true,
-		CipherSuites:       []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+		MaxVersion:   tls.VersionTLS10,
+		CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
 	}
 
 	c := connect(t, clientConf)
@@ -26,15 +30,57 @@ func TestBEASTVuln(t *testing.T) {
 
 }
 
-func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
-	conf := makeTLSConfig("./config/development.crt", "./config/development.key")
-	li, err := tls.Listen("tcp", "localhost:0", conf)
+// This is not to make sure that howsmyssl thinks the Go tls library is good,
+// but, instead, we assume the client is "Probably Okay" and look to see that we
+// can handle that golden path.
+func TestGoDefaultIsOkay(t *testing.T) {
+	clientConf := &tls.Config{}
+	c := connect(t, clientConf)
+	ci := ClientInfo(c)
+	t.Logf("%#v", ci)
+
+	if ci.Rating != okay {
+		t.Errorf("Go client rating: want %s, got %s", okay, ci.Rating)
+	}
+}
+
+var serverConf *tls.Config
+var rootCA *x509.Certificate
+
+func init() {
+	serverConf = makeTLSConfig("./config/development_cert.pem", "./config/development_key.pem")
+	certBytes, err := ioutil.ReadFile("./config/development_ca_cert.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+	cblock, _ := pem.Decode(certBytes)
+
+	certs, err := x509.ParseCertificates(cblock.Bytes)
+	if err != nil {
+		log.Fatalf("x509.ParseCertificates: %s", err)
+	}
+	rootCA = certs[0]
+}
+
+func connect(t *testing.T, clientConf *tls.Config) *conn {
+	clientConf.ServerName = "localhost"
+
+	// Required to flip on session ticket keys
+	clientConf.ClientSessionCache = tls.NewLRUClientSessionCache(-1)
+
+	// Required to avoid InsecureSkipVerify (which is probably unnecessary, but
+	// nice to be Good™.)
+	clientConf.RootCAs = x509.NewCertPool()
+	clientConf.RootCAs.AddCert(rootCA)
+
+	tl, err := tls.Listen("tcp", "localhost:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
+	li := newListener(tl, new(expvar.Map).Init())
 	type connRes struct {
 		recv []byte
-		conn *tls.Conn
+		conn *conn
 	}
 	ch := make(chan connRes)
 	errCh := make(chan error)
@@ -49,7 +95,7 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 		io.ReadFull(c, b)
 		c.Close()
 		li.Close()
-		tc := c.(*tls.Conn)
+		tc := c.(*conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
 	c, err := tls.Dial("tcp", li.Addr().String(), clientConf)
