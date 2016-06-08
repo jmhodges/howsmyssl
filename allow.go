@@ -238,14 +238,14 @@ func loadGoogleServiceAccount(fp string) *googleConfig {
 	if err != nil {
 		log.Fatalf("unable to parse Google service account config %#v: %s", fp, err)
 	}
-	c.conf = jwtConf
+	c.Conf = jwtConf
 	return c
 }
 
 type googleConfig struct {
 	ProjectID string `json:"project_id"`
 
-	conf *jwt.Config `json:"-"`
+	Conf *jwt.Config `json:"-"`
 }
 
 var _ logClient = nullLogClient{}
