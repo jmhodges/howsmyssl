@@ -93,7 +93,6 @@ func main() {
 	webVars.Set("requests", webRequests)
 
 	index = loadIndex()
-
 	tlsConf := makeTLSConfig(*certPath, *keyPath)
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
@@ -130,7 +129,7 @@ func main() {
 	var gclog logClient
 	if *googAcctConf != "" {
 		googConf := loadGoogleServiceAccount(*googAcctConf)
-		tokSrc := googConf.Conf.TokenSource(context.Background())
+		tokSrc := googConf.conf.TokenSource(context.Background())
 		gclog, err = logging.NewClient(context.Background(), googConf.ProjectID, *allowLogName, cloud.WithTokenSource(tokSrc))
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
@@ -265,8 +264,9 @@ func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
 
 	if len(sanitizedCallback) > 0 {
 		return []byte(fmt.Sprintf("%s(%s)", sanitizedCallback, marshalled)), nil
+	} else {
+		return marshalled, nil
 	}
-	return marshalled, nil
 }
 
 func handleWeb(w http.ResponseWriter, r *http.Request) {
