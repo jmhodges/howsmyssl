@@ -91,8 +91,10 @@ func main() {
 	apiVars.Set("requests", apiRequests)
 	staticVars.Set("requests", staticRequests)
 	webVars.Set("requests", webRequests)
+	if !*headless {
+		index = loadIndex()
+	}
 
-	index = loadIndex()
 	tlsConf := makeTLSConfig(*certPath, *keyPath)
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
@@ -228,9 +230,17 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, oa *originAllower) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
-	m.Handle(routeHost+"/s/", staticHandler)
+	if !*headless {
+		m.Handle(routeHost+"/s/", staticHandler)
+		m.HandleFunc(routeHost+"/", handleWeb)
+	} else {
+		// Must define a handler for / on https to prevent redirect loop
+		m.HandleFunc(routeHost+"/", func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "404 Not Found", http.StatusNotFound)
+			return
+		})
+	}
 	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
-	m.HandleFunc(routeHost+"/", handleWeb)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
@@ -390,9 +400,6 @@ func commonRedirect(redirectHost string) http.Handler {
 }
 
 func loadIndex() *template.Template {
-	if *headless {
-		return template.Must(template.New("empty").Parse(""))
-	}
 	return template.Must(template.New("index.html").
 		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan}).
 		ParseFiles(*tmplDir + "/index.html"))
@@ -435,13 +442,8 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 
 func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
 	stats := NewStatusStats(vars)
-	var h http.Handler
-	if *headless {
-		h = http.NotFoundHandler()
-	} else {
-		h = http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
-		h = gzip.GZIPHandler(h, nil)
-	}
+	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
+	h = gzip.GZIPHandler(h, nil)
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
 		w = &statWriter{w: w, stats: stats}
