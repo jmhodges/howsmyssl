@@ -86,6 +86,9 @@ func ClientInfo(c *conn) *clientInfo {
 		d.TLSVersion = "TLS 1.1"
 	case tls.VersionTLS12:
 		d.TLSVersion = "TLS 1.2"
+	case 0x0304: // TODO(#119): use crypto/tls's constant when it has it
+		d.TLSVersion = "TLS 1.3"
+
 	default:
 		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
