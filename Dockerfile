@@ -25,5 +25,5 @@ CMD howsmyssl \
     -originsConf=/etc/howsmyssl-origins/origins.json \
     -googAcctConf=/secrets/howsmyssl-logging-svc-account/howsmyssl-logging.json \
     -allowLogName=howsmyssl_allowance_checks \
-    -cert=/secrets/howsmyssltls/howsmyssl.com.cert \
-    -key=/secrets/howsmyssltls/howsmyssl.com.key
+    -cert=/secrets/howsmyssl-tls/tls.crt \
+    -key=/secrets/howsmyssl-tls/tls.key
