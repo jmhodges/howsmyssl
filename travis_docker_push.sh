@@ -69,9 +69,7 @@ SHA=$(git rev-parse --short HEAD)
 # unless running on a test_gcloud_deploy branch
 DEPLOY_IMAGE="$REPO:${TRAVIS_BUILD_NUMBER}-${TRAVIS_BRANCH}-${SHA}"
 
-docker build -f Dockerfile -t $REPO .
-docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
-docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IMAGE}"
+docker build -f Dockerfile -t $DEPLOY_IMAGE . || die "unable to build as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
 echo "Pushed image to docker hub: ${DEPLOY_IMAGE}"
