@@ -97,14 +97,6 @@
 			"branch": "master",
 			"path": "/logging/v1beta3",
 			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/grpc",
-			"repository": "https://github.com/grpc/grpc-go",
-			"vcs": "git",
-			"revision": "b0b7afa173ab8030774fdf383cac027c3c5077d2",
-			"branch": "master",
-			"notests": true
 		}
 	]
 }
