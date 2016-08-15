@@ -209,6 +209,24 @@
 			"notests": true
 		},
 		{
+			"importpath": "cloud.google.com/go/compute/metadata",
+			"repository": "https://code.googlesource.com/gocloud",
+			"vcs": "git",
+			"revision": "9696460acdaa8a7b2505fa6230ac54b4e97a9961",
+			"branch": "master",
+			"path": "/compute/metadata",
+			"notests": true
+		},
+		{
+			"importpath": "cloud.google.com/go/internal",
+			"repository": "https://code.googlesource.com/gocloud",
+			"vcs": "git",
+			"revision": "9696460acdaa8a7b2505fa6230ac54b4e97a9961",
+			"branch": "master",
+			"path": "internal",
+			"notests": true
+		},
+		{
 			"importpath": "cloud.google.com/go/logging",
 			"repository": "https://code.googlesource.com/gocloud",
 			"vcs": "git",
