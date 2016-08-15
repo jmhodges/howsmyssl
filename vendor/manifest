@@ -10,39 +10,12 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/golang/protobuf/proto",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "7cc19b78d562895b13596ddce7aafb59dd789318",
-			"branch": "master",
-			"path": "/proto",
-			"notests": true
-		},
-		{
 			"importpath": "golang.org/x/net/context",
 			"repository": "https://go.googlesource.com/net",
 			"vcs": "git",
 			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
 			"branch": "master",
 			"path": "/context",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/net/http2",
-			"repository": "https://go.googlesource.com/net",
-			"vcs": "git",
-			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
-			"branch": "master",
-			"path": "/http2",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/net/internal/timeseries",
-			"repository": "https://go.googlesource.com/net",
-			"vcs": "git",
-			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
-			"branch": "master",
-			"path": "/internal/timeseries",
 			"notests": true
 		},
 		{
@@ -55,29 +28,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "golang.org/x/net/trace",
-			"repository": "https://go.googlesource.com/net",
-			"vcs": "git",
-			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
-			"branch": "master",
-			"path": "/trace",
-			"notests": true
-		},
-		{
 			"importpath": "golang.org/x/oauth2",
 			"repository": "https://go.googlesource.com/oauth2",
 			"vcs": "git",
 			"revision": "e86e2718db89775a4604abc10a5d3a5672e7336e",
 			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/api/googleapi",
-			"repository": "https://code.googlesource.com/google-api-go-client",
-			"vcs": "git",
-			"revision": "7059a7f3d456870ff1e8424a6b1f62abe5f95f36",
-			"branch": "master",
-			"path": "/googleapi",
 			"notests": true
 		}
 	]
