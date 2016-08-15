@@ -4,8 +4,8 @@ package main
 // Generated with:
 //   curl -s https://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
 //
-// Plus appending the quantum resistant ones that Chrome is testing if the
-// client had to degrade its version of TLS in order to talk to the server.
+// Plus appending a few ones that were asked for in #56 and the quantum
+// resistant ones that Chrome is testing.
 var allCipherSuites = map[uint16]string{
 	0x0000: "TLS_NULL_WITH_NULL_NULL",
 	0x0001: "TLS_RSA_WITH_NULL_MD5",
@@ -346,4 +346,8 @@ var allCipherSuites = map[uint16]string{
 	0x16b8: "TLS_CECPQ1_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
 	0x16b9: "TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384",
 	0x16ba: "TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384",
+
+	// Some insecure cipher suites discovered in the wild.
+	0x0060: "TLS_RSA_EXPORT1024_WITH_RC4_56_MD5",
+	0x0061: "TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5",
 }
