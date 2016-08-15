@@ -72,24 +72,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "golang.org/x/oauth2/google",
-			"repository": "https://go.googlesource.com/oauth2",
-			"vcs": "git",
-			"revision": "e86e2718db89775a4604abc10a5d3a5672e7336e",
-			"branch": "master",
-			"path": "/google",
-			"notests": true
-		},
-		{
-			"importpath": "golang.org/x/oauth2/jwt",
-			"repository": "https://go.googlesource.com/oauth2",
-			"vcs": "git",
-			"revision": "e86e2718db89775a4604abc10a5d3a5672e7336e",
-			"branch": "master",
-			"path": "/jwt",
-			"notests": true
-		},
-		{
 			"importpath": "google.golang.org/api/gensupport",
 			"repository": "https://code.googlesource.com/google-api-go-client",
 			"vcs": "git",
@@ -114,41 +96,6 @@
 			"revision": "7059a7f3d456870ff1e8424a6b1f62abe5f95f36",
 			"branch": "master",
 			"path": "/logging/v1beta3",
-			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/cloud",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "git",
-			"revision": "426f71cccabdf34d0fd67fc49e25038c8f49a0bb",
-			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/cloud/compute/metadata",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "git",
-			"revision": "426f71cccabdf34d0fd67fc49e25038c8f49a0bb",
-			"branch": "master",
-			"path": "/compute/metadata",
-			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/cloud/internal",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "git",
-			"revision": "426f71cccabdf34d0fd67fc49e25038c8f49a0bb",
-			"branch": "master",
-			"path": "/internal",
-			"notests": true
-		},
-		{
-			"importpath": "google.golang.org/cloud/logging",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "git",
-			"revision": "426f71cccabdf34d0fd67fc49e25038c8f49a0bb",
-			"branch": "master",
-			"path": "/logging",
 			"notests": true
 		},
 		{
