@@ -72,15 +72,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "google.golang.org/api/gensupport",
-			"repository": "https://code.googlesource.com/google-api-go-client",
-			"vcs": "git",
-			"revision": "7059a7f3d456870ff1e8424a6b1f62abe5f95f36",
-			"branch": "master",
-			"path": "/gensupport",
-			"notests": true
-		},
-		{
 			"importpath": "google.golang.org/api/googleapi",
 			"repository": "https://code.googlesource.com/google-api-go-client",
 			"vcs": "git",
