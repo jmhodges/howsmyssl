@@ -27,7 +27,11 @@ var (
 //   TLS_RSA_EXPORT1024_WITH_RC4_56_SHA      56-bit encryption, export grade
 //   TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA  56-bit encryption, export grade
 //
-// These last, I believe, are IE only.
+// Plus a few more found in https://github.com/jmhodges/howsmyssl/issues/56:
+//
+//   TLS_RSA_EXPORT1024_WITH_RC4_56_MD5      56-bit encryption, export grade
+//   TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5  56-bit encryption, export grade
+//
 var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA":   true,
 	"TLS_DHE_DSS_WITH_DES_CBC_SHA":            true,
@@ -54,6 +58,8 @@ var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA": true,
 	"TLS_RSA_EXPORT1024_WITH_RC4_56_SHA":      true,
 	"TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA":  true,
+	"TLS_RSA_EXPORT1024_WITH_RC4_56_MD5":      true,
+	"TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5":  true,
 }
 
 // Cipher suites that offer no encryption.
