@@ -47,14 +47,6 @@ function auth_gcloud() {
   gcloud config set compute/zone us-east1-c
   gcloud config set project personal-sites-1295
 
-  # As of sometime before Aug 12th, 2016, Google broke the ability for Google
-  # service accounts to use kubectl outside the DC without the "legacy" setting
-  # use_client_certificate turned on. That's important to us because kubectl is
-  # how we do deploys. It's not clear that they have another solution on the
-  # way. The article that mentions this is
-  # https://cloud.google.com/container-engine/docs/iam-integration
-  gcloud config set container/use_client_certificate True
-
   gcloud container clusters get-credentials sites || die "unable to get credentials for GKE cluster"
 }
 
