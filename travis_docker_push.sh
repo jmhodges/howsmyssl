@@ -60,7 +60,7 @@ if [[ "${DO_DEPLOY}" == "1" ]]; then
   AUTH_PID=$!
 fi
 
-docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
+docker login -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
 REPO=jmhodges/howsmyssl
 
