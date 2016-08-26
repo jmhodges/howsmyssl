@@ -40,7 +40,7 @@ function auth_gcloud() {
 
   openssl aes-256-cbc -K $encrypted_1fc90f464345_key -iv $encrypted_1fc90f464345_iv -in personal-sites-b745e475e82b.json.enc -out ./personal-sites-b745e475e82b.json -d
   
-  gcloud beta auth application-default activate-service-account --key-file  ./personal-sites-b745e475e82b.json || die "unable to authenticate gcloud service account"
+  gcloud auth activate-service-account --key-file  ./personal-sites-b745e475e82b.json || die "unable to authenticate gcloud service account"
 
   gcloud components update || die "unable to update all components"
   # This is for when we're on the first install of gcloud.
