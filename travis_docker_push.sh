@@ -39,8 +39,8 @@ function auth_gcloud() {
     echo "Skipping gcloud download, using the cache of it"
   fi
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
-  gcloud beta auth application-default activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
   export GOOGLE_APPLICATION_CREDENTIALS="$PWD/howsmyssl-gcloud-credentials.json"
+  gcloud beta auth application-default activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
 
   gcloud components update || die "unable to update all components"
   # This is for when we're on the first install of gcloud.
