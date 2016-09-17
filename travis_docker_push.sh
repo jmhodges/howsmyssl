@@ -39,7 +39,7 @@ function auth_gcloud() {
   fi
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
 
-  # FIXME write comment
+  # See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
   gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate service account for gcloud"
 
   gcloud components update || die "unable to update all components"
@@ -89,7 +89,7 @@ wait $AUTH_PID || die "unable to auth_gcloud"
 # all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
 
-# FIXME write second comment
+# See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
 export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/howsmyssl-gcloud-credentials.json"
 # quotes around PATCH are important since there are spaces in it.
 kubectl patch deployment --namespace=prod howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
