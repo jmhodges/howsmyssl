@@ -90,6 +90,8 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		go oa.countRequest(entry)
 	}()
 
+	// Some bad guys are spamming howsmyssl and they don't include a
+	// User-Agent. So, block them.
 	if userAgent == "" {
 		return "", false
 	}
