@@ -62,6 +62,8 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
+	r.Header.Set("User-Agent", "something")
+
 	for i, ot := range tests {
 		r.Header.Set("Origin", ot.origin)
 		r.Header.Set("Referer", ot.referrer)
@@ -89,6 +91,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
+	r.Header.Set("User-Agent", "something")
 
 	for i, ot := range tests {
 		r.Header.Set("Origin", ot.origin)
@@ -111,6 +114,7 @@ func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
+	r.Header.Set("User-Agent", "something")
 
 	tests := []string{"localhost", "http://example.com", "https://notreallyexample.com", "garbage"}
 	for _, d := range tests {
