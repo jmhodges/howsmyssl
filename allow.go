@@ -90,6 +90,10 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		go oa.countRequest(entry)
 	}()
 
+	if userAgent == "" {
+		return "", false
+	}
+
 	if origin == "" && referrer == "" {
 		entry.Allowed = true
 		return "", true
