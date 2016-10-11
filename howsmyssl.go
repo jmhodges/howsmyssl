@@ -294,7 +294,7 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 		return
 	}
-	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
+	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v, User-Agent: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Header.Get("User-Agent"))
 
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
