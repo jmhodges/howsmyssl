@@ -284,6 +284,7 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 }
 
 var disallowedOriginBody = []byte(`{"error": "The website calling howsmyssl.com's API has not been allowed to use it. See https://www.howsmyssl.com/s/api.html for information."}`)
+var disallowedUserAgentBody = []byte(`{"error": "This request had no User-Agent. It's required to provide debugging info when people accidentally abuse the howsmyssl.com's API."}`)
 
 type apiHandler struct {
 	oa *originAllower
@@ -298,11 +299,15 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defaultResponseHeaders(w.Header(), r, "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
 		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write(disallowedOriginBody)
-		fmt.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v; Rejection: %s", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), rej)
+		if rej == rejectionEmptyUserAgent {
+			w.Write(disallowedUserAgentBody)
+		} else {
+			w.Write(disallowedOriginBody)
+		}
+		log.Printf("disallowed request: detected: %#v; Origin: %#v; Referrer: %#v; Rejection: %s", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), rej)
 		return
 	}
-	fmt.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v, User-Agent: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Header.Get("User-Agent"))
+	log.Printf("allowed request: detected: %#v; Origin: %#v; Referrer: %#v, User-Agent: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Header.Get("User-Agent"))
 
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }
