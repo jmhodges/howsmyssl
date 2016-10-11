@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/jmhodges/howsmyssl/tls"
 )
@@ -69,6 +70,7 @@ func (l *listener) Accept() (net.Conn, error) {
 		c.Close()
 		return nil, tlsConnConvError
 	}
+	tlsConn.SetDeadline(30 * time.Second)
 	return &conn{
 		Conn:           tlsConn,
 		handshakeMutex: &sync.Mutex{},
