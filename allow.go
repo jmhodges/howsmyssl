@@ -93,6 +93,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	// Some bad guys are spamming howsmyssl and they don't include a
 	// User-Agent. So, block them.
 	if userAgent == "" {
+		entry.RejectionReason = rejectionEmptyUserAgent
 		return "", false
 	}
 
@@ -211,7 +212,11 @@ type originsConfig struct {
 
 type rejectionReason string
 
-const rejectionConfig = rejectionReason("config")
+const (
+	rejectionConfig         = rejectionReason("config")
+	rejectionEmptyUserAgent = rejectionReason("empty-user-agent")
+	rejectionNil            = rejectionReason("")
+)
 
 type apiLogEntry struct {
 	DetectedDomain  string          `json:"detected_domain"`
