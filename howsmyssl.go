@@ -292,17 +292,17 @@ type apiHandler struct {
 func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	apiRequests.Add(1)
 
-	detectedDomain, ok := ah.oa.Allow(r)
+	detectedDomain, rej := ah.oa.Allow(r)
 
-	if !ok {
+	if rej != rejectionNil {
 		defaultResponseHeaders(w.Header(), r, "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write(disallowedOriginBody)
-		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
+		fmt.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v; Rejection: %s", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), rej)
 		return
 	}
-	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v, User-Agent: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Header.Get("User-Agent"))
+	fmt.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v, User-Agent: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), r.Header.Get("User-Agent"))
 
 	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
 }

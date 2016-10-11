@@ -69,7 +69,7 @@ func newOriginAllower(blockedDomains []string, hostname string, gclog logClient,
 	return oa
 }
 
-func (oa *originAllower) Allow(r *http.Request) (string, bool) {
+func (oa *originAllower) Allow(r *http.Request) (string, rejectionReason) {
 	origin := r.Header.Get("Origin")
 	referrer := r.Header.Get("Referer")
 
@@ -94,12 +94,12 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	// User-Agent. So, block them.
 	if userAgent == "" {
 		entry.RejectionReason = rejectionEmptyUserAgent
-		return "", false
+		return "", entry.RejectionReason
 	}
 
 	if origin == "" && referrer == "" {
 		entry.Allowed = true
-		return "", true
+		return "", rejectionNil
 	}
 	if origin != "" {
 		domain, ok := oa.checkDomain(origin)
@@ -108,7 +108,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		if !ok {
 			entry.RejectionReason = rejectionConfig
 		}
-		return domain, ok
+		return domain, entry.RejectionReason
 	}
 	if referrer != "" {
 		domain, ok := oa.checkDomain(referrer)
@@ -117,10 +117,10 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		if !ok {
 			entry.RejectionReason = rejectionConfig
 		}
-		return domain, ok
+		return domain, entry.RejectionReason
 	}
 
-	return "", false
+	return "", rejectionNil
 }
 
 // checkDomain checks if the detected domain from the request headers and
