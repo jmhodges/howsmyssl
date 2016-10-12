@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"golang.org/x/net/http2/hpack"
+	"golang.org/x/net/lex/httplex"
 )
 
 const frameHeaderLen = 9
@@ -453,7 +454,7 @@ func terminalReadFrameError(err error) bool {
 //
 // If the frame is larger than previously set with SetMaxReadFrameSize, the
 // returned error is ErrFrameTooLarge. Other errors may be of type
-// ConnectionError, StreamError, or anything else from from the underlying
+// ConnectionError, StreamError, or anything else from the underlying
 // reader.
 func (fr *Framer) ReadFrame() (Frame, error) {
 	fr.errDetail = nil
@@ -593,6 +594,7 @@ func parseDataFrame(fh FrameHeader, payload []byte) (Frame, error) {
 var (
 	errStreamID    = errors.New("invalid stream ID")
 	errDepStreamID = errors.New("invalid dependent stream ID")
+	errPadLength   = errors.New("pad length too large")
 )
 
 func validStreamIDOrZero(streamID uint32) bool {
@@ -606,18 +608,40 @@ func validStreamID(streamID uint32) bool {
 // WriteData writes a DATA frame.
 //
 // It will perform exactly one Write to the underlying Writer.
-// It is the caller's responsibility to not call other Write methods concurrently.
+// It is the caller's responsibility not to violate the maximum frame size
+// and to not call other Write methods concurrently.
 func (f *Framer) WriteData(streamID uint32, endStream bool, data []byte) error {
-	// TODO: ignoring padding for now. will add when somebody cares.
+	return f.WriteDataPadded(streamID, endStream, data, nil)
+}
+
+// WriteData writes a DATA frame with optional padding.
+//
+// If pad is nil, the padding bit is not sent.
+// The length of pad must not exceed 255 bytes.
+//
+// It will perform exactly one Write to the underlying Writer.
+// It is the caller's responsibility not to violate the maximum frame size
+// and to not call other Write methods concurrently.
+func (f *Framer) WriteDataPadded(streamID uint32, endStream bool, data, pad []byte) error {
 	if !validStreamID(streamID) && !f.AllowIllegalWrites {
 		return errStreamID
+	}
+	if len(pad) > 255 {
+		return errPadLength
 	}
 	var flags Flags
 	if endStream {
 		flags |= FlagDataEndStream
 	}
+	if pad != nil {
+		flags |= FlagDataPadded
+	}
 	f.startWrite(FrameData, flags, streamID)
+	if pad != nil {
+		f.wbuf = append(f.wbuf, byte(len(pad)))
+	}
 	f.wbuf = append(f.wbuf, data...)
+	f.wbuf = append(f.wbuf, pad...)
 	return f.endWrite()
 }
 
@@ -839,7 +863,7 @@ func parseWindowUpdateFrame(fh FrameHeader, p []byte) (Frame, error) {
 		if fh.StreamID == 0 {
 			return nil, ConnectionError(ErrCodeProtocol)
 		}
-		return nil, StreamError{fh.StreamID, ErrCodeProtocol}
+		return nil, streamError(fh.StreamID, ErrCodeProtocol)
 	}
 	return &WindowUpdateFrame{
 		FrameHeader: fh,
@@ -920,7 +944,7 @@ func parseHeadersFrame(fh FrameHeader, p []byte) (_ Frame, err error) {
 		}
 	}
 	if len(p)-int(padLength) <= 0 {
-		return nil, StreamError{fh.StreamID, ErrCodeProtocol}
+		return nil, streamError(fh.StreamID, ErrCodeProtocol)
 	}
 	hf.headerFragBuf = p[:len(p)-int(padLength)]
 	return hf, nil
@@ -1395,7 +1419,10 @@ func (fr *Framer) readMetaFrame(hf *HeadersFrame) (*MetaHeadersFrame, error) {
 	hdec.SetEmitEnabled(true)
 	hdec.SetMaxStringLength(fr.maxHeaderStringLen())
 	hdec.SetEmitFunc(func(hf hpack.HeaderField) {
-		if !validHeaderFieldValue(hf.Value) {
+		if VerboseLogs && logFrameReads {
+			log.Printf("http2: decoded hpack field %+v", hf)
+		}
+		if !httplex.ValidHeaderFieldValue(hf.Value) {
 			invalid = headerFieldValueError(hf.Value)
 		}
 		isPseudo := strings.HasPrefix(hf.Name, ":")
@@ -1405,7 +1432,7 @@ func (fr *Framer) readMetaFrame(hf *HeadersFrame) (*MetaHeadersFrame, error) {
 			}
 		} else {
 			sawRegular = true
-			if !validHeaderFieldName(hf.Name) {
+			if !validWireHeaderFieldName(hf.Name) {
 				invalid = headerFieldNameError(hf.Name)
 			}
 		}
@@ -1453,11 +1480,17 @@ func (fr *Framer) readMetaFrame(hf *HeadersFrame) (*MetaHeadersFrame, error) {
 	}
 	if invalid != nil {
 		fr.errDetail = invalid
-		return nil, StreamError{mh.StreamID, ErrCodeProtocol}
+		if VerboseLogs {
+			log.Printf("http2: invalid header: %v", invalid)
+		}
+		return nil, StreamError{mh.StreamID, ErrCodeProtocol, invalid}
 	}
 	if err := mh.checkPseudos(); err != nil {
 		fr.errDetail = err
-		return nil, StreamError{mh.StreamID, ErrCodeProtocol}
+		if VerboseLogs {
+			log.Printf("http2: invalid pseudo headers: %v", err)
+		}
+		return nil, StreamError{mh.StreamID, ErrCodeProtocol, err}
 	}
 	return mh, nil
 }

@@ -20,13 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
-
-	"google.golang.org/cloud"
-	"google.golang.org/cloud/logging"
-
+	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
 	"github.com/jmhodges/howsmyssl/tls"
+	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -132,7 +130,7 @@ func main() {
 	if *googAcctConf != "" {
 		googConf := loadGoogleServiceAccount(*googAcctConf)
 		tokSrc := googConf.conf.TokenSource(context.Background())
-		gclog, err = logging.NewClient(context.Background(), googConf.ProjectID, *allowLogName, cloud.WithTokenSource(tokSrc))
+		gclog, err = logging.NewClient(context.Background(), googConf.ProjectID, *allowLogName, option.WithTokenSource(tokSrc))
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
 		}

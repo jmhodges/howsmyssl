@@ -38,7 +38,10 @@ function auth_gcloud() {
     echo "Skipping gcloud download, using the cache of it"
   fi
   openssl aes-256-cbc -K $encrypted_46319ee087e0_key -iv $encrypted_46319ee087e0_iv -in howsmyssl-gcloud-credentials.json.enc -out ./howsmyssl-gcloud-credentials.json -d || die "unable to decrypt gcloud creds"
-  gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate gcloud service account"
+
+  # See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
+  gcloud auth activate-service-account --key-file howsmyssl-gcloud-credentials.json || die "unable to authenticate service account for gcloud"
+
   gcloud components update || die "unable to update all components"
   # This is for when we're on the first install of gcloud.
   gcloud components update kubectl || die "unable to install kubectl"
@@ -46,6 +49,7 @@ function auth_gcloud() {
   gcloud config set container/cluster sites
   gcloud config set compute/zone us-east1-c
   gcloud config set project personal-sites-1295
+
   gcloud container clusters get-credentials sites || die "unable to get credentials for GKE cluster"
 }
 
@@ -59,7 +63,7 @@ if [[ "${DO_DEPLOY}" == "1" ]]; then
   AUTH_PID=$!
 fi
 
-docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
+docker login -u $DOCKER_USER -p $DOCKER_PASS || die "unable to login"
 
 REPO=jmhodges/howsmyssl
 
@@ -69,9 +73,7 @@ SHA=$(git rev-parse --short HEAD)
 # unless running on a test_gcloud_deploy branch
 DEPLOY_IMAGE="$REPO:${TRAVIS_BUILD_NUMBER}-${TRAVIS_BRANCH}-${SHA}"
 
-docker build -f Dockerfile -t $REPO .
-docker tag -f $REPO:$COMMIT $REPO:latest || die "unable to tag as latest"
-docker tag -f $REPO:$COMMIT ${DEPLOY_IMAGE} || die "unable to tag as ${DEPLOY_IMAGE}"
+docker build -f Dockerfile -t $DEPLOY_IMAGE . || die "unable to build as ${DEPLOY_IMAGE}"
 
 docker push $REPO || die "unable to push docker tags"
 echo "Pushed image to docker hub: ${DEPLOY_IMAGE}"
@@ -87,5 +89,7 @@ wait $AUTH_PID || die "unable to auth_gcloud"
 # all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
 PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
 
+# See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
+export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/howsmyssl-gcloud-credentials.json"
 # quotes around PATCH are important since there are spaces in it.
 kubectl patch deployment --namespace=prod howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"

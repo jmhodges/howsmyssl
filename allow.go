@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/cloud/logging"
+	"cloud.google.com/go/logging"
 
 	topk "github.com/dgryski/go-topk"
 	"golang.org/x/net/publicsuffix"
