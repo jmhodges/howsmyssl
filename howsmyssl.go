@@ -137,13 +137,11 @@ func main() {
 	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
 
 	staticHandler := http.NotFoundHandler()
-	webHandler := func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "404 Not Found", http.StatusNotFound)
-	}
+	webHandleFunc := http.NotFound
 	if !*headless {
 		index = loadIndex()
 		staticHandler = makeStaticHandler(*staticDir, staticVars)
-		webHandler = handleWeb
+		webHandleFunc = handleWeb
 	}
 
 	m := tlsMux(
@@ -151,7 +149,7 @@ func main() {
 		redirectHost,
 		*acmeURL,
 		staticHandler,
-		webHandler,
+		webHandleFunc,
 		oa,
 	)
 
@@ -233,12 +231,12 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandler func(http.ResponseWriter, *http.Request), oa *originAllower) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandleFunc http.HandlerFunc, oa *originAllower) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
 	m.Handle(routeHost+"/s/", staticHandler)
 	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
-	m.HandleFunc(routeHost+"/", webHandler)
+	m.HandleFunc(routeHost+"/", webHandleFunc)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
