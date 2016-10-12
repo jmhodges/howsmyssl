@@ -299,18 +299,24 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if rej != rejectionNil {
 		defaultResponseHeaders(w.Header(), r, "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
 		if rej == rejectionEmptyUserAgent {
 			// TODO(jmhodges): undo this redirect and use StatusTooManyRequests
 			i := atomic.LoadInt64(&ah.nopeRedirects)
 			if i < 500 && r.Header.Get("Origin") == "" && r.Header.Get("Referer") == "" {
-				http.Redirect(w, r, fmt.Sprintf("https://www.somethingsimilar.com/nope-%03d", i), http.StatusFound)
+				// http.Redirect(w, r, fmt.Sprintf("https://www.somethingsimilar.com/?nope=%03d", i), http.StatusFound)
+				fmt.Println("badguy", r.Header)
+				w.Header().Set("Content-Length", strconv.Itoa(len(disallowedUserAgentBody)))
+				w.WriteHeader(http.StatusTooManyRequests)
+				w.Write(disallowedUserAgentBody)
+
 				atomic.AddInt64(&ah.nopeRedirects, 1)
 			} else {
+				w.Header().Set("Content-Length", strconv.Itoa(len(disallowedUserAgentBody)))
 				w.WriteHeader(http.StatusTooManyRequests)
 				w.Write(disallowedUserAgentBody)
 			}
 		} else {
+			w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
 			w.WriteHeader(http.StatusTooManyRequests)
 			w.Write(disallowedOriginBody)
 		}
