@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/logging"
@@ -287,7 +288,8 @@ var disallowedOriginBody = []byte(`{"error": "The website calling howsmyssl.com'
 var disallowedUserAgentBody = []byte(`{"error": "This request had no User-Agent. It's required to provide debugging info when people accidentally abuse the howsmyssl.com's API."}`)
 
 type apiHandler struct {
-	oa *originAllower
+	oa            *originAllower
+	nopeRedirects int64
 }
 
 func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -298,10 +300,18 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rej != rejectionNil {
 		defaultResponseHeaders(w.Header(), r, "application/json")
 		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
-		w.WriteHeader(http.StatusTooManyRequests)
 		if rej == rejectionEmptyUserAgent {
-			w.Write(disallowedUserAgentBody)
+			// TODO(jmhodges): undo this redirect and use StatusTooManyRequests
+			i := atomic.LoadInt64(&ah.nopeRedirects)
+			if i < 500 && r.Header.Get("Origin") == "" && r.Header.Get("Referer") == "" {
+				http.Redirect(w, r, fmt.Sprintf("https://www.somethingsimilar.com/nope-%03d", i), http.StatusFound)
+				atomic.AddInt64(&ah.nopeRedirects, 1)
+			} else {
+				w.WriteHeader(http.StatusTooManyRequests)
+				w.Write(disallowedUserAgentBody)
+			}
 		} else {
+			w.WriteHeader(http.StatusTooManyRequests)
 			w.Write(disallowedOriginBody)
 		}
 		log.Printf("disallowed request: detected: %#v; Origin: %#v; Referrer: %#v; Rejection: %s", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"), rej)
