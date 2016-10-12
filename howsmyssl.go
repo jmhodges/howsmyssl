@@ -89,9 +89,6 @@ func main() {
 	apiVars.Set("requests", apiRequests)
 	staticVars.Set("requests", staticRequests)
 	webVars.Set("requests", webRequests)
-	if !*headless {
-		index = loadIndex()
-	}
 
 	tlsConf := makeTLSConfig(*certPath, *keyPath)
 
@@ -139,11 +136,22 @@ func main() {
 	}
 	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
 
+	staticHandler := http.NotFoundHandler()
+	webHandler := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "404 Not Found", http.StatusNotFound)
+	}
+	if !*headless {
+		index = loadIndex()
+		staticHandler = makeStaticHandler(*staticDir, staticVars)
+		webHandler = handleWeb
+	}
+
 	m := tlsMux(
 		routeHost,
 		redirectHost,
 		*acmeURL,
-		makeStaticHandler(*staticDir, staticVars),
+		staticHandler,
+		webHandler,
 		oa,
 	)
 
@@ -225,20 +233,12 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, oa *originAllower) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandler func(http.ResponseWriter, *http.Request), oa *originAllower) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
-	if !*headless {
-		m.Handle(routeHost+"/s/", staticHandler)
-		m.HandleFunc(routeHost+"/", handleWeb)
-	} else {
-		// Must define a handler for / on https to prevent redirect loop
-		m.HandleFunc(routeHost+"/", func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "404 Not Found", http.StatusNotFound)
-			return
-		})
-	}
+	m.Handle(routeHost+"/s/", staticHandler)
 	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
+	m.HandleFunc(routeHost+"/", webHandler)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))

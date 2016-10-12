@@ -30,6 +30,9 @@ type acmeTest struct {
 func TestACMERedirect(t *testing.T) {
 	staticVars := new(expvar.Map).Init()
 	staticHandler := makeStaticHandler("/static", staticVars)
+	webHandler := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "404 Not Found", http.StatusNotFound)
+	}
 	tests := []acmeTest{
 		// same domain redirect, acmeRedirectURL leads with "/"
 		{
@@ -90,7 +93,7 @@ func TestACMERedirect(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, nil)
+		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, webHandler, nil)
 		r, err := http.NewRequest("GET", tt.challPath, nil)
 		if err != nil {
 			t.Fatalf("borked request for %#v: %s", tt.challPath, err)
@@ -148,6 +151,9 @@ func TestVHostCalculation(t *testing.T) {
 	}
 	staticVars := new(expvar.Map).Init()
 	staticHandler := makeStaticHandler("/static", staticVars)
+	webHandler := func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "404 Not Found", http.StatusNotFound)
+	}
 
 	for i, vt := range tests {
 		routeHost, redirectHost := calculateDomains(vt.rawVHost, vt.httpsAddr)
@@ -158,7 +164,7 @@ func TestVHostCalculation(t *testing.T) {
 			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
 		}
 
-		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, nil)
+		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, webHandler, nil)
 		r, err := http.NewRequest("GET", "https://howsmyssl.com/", nil)
 		if err != nil {
 			t.Fatalf("borked request")
