@@ -355,11 +355,27 @@ var allCipherSuites = map[uint16]string{
 	0x16b9: "TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384",
 	0x16ba: "TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384",
 
-	// Chrome is testing out GREASE. When this cipher suite was added, there was
-	// no name given, so it was called "TLS_GREASE_IS_THE_WORD". See draft 01
+	// Chrome is testing out GREASE. When these cipher suite was added, there
+	// was no name given in their IETF draft, so we call them
+	// "TLS_GREASE_IS_THE_WORD_${PREFIX}". See draft 01
 	// <https://tools.ietf.org/html/draft-davidben-tls-grease-01>. We, for now,
 	// assume they are safe.
-	0x5a5a: "TLS_GREASE_IS_THE_WORD",
+	0x0A0A: "TLS_GREASE_IS_THE_WORD_0A",
+	0x1A1A: "TLS_GREASE_IS_THE_WORD_1A",
+	0x2A2A: "TLS_GREASE_IS_THE_WORD_2A",
+	0x3A3A: "TLS_GREASE_IS_THE_WORD_3A",
+	0x4A4A: "TLS_GREASE_IS_THE_WORD_4A",
+	0x5A5A: "TLS_GREASE_IS_THE_WORD_5A",
+	0x6A6A: "TLS_GREASE_IS_THE_WORD_6A",
+	0x7A7A: "TLS_GREASE_IS_THE_WORD_7A",
+	0x8A8A: "TLS_GREASE_IS_THE_WORD_8A",
+	0x9A9A: "TLS_GREASE_IS_THE_WORD_9A",
+	0xAAAA: "TLS_GREASE_IS_THE_WORD_AA",
+	0xBABA: "TLS_GREASE_IS_THE_WORD_BA",
+	0xCACA: "TLS_GREASE_IS_THE_WORD_CA",
+	0xDADA: "TLS_GREASE_IS_THE_WORD_DA",
+	0xEAEA: "TLS_GREASE_IS_THE_WORD_EA",
+	0xFAFA: "TLS_GREASE_IS_THE_WORD_FA",
 
 	// Some insecure cipher suites discovered in the wild.
 	0x0060: "TLS_RSA_EXPORT1024_WITH_RC4_56_MD5",
