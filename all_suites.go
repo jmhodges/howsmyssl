@@ -355,6 +355,12 @@ var allCipherSuites = map[uint16]string{
 	0x16b9: "TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384",
 	0x16ba: "TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384",
 
+	// Chrome is testing out GREASE. When this cipher suite was added, there was
+	// no name given, so it was called "TLS_GREASE_IS_THE_WORD". See draft 01
+	// <https://tools.ietf.org/html/draft-davidben-tls-grease-01>. We, for now,
+	// assume they are safe.
+	0x5a5a: "TLS_GREASE_IS_THE_WORD",
+
 	// Some insecure cipher suites discovered in the wild.
 	0x0060: "TLS_RSA_EXPORT1024_WITH_RC4_56_MD5",
 	0x0061: "TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5",
