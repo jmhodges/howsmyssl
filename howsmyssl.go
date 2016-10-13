@@ -54,6 +54,7 @@ var (
 	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
+	headless     = flag.Bool("headless", false, "Run without templates")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -89,7 +90,6 @@ func main() {
 	staticVars.Set("requests", staticRequests)
 	webVars.Set("requests", webRequests)
 
-	index = loadIndex()
 	tlsConf := makeTLSConfig(*certPath, *keyPath)
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
@@ -136,11 +136,20 @@ func main() {
 	}
 	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
 
+	staticHandler := http.NotFoundHandler()
+	webHandleFunc := http.NotFound
+	if !*headless {
+		index = loadIndex()
+		staticHandler = makeStaticHandler(*staticDir, staticVars)
+		webHandleFunc = handleWeb
+	}
+
 	m := tlsMux(
 		routeHost,
 		redirectHost,
 		*acmeURL,
-		makeStaticHandler(*staticDir, staticVars),
+		staticHandler,
+		webHandleFunc,
 		oa,
 	)
 
@@ -222,12 +231,12 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, oa *originAllower) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandleFunc http.HandlerFunc, oa *originAllower) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
 	m.Handle(routeHost+"/s/", staticHandler)
 	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
-	m.HandleFunc(routeHost+"/", handleWeb)
+	m.HandleFunc(routeHost+"/", webHandleFunc)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
