@@ -332,6 +332,7 @@ var allCipherSuites = map[uint16]string{
 	0xCC15: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 	0xCCA8: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
 	0xCCA9: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+	0xCCAA: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305",
 
 	// new PSK ciphers introduced by TLS 1.3
 	// https://tlswg.github.io/tls13-spec/#rfc.appendix.A.4
