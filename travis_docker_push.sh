@@ -28,6 +28,11 @@ fi
 
 function auth_gcloud() {
   export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+  echo "auth_gcloud 1"
+  ls ${HOME}/google-cloud-sdk/bin
+  echo "auth_gcloud 2"
+  echo $PATH
+  which gcloud
   if [ ! -d ${HOME}/google-cloud-sdk/bin ]; then
     # If there's no cache, TravisCI will put an empty directory there, which
     # gcloud's install script errors out on. So, delete it and do the download
