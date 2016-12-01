@@ -58,7 +58,7 @@ export PATH=${HOME}/google-cloud-sdk/bin:$PATH
 AUTH_PID=1
 
 if [[ "${DO_DEPLOY}" == "1" ]]; then
-  auth_gcloud &
+  auth_gcloud
 
   AUTH_PID=$!
 fi
