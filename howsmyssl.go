@@ -127,10 +127,14 @@ func main() {
 	if *googAcctConf != "" {
 		googConf := loadGoogleServiceAccount(*googAcctConf)
 		tokSrc := googConf.conf.TokenSource(context.Background())
-		gclog, err = logging.NewClient(context.Background(), googConf.ProjectID, *allowLogName, option.WithTokenSource(tokSrc))
+		client, err := logging.NewClient(context.Background(), googConf.ProjectID, option.WithTokenSource(tokSrc))
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
 		}
+		client.OnError = func(e error) {
+			log.Printf("goog logging error: %s", err)
+		}
+		gclog = client.Logger(*allowLogName)
 	} else {
 		gclog = nullLogClient{}
 	}
