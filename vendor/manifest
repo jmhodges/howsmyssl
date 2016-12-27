@@ -252,75 +252,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/golang/protobuf/proto",
+			"importpath": "github.com/golang/protobuf",
 			"repository": "https://github.com/golang/protobuf",
 			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
+			"revision": "8ee79997227bf9b34611aee7946ae64735e6fd93",
 			"branch": "master",
-			"path": "/proto",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/protoc-gen-go/descriptor",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "protoc-gen-go/descriptor",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/any",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/any",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/duration",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/duration",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/empty",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/empty",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/struct",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/struct",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/timestamp",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/timestamp",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/golang/protobuf/ptypes/wrappers",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "git",
-			"revision": "2c1988e8c18d14b142c0b472624f71647cf39adb",
-			"branch": "master",
-			"path": "ptypes/wrappers",
 			"notests": true
 		},
 		{
