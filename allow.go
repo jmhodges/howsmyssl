@@ -80,7 +80,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		log.Printf("error splitting %#v as host:port: %s", r.RemoteAddr, err)
-		remoteIP = "<parseerror>"
+		remoteIP = "0.0.0.0"
 	}
 	entry := &apiLogEntry{
 		DetectedDomain: "",
