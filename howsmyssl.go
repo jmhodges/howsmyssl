@@ -131,7 +131,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
 		}
-		client.OnError = func(e error) {
+		client.OnError = func(err error) {
 			log.Printf("goog logging error: %s", err)
 		}
 		gclog = client.Logger(*allowLogName)
