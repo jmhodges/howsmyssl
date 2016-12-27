@@ -33,8 +33,8 @@ type originAllower struct {
 
 // FIXME flush on shutdown
 type logClient interface {
-	Log(logging.Entry) error
-	Flush() error
+	Log(logging.Entry)
+	Flush()
 }
 
 func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
@@ -234,7 +234,7 @@ func loadGoogleServiceAccount(fp string) *googleConfig {
 	if c.ProjectID == "" {
 		log.Fatalf("blank project ID in Google service account config %#v: %s", fp, err)
 	}
-	jwtConf, err := google.JWTConfigFromJSON(bs, logging.Scope)
+	jwtConf, err := google.JWTConfigFromJSON(bs, logging.WriteScope)
 	if err != nil {
 		log.Fatalf("unable to parse Google service account config %#v: %s", fp, err)
 	}
@@ -252,10 +252,8 @@ var _ logClient = nullLogClient{}
 
 type nullLogClient struct{}
 
-func (n nullLogClient) Log(e logging.Entry) error {
-	return nil
+func (n nullLogClient) Log(e logging.Entry) {
 }
 
-func (n nullLogClient) Flush() error {
-	return nil
+func (n nullLogClient) Flush() {
 }
