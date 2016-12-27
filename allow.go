@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -76,6 +77,11 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	apiKey := r.FormValue("key")
 	userAgent := r.Header.Get("User-Agent")
 
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		log.Printf("error splitting %#v as host:port: %s", r.RemoteAddr, err)
+		remoteIP = "<parseerror>"
+	}
 	entry := &apiLogEntry{
 		DetectedDomain: "",
 		Allowed:        false,
@@ -87,7 +93,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		},
 	}
 	defer func() {
-		go oa.countRequest(entry)
+		go oa.countRequest(entry, r, remoteIP)
 	}()
 
 	if origin == "" && referrer == "" {
@@ -129,9 +135,10 @@ func (oa *originAllower) checkDomain(d string) (string, bool) {
 	return domain, !isBlocked || len(oa.m) == 0
 }
 
-func (oa *originAllower) countRequest(entry *apiLogEntry) {
+func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
 	oa.gclog.Log(logging.Entry{
-		Payload: entry,
+		Payload:     entry,
+		HTTPRequest: &logging.HTTPRequest{Request: r, RemoteIP: remoteIP},
 		Labels: map[string]string{
 			"server_hostname": oa.hostname,
 			"app":             "howsmyssl",
