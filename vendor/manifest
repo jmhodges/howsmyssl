@@ -402,15 +402,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "google.golang.org/api/logging/v1beta3",
-			"repository": "https://code.googlesource.com/google-api-go-client",
-			"vcs": "git",
-			"revision": "55146ba61254fdb1c26d65ff3c04bc1611ad73fb",
-			"branch": "master",
-			"path": "logging/v1beta3",
-			"notests": true
-		},
-		{
 			"importpath": "google.golang.org/api/option",
 			"repository": "https://code.googlesource.com/google-api-go-client",
 			"vcs": "git",
