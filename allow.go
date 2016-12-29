@@ -21,11 +21,35 @@ import (
 	"golang.org/x/oauth2/jwt"
 )
 
+type ipv6 [16]byte
+
+func (ip ipv6) ToIP() net.IP {
+	out := make(net.IP, 16)
+	copy(out, ip[:])
+	return out
+}
+
+// FIXME test json parsing
+func (ip *ipv6) UnmarshalJSON(b []byte) error {
+	jip := ""
+	err := json.Unmarshal(b, &jip)
+	if err != nil {
+		return fmt.Errorf("unable to parse %#v as a JSON string: %s", string(b), err)
+	}
+	rawIP := net.ParseIP(jip)
+	if rawIP == nil {
+		return fmt.Errorf("unable to parse %#v as an IP address")
+	}
+	copy((*ip)[:], rawIP)
+	return nil
+}
+
 type originAllower struct {
-	m        map[string]struct{}
-	ns       *expvar.Map
-	hostname string
-	gclog    logClient
+	blockedDomains map[string]bool
+	blockedIPs     map[ipv6]bool
+	ns             *expvar.Map
+	hostname       string
+	gclog          logClient
 
 	mu                 *sync.RWMutex
 	topKAllDomains     *topk.Stream
@@ -38,7 +62,7 @@ type logClient interface {
 	Flush()
 }
 
-func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
+func newOriginAllower(blockedDomains []string, blockedIPs []ipv6, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
 	mu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -56,7 +80,8 @@ func newOriginAllower(blockedDomains []string, hostname string, gclog logClient,
 	}))
 
 	oa := &originAllower{
-		m:                  make(map[string]struct{}),
+		blockedDomains:     make(map[string]bool),
+		blockedIPs:         make(map[ipv6]bool),
 		ns:                 ns,
 		hostname:           hostname,
 		gclog:              gclog,
@@ -65,7 +90,10 @@ func newOriginAllower(blockedDomains []string, hostname string, gclog logClient,
 		topKOfflistDomains: topKOfflistDomains,
 	}
 	for _, d := range blockedDomains {
-		oa.m[d] = struct{}{}
+		oa.blockedDomains[d] = true
+	}
+	for _, ip := range blockedIPs {
+		oa.blockedIPs[ip] = true
 	}
 	return oa
 }
@@ -77,11 +105,9 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 	apiKey := r.FormValue("key")
 	userAgent := r.Header.Get("User-Agent")
 
-	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		log.Printf("error splitting %#v as host:port: %s", r.RemoteAddr, err)
-		remoteIP = "0.0.0.0"
-	}
+	// Set by ipHandler.ServeHTTP
+	remoteIP := r.Context().Value(ipCtxKey).(ipv6)
+
 	entry := &apiLogEntry{
 		DetectedDomain: "",
 		Allowed:        false,
@@ -92,31 +118,37 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 			UserAgent: userAgent,
 		},
 	}
+	domain := ""
+	domainAllowed := true
 	defer func() {
-		go oa.countRequest(entry, r, remoteIP)
+		go oa.countRequest(entry, r, remoteIP, domainAllowed)
 	}()
+	domain, domainAllowed = oa.checkOriginHeaders(origin, referrer)
+	ipAllowed := !oa.blockedIPs[remoteIP]
+	entry.DetectedDomain = domain
+	entry.Allowed = domainAllowed && ipAllowed
+	switch {
+	case !domainAllowed:
+		entry.RejectionReason = rejectionDomain
+	case !ipAllowed:
+		entry.RejectionReason = rejectionIP
+	}
+	return entry.DetectedDomain, entry.Allowed
+}
 
+// checkOriginHeaders returns true if the domains in the Origin and Referer
+// [sic] headers of the request are allowed to access How's My SSL. If the
+// Origin is allowed, the requests passes even if the Referer was disallowed.
+func (oa *originAllower) checkOriginHeaders(origin, referrer string) (string, bool) {
 	if origin == "" && referrer == "" {
-		entry.Allowed = true
 		return "", true
 	}
+
 	if origin != "" {
-		domain, ok := oa.checkDomain(origin)
-		entry.DetectedDomain = domain
-		entry.Allowed = ok
-		if !ok {
-			entry.RejectionReason = rejectionConfig
-		}
-		return domain, ok
+		return oa.checkDomain(origin)
 	}
 	if referrer != "" {
-		domain, ok := oa.checkDomain(referrer)
-		entry.DetectedDomain = domain
-		entry.Allowed = ok
-		if !ok {
-			entry.RejectionReason = rejectionConfig
-		}
-		return domain, ok
+		return oa.checkDomain(referrer)
 	}
 
 	return "", false
@@ -127,18 +159,17 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 func (oa *originAllower) checkDomain(d string) (string, bool) {
 	domain, err := effectiveDomain(d)
 	if err != nil {
-		// TODO(jmhodges): replace this len check with false when we use top-k
-		return "", len(oa.m) == 0
+		return "", len(oa.blockedDomains) == 0
 	}
-	_, isBlocked := oa.m[domain]
+	isBlocked := oa.blockedDomains[domain]
 	// TODO(jmhodges): remove this len check when we use top-k
-	return domain, !isBlocked || len(oa.m) == 0
+	return domain, !isBlocked
 }
 
-func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
+func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP ipv6, domainAllowed bool) {
 	oa.gclog.Log(logging.Entry{
 		Payload:     entry,
-		HTTPRequest: &logging.HTTPRequest{Request: r, RemoteIP: remoteIP},
+		HTTPRequest: &logging.HTTPRequest{Request: r, RemoteIP: remoteIP.ToIP().String()},
 		Labels: map[string]string{
 			"server_hostname": oa.hostname,
 			"app":             "howsmyssl",
@@ -152,7 +183,7 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 	oa.mu.Lock()
 	defer oa.mu.Unlock()
 	oa.topKAllDomains.Insert(entry.DetectedDomain, 1)
-	if !entry.Allowed {
+	if !domainAllowed {
 		oa.topKOfflistDomains.Insert(entry.DetectedDomain, 1)
 	}
 }
@@ -208,11 +239,20 @@ type originsConfig struct {
 	// API. They should not have a scheme or path, but only the domain, as in
 	// "example.com".
 	BlockedOrigins []string `json:"blocked_origins"`
+
+	// BlockedIPs are the IPs that are immediately rejected for being spammy.
+	BlockedIPs []ipv6 `json:"blocked_ips"`
 }
 
 type rejectionReason string
 
-const rejectionConfig = rejectionReason("config")
+const (
+	rejectionDomain = rejectionReason("bad-origin")
+	rejectionIP     = rejectionReason("bad-ip")
+
+	// Deprecated. Use rejectionDomain instead.
+	rejectionConfig = rejectionReason("config")
+)
 
 type apiLogEntry struct {
 	DetectedDomain  string          `json:"detected_domain"`

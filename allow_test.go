@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"expvar"
 	"net/http"
 	"testing"
@@ -15,7 +16,7 @@ type oaTest struct {
 }
 
 func TestOriginAllowerWithLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{"localhost", "example.com"}, []ipv6{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"", "", "", true},
@@ -62,6 +63,8 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
+	r = r.WithContext(context.WithValue(context.Background(), ipCtxKey, easyIPv6()))
+
 	for i, ot := range tests {
 		r.Header.Set("Origin", ot.origin)
 		r.Header.Set("Referer", ot.referrer)
@@ -76,7 +79,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 }
 
 func TestOriginAllowerNoLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{"example.com"}, []ipv6{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},
@@ -89,7 +92,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
-
+	r = r.WithContext(context.WithValue(context.Background(), ipCtxKey, easyIPv6()))
 	for i, ot := range tests {
 		r.Header.Set("Origin", ot.origin)
 		r.Header.Set("Referer", ot.referrer)
@@ -105,12 +108,13 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 }
 
 func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
-	oa := newOriginAllower([]string{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{}, []ipv6{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	r, err := http.NewRequest("GET", "/whatever", nil)
 	if err != nil {
 		t.Fatalf("unable to make request: %s", err)
 	}
+	r = r.WithContext(context.WithValue(context.Background(), ipCtxKey, easyIPv6()))
 
 	tests := []string{"localhost", "http://example.com", "https://notreallyexample.com", "garbage"}
 	for _, d := range tests {
@@ -120,4 +124,10 @@ func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
 			t.Errorf("%#v was not okay", d)
 		}
 	}
+}
+
+func easyIPv6() ipv6 {
+	var ip ipv6
+	copy(ip[:], zeroIP)
+	return ip
 }

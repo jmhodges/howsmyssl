@@ -113,9 +113,11 @@ func main() {
 	}
 
 	blockedOrigins := []string{}
+	blockedIPs := []ipv6{}
 	if *originsFile != "" {
 		jc := loadOriginsConfig(*originsFile)
 		blockedOrigins = jc.BlockedOrigins
+		blockedIPs = jc.BlockedIPs
 	}
 
 	hostname, err := os.Hostname()
@@ -138,7 +140,7 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
+	oa := newOriginAllower(blockedOrigins, blockedIPs, hostname, gclog, expvar.NewMap("origins"))
 
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
@@ -245,14 +247,14 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
 	m.Handle("/", commonRedirect(redirectHost))
-	return protoHandler{logHandler{m}, "https"}
+	return protoHandler{ipHandler{logHandler{m}}, "https"}
 }
 
 func plaintextMux(redirectHost string) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(redirectHost))
-	return protoHandler{logHandler{m}, "http"}
+	return protoHandler{ipHandler{logHandler{m}}, "http"}
 }
 
 func renderHTML(r *http.Request, data *clientInfo) ([]byte, error) {
@@ -472,21 +474,49 @@ func sentence(parts []string) string {
 	return strings.Join(commaed, ", ") + ", and " + parts[len(parts)-1] + "."
 }
 
+type ipHandler struct {
+	inner http.Handler
+}
+
+var zeroIP = net.ParseIP("0.0.0.0").To16()
+
+func (h ipHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ipStr, _, err := net.SplitHostPort(r.RemoteAddr)
+	var ip ipv6
+	if err != nil {
+		log.Printf("error splitting Request.RemoteAddr %#v as host:port: %s", r.RemoteAddr, err)
+		copy(ip[:], zeroIP)
+	} else {
+		netIP := net.ParseIP(ipStr)
+		if netIP == nil {
+			netIP = zeroIP
+		}
+		copy(ip[:], netIP.To16())
+	}
+
+	r = r.WithContext(context.WithValue(r.Context(), ipCtxKey, ip))
+	h.inner.ServeHTTP(w, r)
+}
+
 type logHandler struct {
 	inner http.Handler
 }
 
+type howsMySSLCtxKey int
+
+const ipCtxKey howsMySSLCtxKey = 0
+
 // Since we have a Hijack in our code, this simple writer will suffice for
 // now.
 func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = "0.0.0.0"
-	}
 	proto := r.Header.Get(xForwardedProto)
 	if proto == "" {
 		proto = "unknown"
 	}
+
+	// Set by ipHandler.ServeHTTP
+	ip := r.Context().Value(ipCtxKey).(ipv6)
+
 	referrer := r.Header.Get("Referer")
 	if referrer == "" {
 		referrer = "noreferrer"
@@ -499,7 +529,7 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	fmt.Printf("request: %s %s %s %s %s %s\n", host, proto, r.URL, referrer, origin, userAgent)
+	fmt.Printf("request: %s %s %s %s %s %s\n", ip, proto, r.URL, referrer, origin, userAgent)
 	h.inner.ServeHTTP(w, r)
 }
 
