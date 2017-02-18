@@ -15,9 +15,12 @@ import (
 	"net/http/httputil"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"cloud.google.com/go/logging"
@@ -175,6 +178,8 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
@@ -183,10 +188,33 @@ func main() {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
-	err = httpSrv.Serve(plaintextListener)
-	if err != nil {
-		log.Fatalf("http server error: %s", err)
-	}
+	go func() {
+		err = httpSrv.Serve(plaintextListener)
+		if err != nil {
+			log.Fatalf("http server error: %s", err)
+		}
+	}()
+
+	<-stop
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		err := httpsSrv.Shutdown(ctx)
+		if err != nil {
+			log.Printf("error shutting down HTTPS: %s", err)
+		}
+		wg.Done()
+	}()
+	go func() {
+		err := httpSrv.Shutdown(ctx)
+		if err != nil {
+			log.Printf("error shutting down HTTP: %s", err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+	cancel()
 }
 
 // Returns routeHost, redirectHost
