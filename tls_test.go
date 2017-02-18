@@ -8,26 +8,76 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"testing"
 	"time"
 
-	"github.com/jmhodges/howsmyssl/tls"
+	tls "github.com/jmhodges/howsmyssl/tls18"
 )
 
 func TestBEASTVuln(t *testing.T) {
-	clientConf := &tls.Config{
-		MaxVersion:   tls.VersionTLS10,
-		CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
-	}
+	t.Run("TLS10OnlyCBC", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MaxVersion:   tls.VersionTLS10,
+			CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+		}
 
-	c := connect(t, clientConf)
-	if !c.HasBeastVulnSuites {
-		t.Errorf("HasBeastVulnSuites was false")
-	}
-	if !c.NMinusOneRecordSplittingDetected {
-		t.Errorf("NMinusOneRecordSplittingDetected was false")
-	}
+		c := connect(t, clientConf)
+		st := c.ConnectionState()
+		if !st.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.0, CBC suite, Conn: AbleToDetectNMinusOneSplitting was false")
+		}
+		if !st.NMinusOneRecordSplittingDetected {
+			t.Errorf("TLS 1.0, CBC suite, Conn: NMinusOneRecordSplittingDetected was false")
+		}
+		ci := ClientInfo(c)
+		if ci.BEASTVuln {
+			t.Errorf("TLS 1.0, CBC suite, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+		}
+		if !ci.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.0, CBC suite, ClientInfo: AbleToDetectNMinusOneSplitting was false")
+		}
+	})
 
+	// AbleToDetectNMinusOneSplitting shouldn't be set unless there are BEAST vuln cipher suites included
+	// and we're talking over TLS 1.0.
+	t.Run("TLS10NoCBC", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MaxVersion:   tls.VersionTLS10,
+			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
+		}
+		c := connect(t, clientConf)
+		st := c.ConnectionState()
+		if st.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.0, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
+		}
+		ci := ClientInfo(c)
+		if ci.BEASTVuln {
+			t.Errorf("TLS 1.0, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+		}
+		if ci.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.0, no CBC suites, ClientInfo: AbleToDetectNMinusOneSplitting was true but should be false because no CBC suites were included even though we used TLS 1.0")
+		}
+	})
+
+	t.Run("TLS12NoCBC", func(t *testing.T) {
+		clientConf := &tls.Config{
+			CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305},
+		}
+
+		c := connect(t, clientConf)
+		st := c.ConnectionState()
+		if st.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.2+, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
+		}
+		ci := ClientInfo(c)
+		if ci.BEASTVuln {
+			t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+		}
+		if ci.AbleToDetectNMinusOneSplitting {
+			t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: AbleToDetectNMinusOneSplitting was true but shouldn't be set since we're not on TLS 1.0 or older")
+		}
+	})
 }
 
 // This is not to make sure that howsmyssl thinks the Go tls library is good,
@@ -41,6 +91,15 @@ func TestGoDefaultIsOkay(t *testing.T) {
 
 	if ci.Rating != okay {
 		t.Errorf("Go client rating: want %s, got %s", okay, ci.Rating)
+	}
+	if len(ci.GivenCipherSuites) == 0 {
+		t.Errorf("no cipher suites given")
+	}
+	if ci.TLSCompressionSupported {
+		t.Errorf("TLSCompressionSupported was somehow true even though Go's TLS client doesn't support it")
+	}
+	if !ci.SessionTicketsSupported {
+		t.Errorf("SessionTicketsSupported was false but we set that in connect explicitly")
 	}
 }
 
@@ -84,7 +143,6 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 	}
 	ch := make(chan connRes)
 	errCh := make(chan error)
-
 	go func() {
 		c, err := li.Accept()
 		if err != nil {
@@ -98,13 +156,30 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		tc := c.(*conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
-	c, err := tls.Dial("tcp", li.Addr().String(), clientConf)
+	var c *tls.Conn
+	for i := 0; i < 10; i++ {
+		d := &net.Dialer{
+			Timeout: 500 * time.Millisecond,
+		}
+		c, err = tls.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		if err == nil {
+			break
+		} else {
+			t.Logf("unable to connect on attempt %d: %s", i, err)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 	if err != nil {
+		logErrFromServer(t, errCh)
 		t.Fatalf("Dial: %s", err)
 	}
 	defer c.Close()
 	sent := []byte("a")
-	c.Write(sent)
+	_, err = c.Write(sent)
+	if err != nil {
+		logErrFromServer(t, errCh)
+		t.Fatalf("unable to send data to the conn: %s", err)
+	}
 	var cr connRes
 	select {
 	case err := <-errCh:
@@ -117,4 +192,17 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		t.Fatalf("timed out")
 	}
 	return cr.conn
+}
+
+func logErrFromServer(t *testing.T, errCh chan error) {
+	defer func() {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				t.Logf("error from server side: %s", err)
+			}
+		case <-time.After(100 * time.Millisecond):
+			// do nothing
+		}
+	}()
 }

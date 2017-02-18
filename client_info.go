@@ -31,18 +31,19 @@ type clientInfo struct {
 func ClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
-	c.handshakeMutex.Lock()
-	defer c.handshakeMutex.Unlock()
-
-	for _, ci := range c.st.ClientHello.CipherSuites {
+	st := c.ConnectionState()
+	if !st.HandshakeComplete {
+		panic("given a TLS conn that has not completed its handshake")
+	}
+	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
 		if found {
 			if strings.Contains(s, "DHE_") {
 				d.EphemeralKeysSupported = true
 			}
-			if c.HasBeastVulnSuites {
-				d.BEASTVuln = !c.NMinusOneRecordSplittingDetected
-				d.AbleToDetectNMinusOneSplitting = c.AbleToDetectNMinusOneSplitting
+			if cbcSuites[ci] && st.Version <= tls.VersionTLS10 {
+				d.BEASTVuln = !st.NMinusOneRecordSplittingDetected
+				d.AbleToDetectNMinusOneSplitting = st.AbleToDetectNMinusOneSplitting
 			}
 			if fewBitCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
@@ -68,15 +69,15 @@ func ClientInfo(c *conn) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
-	d.SessionTicketsSupported = c.st.ClientHello.TicketSupported
+	d.SessionTicketsSupported = st.SessionTicketsSupported
 
-	for _, cm := range c.st.ClientHello.CompressionMethods {
+	for _, cm := range st.CompressionMethods {
 		if cm != 0x0 {
 			d.TLSCompressionSupported = true
 			break
 		}
 	}
-	vers := c.st.ClientHello.Vers
+	vers := st.Version
 	switch vers {
 	case tls.VersionSSL30:
 		d.TLSVersion = "SSL 3.0"
