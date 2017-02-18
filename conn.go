@@ -72,7 +72,6 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{
 		Conn:           tlsConn,
 		handshakeMutex: &sync.Mutex{},
-		st:             nil,
 		handshakeStats: l.handshakeStats,
 	}, nil
 }
@@ -80,7 +79,6 @@ func (l *listener) Accept() (net.Conn, error) {
 type conn struct {
 	*tls.Conn
 	handshakeMutex *sync.Mutex
-	st             *tls.ServerHandshakeState
 
 	*handshakeStats
 }
@@ -104,11 +102,12 @@ func (c *conn) Write(b []byte) (int, error) {
 // This, unfortunately, means we take two uncontended locks on every read and
 // write: the c.handshakeMutex here and the one in tls.Conn.
 func (c *conn) handshake() error {
-	st, err := c.Conn.ServerHandshake()
-	if err == tls.HandshakeAlreadyPerformedError {
-		c.Successes.Add(1)
-		return nil
-	}
+	err := c.Conn.Handshake()
+	// FIXME tls18
+	// if err == tls.HandshakeAlreadyPerformedError {
+	// 	c.Successes.Add(1)
+	// 	return nil
+	// }
 	if err != nil {
 		c.Errs.Add(1)
 		if err == io.EOF {
@@ -131,6 +130,5 @@ func (c *conn) handshake() error {
 	c.Successes.Add(1)
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
-	c.st = st
 	return nil
 }

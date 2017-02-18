@@ -22,12 +22,54 @@ func TestBEASTVuln(t *testing.T) {
 	}
 
 	c := connect(t, clientConf)
-	if !c.HasBeastVulnSuites {
-		t.Errorf("HasBeastVulnSuites was false")
+	st := c.ConnectionState()
+	if !st.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.0, CBC suite, Conn: AbleToDetectNMinusOneSplitting was false")
 	}
-	if !c.NMinusOneRecordSplittingDetected {
-		t.Errorf("NMinusOneRecordSplittingDetected was false")
+	if !st.NMinusOneRecordSplittingDetected {
+		t.Errorf("TLS 1.0, CBC suite, Conn: NMinusOneRecordSplittingDetected was false")
 	}
+	ci := ClientInfo(c)
+	if ci.BEASTVuln {
+		t.Errorf("TLS 1.0, CBC suite, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+	}
+	if !ci.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.0, CBC suite, ClientInfo: AbleToDetectNMinusOneSplitting was false")
+	}
+
+	// AbleToDetectNMinusOneSplitting shouldn't be set unless there are BEAST vuln cipher suites included
+	// and we're talking over TLS 1.0.
+
+	clientConf = &tls.Config{
+		MaxVersion: tls.VersionTLS10,
+	}
+	c = connect(t, clientConf)
+	st = c.ConnectionState()
+	if st.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.0, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
+	}
+	ci = ClientInfo(c)
+	if ci.BEASTVuln {
+		t.Errorf("TLS 1.0, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+	}
+	if ci.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.0, no CBC suites, ClientInfo: AbleToDetectNMinusOneSplitting was true but should be false because no CBC suites were included even though we used TLS 1.0")
+	}
+
+	clientConf = &tls.Config{}
+	c = connect(t, clientConf)
+	st = c.ConnectionState()
+	if st.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.2+, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
+	}
+	ci = ClientInfo(c)
+	if ci.BEASTVuln {
+		t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
+	}
+	if ci.AbleToDetectNMinusOneSplitting {
+		t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: AbleToDetectNMinusOneSplitting was true but shouldn't be set since we're not on TLS 1.0 or older")
+	}
+
 }
 
 // This is not to make sure that howsmyssl thinks the Go tls library is good,

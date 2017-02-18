@@ -33,16 +33,16 @@ func ClientInfo(c *conn) *clientInfo {
 
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
-
-	for _, ci := range c.st.ClientHello.CipherSuites {
+	st := c.ConnectionState()
+	for _, ci := range st.GivenCipherSuites {
 		s, found := allCipherSuites[ci]
 		if found {
 			if strings.Contains(s, "DHE_") {
 				d.EphemeralKeysSupported = true
 			}
-			if c.HasBeastVulnSuites {
-				d.BEASTVuln = !c.NMinusOneRecordSplittingDetected
-				d.AbleToDetectNMinusOneSplitting = c.AbleToDetectNMinusOneSplitting
+			if cbcSuites[ci] {
+				d.BEASTVuln = !st.NMinusOneRecordSplittingDetected
+				d.AbleToDetectNMinusOneSplitting = st.AbleToDetectNMinusOneSplitting
 			}
 			if fewBitCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
@@ -68,15 +68,15 @@ func ClientInfo(c *conn) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
-	d.SessionTicketsSupported = c.st.ClientHello.TicketSupported
+	d.SessionTicketsSupported = st.SessionTicketsSupported
 
-	for _, cm := range c.st.ClientHello.CompressionMethods {
+	for _, cm := range st.CompressionMethods {
 		if cm != 0x0 {
 			d.TLSCompressionSupported = true
 			break
 		}
 	}
-	vers := c.st.ClientHello.Vers
+	vers := st.Version
 	switch vers {
 	case tls.VersionSSL30:
 		d.TLSVersion = "SSL 3.0"

@@ -179,6 +179,13 @@ type ConnectionState struct {
 	// future versions of Go once the TLS master-secret fix has been
 	// standardized and implemented.
 	TLSUnique []byte
+
+	// Added for howsmyssl use
+	GivenCipherSuites                []uint16
+	CompressionMethods               []uint8
+	NMinusOneRecordSplittingDetected bool
+	AbleToDetectNMinusOneSplitting   bool
+	SessionTicketsSupported          bool
 }
 
 // ClientAuthType declares the policy the server will follow for
