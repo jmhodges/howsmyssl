@@ -14,6 +14,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"runtime/debug"
 )
 
 // serverHandshakeState contains details of a server handshake in progress.
@@ -103,6 +105,7 @@ func (c *Conn) serverHandshake() error {
 			return err
 		}
 	}
+	c.clientHello = hs.clientHello
 	c.handshakeComplete = true
 
 	return nil
@@ -247,26 +250,50 @@ Curves:
 		}
 	}
 
-	if hs.checkForResumption() {
+	// Disallow resumption when client is at TLS 1.0 or below so that
+	// we can be sure the checks for HasBeastVulnSuites is set
+	// correctly. A latency and CPU hit, but tolerable for accuracy.
+	if hs.clientHello.vers > VersionTLS10 && hs.checkForResumption() {
 		return true, nil
 	}
 
-	var preferenceList, supportedList []uint16
-	if c.config.PreferServerCipherSuites {
-		preferenceList = c.config.cipherSuites()
-		supportedList = hs.clientHello.cipherSuites
-	} else {
-		preferenceList = hs.clientHello.cipherSuites
-		supportedList = c.config.cipherSuites()
+	log.Printf("In handshake server 10: %d", c)
+	if hs.clientHello.vers <= VersionTLS10 {
+		for _, cs := range hs.clientHello.cipherSuites {
+			if cs == TLS_RSA_WITH_AES_128_CBC_SHA || cs == TLS_RSA_WITH_AES_256_CBC_SHA || cs == TLS_RSA_WITH_AES_128_CBC_SHA256 {
+
+				if hs.setCipherSuite(cs, c.config.cipherSuites(), c.vers) {
+					log.Println("setting ableToDetectNMinusOneSplitting", hs.suite)
+					c.ableToDetectNMinusOneSplitting = true
+					break
+				}
+			}
+		}
 	}
 
-	for _, id := range preferenceList {
-		if hs.setCipherSuite(id, supportedList, c.vers) {
-			break
+	what := debug.Stack()
+	log.Println("checking before calling again", hs.suite, string(what))
+	// If we didn't already call setCipherSuite for the BEAST vuln detection, do
+	// the usual stuff.
+	if hs.suite == nil {
+		var preferenceList, supportedList []uint16
+		if c.config.PreferServerCipherSuites {
+			preferenceList = c.config.cipherSuites()
+			supportedList = hs.clientHello.cipherSuites
+		} else {
+			preferenceList = hs.clientHello.cipherSuites
+			supportedList = c.config.cipherSuites()
+		}
+
+		for _, id := range preferenceList {
+			if hs.setCipherSuite(id, supportedList, c.vers) {
+				break
+			}
 		}
 	}
 
 	if hs.suite == nil {
+		log.Println("calling sendAlert alertHandshakeFailure", hs.suite)
 		c.sendAlert(alertHandshakeFailure)
 		return false, errors.New("tls: no cipher suite supported by both client and server")
 	}
@@ -770,9 +797,11 @@ func (hs *serverHandshakeState) processCertsFromClient(certificates [][]byte) (c
 func (hs *serverHandshakeState) setCipherSuite(id uint16, supportedCipherSuites []uint16, version uint16) bool {
 	for _, supported := range supportedCipherSuites {
 		if id == supported {
+			log.Printf("setCipherSuite 1: %X", id)
 			var candidate *cipherSuite
 
 			for _, s := range cipherSuites {
+				log.Printf("setCipherSuite 5: s.id is %X", s.id)
 				if s.id == id {
 					candidate = s
 					break
@@ -781,25 +810,32 @@ func (hs *serverHandshakeState) setCipherSuite(id uint16, supportedCipherSuites 
 			if candidate == nil {
 				continue
 			}
+			log.Printf("setCipherSuite 10: candidate.id is %X", candidate.id)
 			// Don't select a ciphersuite which we can't
 			// support for this client.
 			if candidate.flags&suiteECDHE != 0 {
 				if !hs.ellipticOk {
+					log.Printf("setCipherSuite 50: candidate.id is %X", candidate.id)
 					continue
 				}
 				if candidate.flags&suiteECDSA != 0 {
 					if !hs.ecdsaOk {
+						log.Printf("setCipherSuite 60: candidate.id is %X", candidate.id)
 						continue
 					}
 				} else if !hs.rsaSignOk {
+					log.Printf("setCipherSuite 70: candidate.id is %X", candidate.id)
 					continue
 				}
 			} else if !hs.rsaDecryptOk {
+				log.Printf("setCipherSuite 75: candidate.id is %X", candidate.id)
 				continue
 			}
+			log.Printf("setCipherSuite 80: candidate.id is %X", candidate.id)
 			if version < VersionTLS12 && candidate.flags&suiteTLS12 != 0 {
 				continue
 			}
+			log.Printf("setCipherSuite 100: candidate.id is %X", candidate.id)
 			hs.suite = candidate
 			return true
 		}

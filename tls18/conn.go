@@ -100,6 +100,12 @@ type Conn struct {
 	activeCall int32
 
 	tmp [16]byte
+
+	// Added for howsmyssl's use
+	clientHello                      *clientHelloMsg
+	ableToDetectNMinusOneSplitting   bool
+	readOneAppDataRecord             bool
+	nMinusOneRecordSplittingDetected bool
 }
 
 // Access to net.Conn methods.
@@ -655,6 +661,19 @@ Again:
 		err := c.sendAlert(alertRecordOverflow)
 		c.in.freeBlock(b)
 		return c.in.setErrorLocked(err)
+	}
+
+	// This detects BEAST mitigation when the first app data record is
+	// of length 1 or 0. Length 1 mitigation is common in web browsers, while
+	// length 0 is common in OpenSSL tools. Since the requests to
+	// /a/check are typically very small, this won't detect the Java
+	// style BEAST mitigation where the 1 byte record is sent after
+	// the first application record but only if its large enough.
+	//
+	// TODO(jmhodges): check that 1 or 0 byte records are sent between others
+	if !c.readOneAppDataRecord && c.ableToDetectNMinusOneSplitting && want == recordTypeApplicationData {
+		c.readOneAppDataRecord = true
+		c.nMinusOneRecordSplittingDetected = len(data) == 1 || len(data) == 0
 	}
 
 	switch typ {
@@ -1354,6 +1373,13 @@ func (c *Conn) ConnectionState() ConnectionState {
 				state.TLSUnique = c.serverFinished[:]
 			}
 		}
+		state.ClientCipherSuites = make([]uint16, len(c.clientHello.cipherSuites))
+		copy(state.ClientCipherSuites, c.clientHello.cipherSuites)
+		state.CompressionMethods = make([]uint8, len(c.clientHello.compressionMethods))
+		copy(state.CompressionMethods, c.clientHello.compressionMethods)
+		state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
+		state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected
+		state.SessionTicketsSupported = c.clientHello.ticketSupported
 	}
 
 	return state

@@ -34,13 +34,16 @@ func ClientInfo(c *conn) *clientInfo {
 	c.handshakeMutex.Lock()
 	defer c.handshakeMutex.Unlock()
 	st := c.ConnectionState()
-	for _, ci := range st.GivenCipherSuites {
+	if !st.HandshakeComplete {
+		panic("given a TLS conn that has not completed its handshake")
+	}
+	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
 		if found {
 			if strings.Contains(s, "DHE_") {
 				d.EphemeralKeysSupported = true
 			}
-			if cbcSuites[ci] {
+			if cbcSuites[ci] && st.Version <= tls.VersionTLS10 {
 				d.BEASTVuln = !st.NMinusOneRecordSplittingDetected
 				d.AbleToDetectNMinusOneSplitting = st.AbleToDetectNMinusOneSplitting
 			}

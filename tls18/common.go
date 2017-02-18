@@ -180,8 +180,8 @@ type ConnectionState struct {
 	// standardized and implemented.
 	TLSUnique []byte
 
-	// Added for howsmyssl use
-	GivenCipherSuites                []uint16
+	// Added for howsmyssl's use
+	ClientCipherSuites               []uint16
 	CompressionMethods               []uint8
 	NMinusOneRecordSplittingDetected bool
 	AbleToDetectNMinusOneSplitting   bool
