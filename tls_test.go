@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jmhodges/howsmyssl/tls"
+	tls "github.com/jmhodges/howsmyssl/tls18"
 )
 
 func TestBEASTVuln(t *testing.T) {
@@ -27,7 +27,6 @@ func TestBEASTVuln(t *testing.T) {
 	if !c.NMinusOneRecordSplittingDetected {
 		t.Errorf("NMinusOneRecordSplittingDetected was false")
 	}
-
 }
 
 // This is not to make sure that howsmyssl thinks the Go tls library is good,
