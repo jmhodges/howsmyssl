@@ -86,9 +86,7 @@ func (c *conn) Read(b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err := c.Conn.Read(b)
-	c.errorToStats(err)
-	return n, err
+	return c.Conn.Read(b)
 }
 
 func (c *conn) Write(b []byte) (int, error) {
@@ -96,9 +94,7 @@ func (c *conn) Write(b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err := c.Conn.Write(b)
-	c.errorToStats(err)
-	return n, err
+	return c.Conn.Write(b)
 }
 
 // This, unfortunately, means we take two uncontended locks on every read and
@@ -110,7 +106,6 @@ func (c *conn) handshake() error {
 	}
 
 	err := c.Conn.Handshake()
-	c.errorToStats(err)
 	if err != nil {
 		return err
 	}
