@@ -22,7 +22,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
-	"github.com/jmhodges/howsmyssl/tls"
+	tls "github.com/jmhodges/howsmyssl/tls18"
 	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 )

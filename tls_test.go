@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"testing"
 	"time"
 
@@ -83,7 +84,6 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 	}
 	ch := make(chan connRes)
 	errCh := make(chan error)
-
 	go func() {
 		c, err := li.Accept()
 		if err != nil {
@@ -97,13 +97,30 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		tc := c.(*conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
-	c, err := tls.Dial("tcp", li.Addr().String(), clientConf)
+	var c *tls.Conn
+	for i := 0; i < 10; i++ {
+		d := &net.Dialer{
+			Timeout: 500 * time.Millisecond,
+		}
+		c, err = tls.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		if err == nil {
+			break
+		} else {
+			t.Logf("unable to connect on attempt %d: %s", i, err)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
 	if err != nil {
+		logErrFromServer(errCh)
 		t.Fatalf("Dial: %s", err)
 	}
 	defer c.Close()
 	sent := []byte("a")
-	c.Write(sent)
+	_, err = c.Write(sent)
+	if err != nil {
+		logErrFromServer(errCh)
+		t.Fatalf("unable to send data to the conn: %s", err)
+	}
 	var cr connRes
 	select {
 	case err := <-errCh:
@@ -116,4 +133,17 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		t.Fatalf("timed out")
 	}
 	return cr.conn
+}
+
+func logErrFromServer(t *testing.T, errCh chan error) {
+	defer func() {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				t.Logf("error from server side: %s", err)
+			}
+		case <-time.After(100 * time.Millisecond):
+			// do nothing
+		}
+	}()
 }
