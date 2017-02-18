@@ -31,8 +31,6 @@ type clientInfo struct {
 func ClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
-	c.handshakeMutex.Lock()
-	defer c.handshakeMutex.Unlock()
 	st := c.ConnectionState()
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")

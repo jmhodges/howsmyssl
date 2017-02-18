@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync"
+	"sync/atomic"
 
 	tls "github.com/jmhodges/howsmyssl/tls18"
 )
@@ -71,15 +71,13 @@ func (l *listener) Accept() (net.Conn, error) {
 	}
 	return &conn{
 		Conn:           tlsConn,
-		handshakeMutex: &sync.Mutex{},
 		handshakeStats: l.handshakeStats,
 	}, nil
 }
 
 type conn struct {
 	*tls.Conn
-	handshakeMutex *sync.Mutex
-
+	handshakeCounted int32
 	*handshakeStats
 }
 
@@ -88,7 +86,9 @@ func (c *conn) Read(b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return c.Conn.Read(b)
+	n, err := c.Conn.Read(b)
+	c.errorToStats(err)
+	return n, err
 }
 
 func (c *conn) Write(b []byte) (int, error) {
@@ -96,18 +96,31 @@ func (c *conn) Write(b []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	return c.Conn.Write(b)
+	n, err := c.Conn.Write(b)
+	c.errorToStats(err)
+	return n, err
 }
 
 // This, unfortunately, means we take two uncontended locks on every read and
 // write: the c.handshakeMutex here and the one in tls.Conn.
 func (c *conn) handshake() error {
+	alreadyCounted := !atomic.CompareAndSwapInt32(&c.handshakeCounted, 0, 1)
+	if alreadyCounted {
+		return nil
+	}
+
 	err := c.Conn.Handshake()
-	// FIXME tls18
-	// if err == tls.HandshakeAlreadyPerformedError {
-	// 	c.Successes.Add(1)
-	// 	return nil
-	// }
+	c.errorToStats(err)
+	if err != nil {
+		return err
+	}
+	if !alreadyCounted {
+		c.Successes.Add(1)
+	}
+	return nil
+}
+
+func (c *conn) errorToStats(err error) {
 	if err != nil {
 		c.Errs.Add(1)
 		if err == io.EOF {
@@ -123,12 +136,7 @@ func (c *conn) handshake() error {
 				c.UnknownTimeouts.Add(1)
 			}
 		} else {
-			log.Printf("unknown handshake error: %s", err)
+			log.Printf("unknown tls error: %s", err)
 		}
-		return err
 	}
-	c.Successes.Add(1)
-	c.handshakeMutex.Lock()
-	defer c.handshakeMutex.Unlock()
-	return nil
 }
