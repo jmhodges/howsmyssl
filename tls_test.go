@@ -111,14 +111,14 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		}
 	}
 	if err != nil {
-		logErrFromServer(errCh)
+		logErrFromServer(t, errCh)
 		t.Fatalf("Dial: %s", err)
 	}
 	defer c.Close()
 	sent := []byte("a")
 	_, err = c.Write(sent)
 	if err != nil {
-		logErrFromServer(errCh)
+		logErrFromServer(t, errCh)
 		t.Fatalf("unable to send data to the conn: %s", err)
 	}
 	var cr connRes
