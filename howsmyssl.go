@@ -200,18 +200,18 @@ func main() {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		err := httpsSrv.Shutdown(ctx)
 		if err != nil {
 			log.Printf("error shutting down HTTPS: %s", err)
 		}
-		wg.Done()
 	}()
 	go func() {
+		defer wg.Done()
 		err := httpSrv.Shutdown(ctx)
 		if err != nil {
 			log.Printf("error shutting down HTTP: %s", err)
 		}
-		wg.Done()
 	}()
 	wg.Wait()
 	cancel()
