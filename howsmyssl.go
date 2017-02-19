@@ -215,6 +215,7 @@ func main() {
 	}()
 	wg.Wait()
 	cancel()
+	gclog.Flush()
 }
 
 // Returns routeHost, redirectHost

@@ -32,7 +32,6 @@ type originAllower struct {
 	topKOfflistDomains *topk.Stream
 }
 
-// FIXME flush on shutdown
 type logClient interface {
 	Log(logging.Entry)
 	Flush()
