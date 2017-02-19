@@ -189,7 +189,7 @@ func main() {
 		}
 	}()
 	go func() {
-		err = httpSrv.Serve(plaintextListener)
+		err := httpSrv.Serve(plaintextListener)
 		if err != nil {
 			log.Fatalf("http server error: %s", err)
 		}
