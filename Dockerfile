@@ -14,7 +14,7 @@ RUN chown -R www-data /go/src/github.com/jmhodges/howsmyssl
 
 USER www-data
 
-CMD howsmyssl \
+CMD ["/bin/bash", "-c", "howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
     -adminAddr=:4567 \
@@ -26,4 +26,4 @@ CMD howsmyssl \
     -googAcctConf=/secrets/howsmyssl-logging-svc-account/howsmyssl-logging.json \
     -allowLogName=howsmyssl_allowance_checks \
     -cert=/secrets/howsmyssl-tls/tls.crt \
-    -key=/secrets/howsmyssl-tls/tls.key
+    -key=/secrets/howsmyssl-tls/tls.key"]
