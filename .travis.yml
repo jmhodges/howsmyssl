@@ -22,7 +22,7 @@ env:
   - GOARCH=amd64 GOOS=linux
 
 install:
-  - go test -i . ./tls18 ./gzip # Mostly to avoid Travis's default `go get`
+  - go test -i -race . ./tls18 ./gzip # Mostly to avoid Travis's default `go get`
 
 script:
-  - go test -v . ./tls18 ./gzip && ./travis_docker_push.sh
+  - go test -v -race . ./tls18 ./gzip && ./travis_docker_push.sh
