@@ -189,7 +189,7 @@ func main() {
 		}
 	}()
 	go func() {
-		err = httpSrv.Serve(plaintextListener)
+		err := httpSrv.Serve(plaintextListener)
 		if err != nil {
 			log.Fatalf("http server error: %s", err)
 		}
@@ -200,18 +200,18 @@ func main() {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
+		defer wg.Done()
 		err := httpsSrv.Shutdown(ctx)
 		if err != nil {
 			log.Printf("error shutting down HTTPS: %s", err)
 		}
-		wg.Done()
 	}()
 	go func() {
+		defer wg.Done()
 		err := httpSrv.Shutdown(ctx)
 		if err != nil {
 			log.Printf("error shutting down HTTP: %s", err)
 		}
-		wg.Done()
 	}()
 	wg.Wait()
 	cancel()
