@@ -15,7 +15,7 @@ type oaTest struct {
 }
 
 func TestOriginAllowerWithLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"", "", "", true},
@@ -76,7 +76,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 }
 
 func TestOriginAllowerNoLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},
@@ -105,7 +105,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 }
 
 func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
-	oa := newOriginAllower([]string{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower([]string{}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
 
 	r, err := http.NewRequest("GET", "/whatever", nil)
 	if err != nil {

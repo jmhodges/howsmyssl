@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"expvar"
 	"fmt"
@@ -12,22 +13,26 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"cloud.google.com/go/logging"
 
 	topk "github.com/dgryski/go-topk"
+	"github.com/jmhodges/howsmyssl/domains"
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 )
 
 type originAllower struct {
-	m        map[string]struct{}
-	ns       *expvar.Map
-	hostname string
-	gclog    logClient
+	m                    map[string]struct{}
+	ns                   *expvar.Map
+	hostname             string
+	gclog                logClient
+	useReferrerWhitelist bool
 
 	mu                 *sync.RWMutex
+	allowed            map[string]bool
 	topKAllDomains     *topk.Stream
 	topKOfflistDomains *topk.Stream
 }
@@ -37,7 +42,7 @@ type logClient interface {
 	Flush()
 }
 
-func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
+func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, useReferrerWhitelist bool, ns *expvar.Map) *originAllower {
 	mu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -55,13 +60,15 @@ func newOriginAllower(blockedDomains []string, hostname string, gclog logClient,
 	}))
 
 	oa := &originAllower{
-		m:                  make(map[string]struct{}),
-		ns:                 ns,
-		hostname:           hostname,
-		gclog:              gclog,
-		mu:                 mu,
-		topKAllDomains:     topKAllDomains,
-		topKOfflistDomains: topKOfflistDomains,
+		m:                    make(map[string]struct{}),
+		ns:                   ns,
+		hostname:             hostname,
+		gclog:                gclog,
+		useReferrerWhitelist: useReferrerWhitelist,
+		mu:                   mu,
+		allowed:              make(map[string]bool),
+		topKAllDomains:       topKAllDomains,
+		topKOfflistDomains:   topKOfflistDomains,
 	}
 	for _, d := range blockedDomains {
 		oa.m[d] = struct{}{}
@@ -95,13 +102,31 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		go oa.countRequest(entry, r, remoteIP)
 	}()
 
-	domain, ok := oa.checkBlockedOriginAndReferrer(origin, referrer)
+	var domain string
+	var ok bool
+	if oa.useReferrerWhitelist {
+		domain, ok = oa.checkAllowedOriginAndReferrer(origin, referrer)
+	} else {
+		domain, ok = oa.checkBlockedOriginAndReferrer(origin, referrer)
+	}
 	entry.Allowed = ok
 	entry.DetectedDomain = domain
 	if !ok {
 		entry.RejectionReason = rejectionConfig
 	}
 	return domain, ok
+}
+
+func (oa *originAllower) checkAllowedOriginAndReferrer(origin, referrer string) (string, bool) {
+	if origin == "" && referrer == "" {
+		return "", true
+	}
+	oa.mu.RLock()
+	defer oa.mu.RUnlock()
+	if oa.allowed[origin] {
+		return origin, true
+	}
+	return referrer, oa.allowed[referrer]
 }
 
 func (oa *originAllower) checkBlockedOriginAndReferrer(origin, referrer string) (string, bool) {
@@ -255,4 +280,38 @@ func (n nullLogClient) Log(e logging.Entry) {
 }
 
 func (n nullLogClient) Flush() {
+}
+
+func fetchAllowedDomainsForever(oa *originAllower, client domains.DomainCheckClient) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	err := fetchAllowedDomains(ctx, oa, client)
+	if err != nil {
+		log.Fatalf("unable to fetch allowed domains on boot: %s", err)
+	}
+	cancel()
+
+	tick := time.NewTicker(60 * time.Second)
+	for range tick.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		err := fetchAllowedDomains(ctx, oa, client)
+		cancel()
+		if err != nil {
+			log.Printf("unable to fetch allowed domains: %s", err)
+		}
+	}
+}
+
+func fetchAllowedDomains(ctx context.Context, oa *originAllower, client domains.DomainCheckClient) error {
+	res, err := client.AllAllowedDomains(ctx, &domains.AllAllowedDomainsRequest{})
+	if err != nil {
+		return err
+	}
+	m := make(map[string]bool)
+	for _, d := range res.Domains {
+		m[d.Domain] = true
+	}
+	oa.mu.Lock()
+	defer oa.mu.Unlock()
+	oa.allowed = m
+	return nil
 }

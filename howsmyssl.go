@@ -24,10 +24,12 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
+	"github.com/jmhodges/howsmyssl/domains"
 	"github.com/jmhodges/howsmyssl/gzip"
 	tls "github.com/jmhodges/howsmyssl/tls18"
 	"golang.org/x/net/context"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -54,6 +56,7 @@ var (
 	originsFile  = flag.String("originsConf", "", "file path to find the allowed origins configuration")
 	googAcctConf = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
 	allowLogName = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
+	domCheckAddr = flag.String("domCheckAddr", "", "address for domain check service")
 	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
@@ -141,8 +144,18 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
+	useReferrerWhitelist := *domCheckAddr == ""
 
+	oa := newOriginAllower(blockedOrigins, hostname, gclog, useReferrerWhitelist, expvar.NewMap("origins"))
+
+	if useReferrerWhitelist {
+		domCheckConn, err := grpc.Dial(*domCheckAddr)
+		if err != nil {
+			log.Fatalf("unable to dial to domain check service %#v: %s", *domCheckAddr, err)
+		}
+		domCheck := domains.NewDomainCheckClient(domCheckConn)
+		fetchAllowedDomainsForever(oa, domCheck)
+	}
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
 	if !*headless {
