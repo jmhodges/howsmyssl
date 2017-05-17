@@ -95,30 +95,23 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		go oa.countRequest(entry, r, remoteIP)
 	}()
 
+	domain, ok := oa.checkBlockedOriginAndReferrer(origin, referrer)
+	entry.Allowed = ok
+	entry.DetectedDomain = domain
+	if !ok {
+		entry.RejectionReason = rejectionConfig
+	}
+	return domain, ok
+}
+
+func (oa *originAllower) checkBlockedOriginAndReferrer(origin, referrer string) (string, bool) {
 	if origin == "" && referrer == "" {
-		entry.Allowed = true
 		return "", true
 	}
 	if origin != "" {
-		domain, ok := oa.checkDomain(origin)
-		entry.DetectedDomain = domain
-		entry.Allowed = ok
-		if !ok {
-			entry.RejectionReason = rejectionConfig
-		}
-		return domain, ok
+		return oa.checkDomain(origin)
 	}
-	if referrer != "" {
-		domain, ok := oa.checkDomain(referrer)
-		entry.DetectedDomain = domain
-		entry.Allowed = ok
-		if !ok {
-			entry.RejectionReason = rejectionConfig
-		}
-		return domain, ok
-	}
-
-	return "", false
+	return oa.checkDomain(referrer)
 }
 
 // checkDomain checks if the detected domain from the request headers and
