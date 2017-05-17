@@ -282,7 +282,7 @@ func (n nullLogClient) Log(e logging.Entry) {
 func (n nullLogClient) Flush() {
 }
 
-func fetchAllowedDomainsForever(oa *originAllower, client domains.DomainCheckClient) {
+func kickOffFetchAllowedDomainsForever(oa *originAllower, client domains.DomainCheckClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	err := fetchAllowedDomains(ctx, oa, client)
 	if err != nil {
@@ -290,15 +290,20 @@ func fetchAllowedDomainsForever(oa *originAllower, client domains.DomainCheckCli
 	}
 	cancel()
 
-	tick := time.NewTicker(60 * time.Second)
-	for range tick.C {
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		err := fetchAllowedDomains(ctx, oa, client)
-		cancel()
-		if err != nil {
-			log.Printf("unable to fetch allowed domains: %s", err)
+	// We fork this goroutine here instead of just running all of the code in
+	// this func in it so that the first fetchAllowedDomains set ups the
+	// originAllower before traffic is served.
+	go func() {
+		tick := time.NewTicker(60 * time.Second)
+		for range tick.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			err := fetchAllowedDomains(ctx, oa, client)
+			cancel()
+			if err != nil {
+				log.Printf("unable to fetch allowed domains: %s", err)
+			}
 		}
-	}
+	}()
 }
 
 func fetchAllowedDomains(ctx context.Context, oa *originAllower, client domains.DomainCheckClient) error {

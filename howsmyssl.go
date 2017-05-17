@@ -56,7 +56,7 @@ var (
 	originsFile  = flag.String("originsConf", "", "file path to find the allowed origins configuration")
 	googAcctConf = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
 	allowLogName = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
-	domCheckAddr = flag.String("domCheckAddr", "", "address for domain check service")
+	domCheckAddr = flag.String("domCheckAddr", "", "if not empty, the address for domain check service")
 	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
@@ -149,13 +149,14 @@ func main() {
 	oa := newOriginAllower(blockedOrigins, hostname, gclog, useReferrerWhitelist, expvar.NewMap("origins"))
 
 	if useReferrerWhitelist {
-		domCheckConn, err := grpc.Dial(*domCheckAddr)
+		domCheckConn, err := grpc.Dial(*domCheckAddr, grpc.WithBlock(), grpc.WithTimeout(30*time.Second), grpc.WithUserAgent("howsmyssl"))
 		if err != nil {
 			log.Fatalf("unable to dial to domain check service %#v: %s", *domCheckAddr, err)
 		}
 		domCheck := domains.NewDomainCheckClient(domCheckConn)
-		fetchAllowedDomainsForever(oa, domCheck)
+		kickOffFetchAllowedDomainsForever(oa, domCheck)
 	}
+
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
 	if !*headless {
