@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -25,14 +24,12 @@ import (
 )
 
 type originAllower struct {
-	m                    map[string]struct{}
-	ns                   *expvar.Map
-	hostname             string
-	gclog                logClient
-	useReferrerWhitelist bool
+	ns       *expvar.Map
+	hostname string
+	gclog    logClient
 
 	mu                 *sync.RWMutex
-	allowed            map[string]bool
+	blocked            map[string]bool
 	topKAllDomains     *topk.Stream
 	topKOfflistDomains *topk.Stream
 }
@@ -42,7 +39,7 @@ type logClient interface {
 	Flush()
 }
 
-func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, useReferrerWhitelist bool, ns *expvar.Map) *originAllower {
+func newOriginAllower(hostname string, gclog logClient, ns *expvar.Map) *originAllower {
 	mu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -60,18 +57,13 @@ func newOriginAllower(blockedDomains []string, hostname string, gclog logClient,
 	}))
 
 	oa := &originAllower{
-		m:                    make(map[string]struct{}),
-		ns:                   ns,
-		hostname:             hostname,
-		gclog:                gclog,
-		useReferrerWhitelist: useReferrerWhitelist,
-		mu:                   mu,
-		allowed:              make(map[string]bool),
-		topKAllDomains:       topKAllDomains,
-		topKOfflistDomains:   topKOfflistDomains,
-	}
-	for _, d := range blockedDomains {
-		oa.m[d] = struct{}{}
+		ns:                 ns,
+		hostname:           hostname,
+		gclog:              gclog,
+		mu:                 mu,
+		blocked:            make(map[string]bool),
+		topKAllDomains:     topKAllDomains,
+		topKOfflistDomains: topKOfflistDomains,
 	}
 	return oa
 }
@@ -102,13 +94,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		go oa.countRequest(entry, r, remoteIP)
 	}()
 
-	var domain string
-	var ok bool
-	if oa.useReferrerWhitelist {
-		domain, ok = oa.checkAllowedOriginAndReferrer(origin, referrer)
-	} else {
-		domain, ok = oa.checkBlockedOriginAndReferrer(origin, referrer)
-	}
+	domain, ok := oa.checkAllowedOriginAndReferrer(origin, referrer)
 	entry.Allowed = ok
 	entry.DetectedDomain = domain
 	if !ok {
@@ -121,35 +107,21 @@ func (oa *originAllower) checkAllowedOriginAndReferrer(origin, referrer string) 
 	if origin == "" && referrer == "" {
 		return "", true
 	}
-	oa.mu.RLock()
-	defer oa.mu.RUnlock()
-	if oa.allowed[origin] {
-		return origin, true
-	}
-	return referrer, oa.allowed[referrer]
-}
-
-func (oa *originAllower) checkBlockedOriginAndReferrer(origin, referrer string) (string, bool) {
-	if origin == "" && referrer == "" {
-		return "", true
-	}
 	if origin != "" {
-		return oa.checkDomain(origin)
+		return oa.isDomainAllowed(origin)
 	}
-	return oa.checkDomain(referrer)
+	return oa.isDomainAllowed(referrer)
 }
 
-// checkDomain checks if the detected domain from the request headers and
+// isDomainAllowed checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
-func (oa *originAllower) checkDomain(d string) (string, bool) {
+func (oa *originAllower) isDomainAllowed(d string) (string, bool) {
 	domain, err := effectiveDomain(d)
 	if err != nil {
-		// TODO(jmhodges): replace this len check with false when we use top-k
-		return "", len(oa.m) == 0
+		return "", false
 	}
-	_, isBlocked := oa.m[domain]
-	// TODO(jmhodges): remove this len check when we use top-k
-	return domain, !isBlocked || len(oa.m) == 0
+	isBlocked := oa.blocked[domain]
+	return domain, !isBlocked
 }
 
 func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
@@ -196,28 +168,6 @@ func effectiveDomain(str string) (string, error) {
 		return "", err
 	}
 	return d, nil
-}
-
-func loadOriginsConfig(fp string) *originsConfig {
-	f, err := os.Open(fp)
-	if err != nil {
-		log.Fatalf("unable to open origins config file %#v: %s", fp, err)
-	}
-	defer f.Close()
-	jc := &originsConfig{}
-	err = json.NewDecoder(f).Decode(jc)
-	if err != nil {
-		log.Fatalf("unable to parse origins config file %#v: %s", fp, err)
-	}
-	for _, a := range jc.BlockedOrigins {
-		if strings.HasPrefix(a, "http://") || strings.HasPrefix(a, "https://") {
-			log.Fatalf("origins config file (%#v) should have only domains without the leading scheme. For example, %#v should not have the protocol scheme at its beginning.", fp, a)
-		}
-		if strings.Contains(a, "/") {
-			log.Fatalf("origins config file (%#v) should have only domains without a path after it. For example, %#v should not have a trailing path.", fp, a)
-		}
-	}
-	return jc
 }
 
 type originsConfig struct {
@@ -282,22 +232,22 @@ func (n nullLogClient) Log(e logging.Entry) {
 func (n nullLogClient) Flush() {
 }
 
-func kickOffFetchAllowedDomainsForever(oa *originAllower, client domains.DomainCheckClient) {
+func kickOffFetchBlockedDomainsForever(oa *originAllower, client domains.DomainCheckClient) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	err := fetchAllowedDomains(ctx, oa, client)
+	err := fetchBlockedDomains(ctx, oa, client)
 	if err != nil {
 		log.Fatalf("unable to fetch allowed domains on boot: %s", err)
 	}
 	cancel()
 
 	// We fork this goroutine here instead of just running all of the code in
-	// this func in it so that the first fetchAllowedDomains set ups the
+	// this func in it so that the first fetchBlockedDomains set ups the
 	// originAllower before traffic is served.
 	go func() {
 		tick := time.NewTicker(60 * time.Second)
 		for range tick.C {
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-			err := fetchAllowedDomains(ctx, oa, client)
+			err := fetchBlockedDomains(ctx, oa, client)
 			cancel()
 			if err != nil {
 				log.Printf("unable to fetch allowed domains: %s", err)
@@ -306,17 +256,17 @@ func kickOffFetchAllowedDomainsForever(oa *originAllower, client domains.DomainC
 	}()
 }
 
-func fetchAllowedDomains(ctx context.Context, oa *originAllower, client domains.DomainCheckClient) error {
-	res, err := client.AllAllowedDomains(ctx, &domains.AllAllowedDomainsRequest{})
+func fetchBlockedDomains(ctx context.Context, oa *originAllower, client domains.DomainCheckClient) error {
+	res, err := client.AllBlockedDomains(ctx, &domains.AllBlockedDomainsRequest{})
 	if err != nil {
 		return err
 	}
 	m := make(map[string]bool)
 	for _, d := range res.Domains {
-		m[d.Domain] = true
+		m[d] = true
 	}
 	oa.mu.Lock()
 	defer oa.mu.Unlock()
-	oa.allowed = m
+	oa.blocked = m
 	return nil
 }

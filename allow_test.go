@@ -15,8 +15,8 @@ type oaTest struct {
 }
 
 func TestOriginAllowerWithLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
-
+	oa := newOriginAllower("testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa.blocked = map[string]bool{"localhost": true, "example.com": true}
 	tests := []oaTest{
 		{"", "", "", true},
 		{"http://example.com/", "", "example.com", false},
@@ -76,7 +76,8 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 }
 
 func TestOriginAllowerNoLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
+	oa := newOriginAllower("testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa.blocked = map[string]bool{"example.com": true}
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},
@@ -102,22 +103,4 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 		}
 	}
 
-}
-
-func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
-	oa := newOriginAllower([]string{}, "testhostname", nullLogClient{}, false, new(expvar.Map).Init())
-
-	r, err := http.NewRequest("GET", "/whatever", nil)
-	if err != nil {
-		t.Fatalf("unable to make request: %s", err)
-	}
-
-	tests := []string{"localhost", "http://example.com", "https://notreallyexample.com", "garbage"}
-	for _, d := range tests {
-		r.Header.Set("Origin", d)
-		_, ok := oa.Allow(r)
-		if !ok {
-			t.Errorf("%#v was not okay", d)
-		}
-	}
 }

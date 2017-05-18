@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service DomainCheck {
+  rpc AllBlockedDomains(AllBlockedDomainsRequest) returns (AllBlockedDomainsResult);
+}
+
+message AllBlockedDomainsRequest {
+
+}
+
+message AllBlockedDomainsResult {
+  repeated string domains = 1;
+}
+

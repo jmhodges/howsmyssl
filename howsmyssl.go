@@ -118,12 +118,6 @@ func main() {
 		}
 	}
 
-	blockedOrigins := []string{}
-	if *originsFile != "" {
-		jc := loadOriginsConfig(*originsFile)
-		blockedOrigins = jc.BlockedOrigins
-	}
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		log.Fatalf("unable to get hostname of local machine: %s", err)
@@ -144,17 +138,16 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	useReferrerWhitelist := *domCheckAddr == ""
 
-	oa := newOriginAllower(blockedOrigins, hostname, gclog, useReferrerWhitelist, expvar.NewMap("origins"))
+	oa := newOriginAllower(hostname, gclog, expvar.NewMap("origins"))
 
-	if useReferrerWhitelist {
+	if *domCheckAddr != "" {
 		domCheckConn, err := grpc.Dial(*domCheckAddr, grpc.WithBlock(), grpc.WithTimeout(30*time.Second), grpc.WithUserAgent("howsmyssl"))
 		if err != nil {
 			log.Fatalf("unable to dial to domain check service %#v: %s", *domCheckAddr, err)
 		}
 		domCheck := domains.NewDomainCheckClient(domCheckConn)
-		kickOffFetchAllowedDomainsForever(oa, domCheck)
+		kickOffFetchBlockedDomainsForever(oa, domCheck)
 	}
 
 	staticHandler := http.NotFoundHandler()
