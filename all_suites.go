@@ -356,7 +356,7 @@ var allCipherSuites = map[uint16]string{
 	0x16b9: "TLS_CECPQ1_RSA_WITH_AES_256_GCM_SHA384",
 	0x16ba: "TLS_CECPQ1_ECDSA_WITH_AES_256_GCM_SHA384",
 
-	// Chrome is testing out GREASE. When these cipher suite was added, there
+	// Chrome is testing out GREASE. When these cipher suites were added, there
 	// was no name given in their IETF draft, so we call them
 	// "TLS_GREASE_IS_THE_WORD_${PREFIX}". See draft 01
 	// <https://tools.ietf.org/html/draft-davidben-tls-grease-01>. We, for now,
