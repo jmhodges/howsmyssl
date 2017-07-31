@@ -35,6 +35,7 @@ func ClientInfo(c *conn) *clientInfo {
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")
 	}
+	var sweet32Seen []string
 	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
 		if found {
@@ -66,6 +67,14 @@ func ClientInfo(c *conn) *clientInfo {
 				s = w
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], weirdNSSReason)
 			}
+		}
+		if sweet32CipherSuites[s] {
+			sweet32Seen = append(sweet32Seen, s)
+		} else if len(sweet32Seen) != 0 {
+			for _, seen := range sweet32Seen {
+				d.InsecureCipherSuites[seen] = append(d.InsecureCipherSuites[seen], sweet32Reason)
+			}
+			sweet32Seen = []string{}
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}

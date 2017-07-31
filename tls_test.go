@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -100,6 +101,46 @@ func TestGoDefaultIsOkay(t *testing.T) {
 	}
 	if !ci.SessionTicketsSupported {
 		t.Errorf("SessionTicketsSupported was false but we set that in connect explicitly")
+	}
+}
+
+func TestSweet32(t *testing.T) {
+	type sweetTest struct {
+		suites   []uint16
+		expected map[string][]string
+	}
+	tests := []sweetTest{
+		{
+			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+			map[string][]string{
+				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
+				"TLS_RSA_WITH_3DES_EDE_CBC_SHA":       []string{sweet32Reason},
+			},
+		},
+		{
+			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
+			map[string][]string{
+				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
+			},
+		},
+	}
+	for i, st := range tests {
+		clientConf := &tls.Config{
+			CipherSuites: st.suites,
+		}
+		c := connect(t, clientConf)
+		ci := ClientInfo(c)
+		t.Logf("#%d, %#v", i, ci)
+
+		if ci.Rating != bad {
+			t.Errorf("#%d, Go client rating: want %s, got %s", i, bad, ci.Rating)
+		}
+		if len(ci.GivenCipherSuites) != len(st.suites) {
+			t.Errorf("#%d, num cipher suites given: want %d, got %d", i, len(st.suites), len(ci.GivenCipherSuites))
+		}
+		if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
+			t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
+		}
 	}
 }
 
