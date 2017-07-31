@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -73,6 +74,11 @@ var (
 	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
 
 	index *template.Template
+
+	// liveHijackCount is for counting hijacked connections so that we can do
+	// clean shutdowns. It's global state because this app is small and we only
+	// use it in this file.
+	liveHijackCount = newUint64()
 )
 
 func main() {
@@ -184,13 +190,13 @@ func main() {
 	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
 		err := httpsSrv.Serve(l)
-		if err != nil {
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("https server error: %s", err)
 		}
 	}()
 	go func() {
 		err := httpSrv.Serve(plaintextListener)
-		if err != nil {
+		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("http server error: %s", err)
 		}
 	}()
@@ -214,6 +220,9 @@ func main() {
 		}
 	}()
 	wg.Wait()
+	for atomic.LoadUint64(liveHijackCount) != 0 && ctx.Err() == nil {
+		time.Sleep(100 * time.Millisecond)
+	}
 	cancel()
 	gclog.Flush()
 }
@@ -354,6 +363,8 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 		log.Printf("server errored during hijack: %s\n", err)
 		return
 	}
+	incrementHijack()
+	defer decrementHijack()
 	defer c.Close()
 	tc, ok := c.(*conn)
 	if !ok {
@@ -570,4 +581,29 @@ func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p += "?" + r.URL.RawQuery
 	}
 	http.Redirect(w, r, string(a)+p, http.StatusFound)
+}
+
+func newUint64() *uint64 {
+	var i uint64
+	return &i
+}
+
+func incrementHijack() {
+	for {
+		old := atomic.LoadUint64(liveHijackCount)
+		new := old + 1
+		if atomic.CompareAndSwapUint64(liveHijackCount, old, new) {
+			break
+		}
+	}
+}
+
+func decrementHijack() {
+	for {
+		old := atomic.LoadUint64(liveHijackCount)
+		new := old - 1
+		if atomic.CompareAndSwapUint64(liveHijackCount, old, new) {
+			break
+		}
+	}
 }
