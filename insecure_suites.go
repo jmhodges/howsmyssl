@@ -6,6 +6,7 @@ var (
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
 	rc4Reason      = "uses RC4 which has insecure biases in its output"
+	sweet32Reason  = "uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"
 )
 
 // Cipher suites with less than 128-bit encryption.
@@ -159,6 +160,29 @@ var rc4CipherSuites = map[string]bool{
 	"TLS_RSA_EXPORT1024_WITH_RC4_56_SHA":     true,
 	"TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA": true,
 	"TLS_DHE_DSS_WITH_RC4_128_SHA":           true,
+}
+
+var sweet32CipherSuites = map[string]bool{
+	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":         true,
+	"TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA":      true,
+	"TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA":      true,
+	"TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_DH_anon_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_KRB5_WITH_3DES_EDE_CBC_SHA":        true,
+	"TLS_KRB5_WITH_3DES_EDE_CBC_MD5":        true,
+	"TLS_PSK_WITH_3DES_EDE_CBC_SHA":         true,
+	"TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA":  true,
+	"TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA": true,
+	"TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA":    true,
+	"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":   true,
+	"TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA":   true,
+	"TLS_SRP_SHA_WITH_3DES_EDE_CBC_SHA":     true,
+	"TLS_SRP_SHA_RSA_WITH_3DES_EDE_CBC_SHA": true,
+	"TLS_SRP_SHA_DSS_WITH_3DES_EDE_CBC_SHA": true,
+	"TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA":   true,
 }
 
 // Obsolete cipher suites in NSS that were meant to die with SSL 3.0 but
