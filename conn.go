@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	_                net.Listener = &listener{}
-	_                net.Conn     = &conn{}
-	tlsConnConvError              = errors.New("Unable to convert net.Conn to tls.Conn")
+	_              net.Listener = &listener{}
+	_              net.Conn     = &conn{}
+	errTLSConnConv              = errors.New("Unable to convert net.Conn to tls.Conn")
 )
 
 type listener struct {
@@ -67,7 +67,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	tlsConn, ok := c.(*tls.Conn)
 	if !ok {
 		c.Close()
-		return nil, tlsConnConvError
+		return nil, errTLSConnConv
 	}
 	return &conn{
 		Conn:           tlsConn,

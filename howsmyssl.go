@@ -66,9 +66,9 @@ var (
 	apiRequests     = new(expvar.Int)
 	staticRequests  = new(expvar.Int)
 	webRequests     = new(expvar.Int)
-	apiStatuses     = NewStatusStats(apiVars)
-	staticStatuses  = NewStatusStats(staticVars)
-	webStatuses     = NewStatusStats(webVars)
+	apiStatuses     = newStatusStats(apiVars)
+	staticStatuses  = newStatusStats(staticVars)
+	webStatuses     = newStatusStats(webVars)
 	commonRedirects = expvar.NewInt("common_redirects")
 
 	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
@@ -312,9 +312,8 @@ func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
 
 	if len(sanitizedCallback) > 0 {
 		return []byte(fmt.Sprintf("%s(%s)", sanitizedCallback, marshalled)), nil
-	} else {
-		return marshalled, nil
 	}
+	return marshalled, nil
 }
 
 func handleWeb(w http.ResponseWriter, r *http.Request) {
@@ -371,7 +370,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
 	}
-	data := ClientInfo(tc)
+	data := pullClientInfo(tc)
 	bs, err := render(r, data)
 	if err != nil {
 		log.Printf("Unable to execute index template: %s\n", err)
@@ -486,7 +485,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 }
 
 func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
-	stats := NewStatusStats(vars)
+	stats := newStatusStats(vars)
 	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
 	h = gzip.GZIPHandler(h, nil)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -496,9 +495,9 @@ func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
 	}
 }
 
-func ratingSpan(rating Rating) template.HTML {
+func ratingSpan(r rating) template.HTML {
 	class := ""
-	switch rating {
+	switch r {
 	case okay:
 		class = "okay"
 	case improvable:

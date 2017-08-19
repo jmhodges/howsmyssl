@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	_                 http.Hijacker = &statWriter{}
-	notAHijackerError               = errors.New("statWriter: given ResponseWriter was not a Hijacker")
+	_               http.Hijacker = &statWriter{}
+	errNotAHijacker               = errors.New("statWriter: given ResponseWriter was not a Hijacker")
 )
 
 type statusStats struct {
@@ -21,7 +21,7 @@ type statusStats struct {
 	status5xx *expvar.Int
 }
 
-func NewStatusStats(outer *expvar.Map) *statusStats {
+func newStatusStats(outer *expvar.Map) *statusStats {
 	m := new(expvar.Map).Init()
 	outer.Set("statuses", m)
 	status1xx := &expvar.Int{}
@@ -82,7 +82,7 @@ func (sw *statWriter) Header() http.Header {
 func (sw *statWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := sw.w.(http.Hijacker)
 	if !ok {
-		return nil, nil, notAHijackerError
+		return nil, nil, errNotAHijacker
 	}
 	return hj.Hijack()
 }
