@@ -251,7 +251,7 @@ func loadGoogleServiceAccount(fp string) *googleConfig {
 type googleConfig struct {
 	ProjectID string `json:"project_id"`
 
-	conf *jwt.Config `json:"-"`
+	conf *jwt.Config
 }
 
 var _ logClient = nullLogClient{}

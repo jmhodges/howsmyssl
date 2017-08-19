@@ -7,12 +7,12 @@ import (
 	tls "github.com/jmhodges/howsmyssl/tls18"
 )
 
-type Rating string
+type rating string
 
 const (
-	okay       Rating = "Probably Okay"
-	improvable Rating = "Improvable"
-	bad        Rating = "Bad"
+	okay       rating = "Probably Okay"
+	improvable rating = "Improvable"
+	bad        rating = "Bad"
 )
 
 type clientInfo struct {
@@ -25,10 +25,10 @@ type clientInfo struct {
 	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
-	Rating                         Rating              `json:"rating"`
+	Rating                         rating              `json:"rating"`
 }
 
-func ClientInfo(c *conn) *clientInfo {
+func pullClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
 	st := c.ConnectionState()
