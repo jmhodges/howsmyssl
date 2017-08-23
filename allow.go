@@ -82,9 +82,10 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		remoteIP = "0.0.0.0"
 	}
 	entry := &apiLogEntry{
-		DetectedDomain: "",
-		Allowed:        false,
-		APIKey:         apiKey,
+		DetectedDomain:     "",
+		DetectedFullDomain: "",
+		Allowed:            false,
+		APIKey:             apiKey,
 		Headers: headers{
 			Origin:    origin,
 			Referrer:  referrer,
@@ -100,8 +101,9 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return "", true
 	}
 	if origin != "" {
-		domain, ok := oa.checkDomain(origin)
+		domain, fullDomain, ok := oa.checkDomain(origin)
 		entry.DetectedDomain = domain
+		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
 		if !ok {
 			entry.RejectionReason = rejectionConfig
@@ -109,8 +111,9 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return domain, ok
 	}
 	if referrer != "" {
-		domain, ok := oa.checkDomain(referrer)
+		domain, fullDomain, ok := oa.checkDomain(referrer)
 		entry.DetectedDomain = domain
+		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
 		if !ok {
 			entry.RejectionReason = rejectionConfig
@@ -123,15 +126,15 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 
 // checkDomain checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
-func (oa *originAllower) checkDomain(d string) (string, bool) {
-	domain, err := effectiveDomain(d)
+func (oa *originAllower) checkDomain(d string) (string, string, bool) {
+	domain, fullDomain, err := effectiveDomain(d)
 	if err != nil {
 		// TODO(jmhodges): replace this len check with false when we use top-k
-		return "", len(oa.m) == 0
+		return "", "", len(oa.m) == 0
 	}
 	_, isBlocked := oa.m[domain]
 	// TODO(jmhodges): remove this len check when we use top-k
-	return domain, !isBlocked || len(oa.m) == 0
+	return domain, fullDomain, !isBlocked || len(oa.m) == 0
 }
 
 func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
@@ -156,14 +159,14 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 	}
 }
 
-func effectiveDomain(str string) (string, error) {
+func effectiveDomain(str string) (string, string, error) {
 	u, err := url.Parse(str)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	host := u.Host
 	if host == "" {
-		return "", fmt.Errorf("unparsable domain string %#v", str)
+		return "", "", fmt.Errorf("unparsable domain string %#v", str)
 	}
 	i := strings.Index(host, ":")
 	if i >= 0 {
@@ -171,13 +174,13 @@ func effectiveDomain(str string) (string, error) {
 	}
 
 	if host == "localhost" {
-		return "localhost", nil
+		return "localhost", "localhost", nil
 	}
 	d, err := publicsuffix.EffectiveTLDPlusOne(host)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return d, nil
+	return d, host, nil
 }
 
 func loadOriginsConfig(fp string) *originsConfig {
@@ -214,11 +217,13 @@ type rejectionReason string
 const rejectionConfig = rejectionReason("config")
 
 type apiLogEntry struct {
-	DetectedDomain  string          `json:"detected_domain"`
-	Allowed         bool            `json:"allowed"`
-	APIKey          string          `json:"api_key"`
-	RejectionReason rejectionReason `json:"rejection_reason"`
-	Headers         headers         `json:"headers"`
+	DetectedDomain     string          `json:"detected_domain"`
+	DetectedFullDomain string          `json:"detected_full_domain"`
+	Allowed            bool            `json:"allowed"`
+	APIKey             string          `json:"api_key"`
+	RejectionReason    rejectionReason `json:"rejection_reason"`
+	ReferrerHost       string          `json:referrer_host"`
+	Headers            headers         `json:"headers"`
 }
 
 type headers struct {
