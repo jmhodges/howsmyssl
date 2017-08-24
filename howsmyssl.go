@@ -325,7 +325,7 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 	hijackHandle(w, r, "text/html;charset=utf-8", webStatuses, renderHTML)
 }
 
-var disallowedOriginBody = []byte(`{"error": "The website calling howsmyssl.com's API has not been allowed to use it. See https://www.howsmyssl.com/s/api.html for information."}`)
+var disallowedOriginBody = []byte(`{"error": "The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com for how to get one.", "tls_version": "(Oops, see the "error" value in this reponse.)"}`)
 
 type apiHandler struct {
 	oa *originAllower
