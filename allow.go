@@ -222,7 +222,6 @@ type apiLogEntry struct {
 	Allowed            bool            `json:"allowed"`
 	APIKey             string          `json:"api_key"`
 	RejectionReason    rejectionReason `json:"rejection_reason"`
-	ReferrerHost       string          `json:referrer_host"`
 	Headers            headers         `json:"headers"`
 }
 
