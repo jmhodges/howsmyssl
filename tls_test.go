@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -106,11 +107,17 @@ func TestGoDefaultIsOkay(t *testing.T) {
 
 func TestSweet32(t *testing.T) {
 	type sweetTest struct {
+		rating   rating
 		suites   []uint16
 		expected map[string][]string
 	}
+	// These are explicitly whitelisted as okay in tls18/handshake_client.go, so
+	// we have to use just them.
+	greaseCS := uint16(0x0A0A)
+	renegCS := uint16(0x00FF)
 	tests := []sweetTest{
 		{
+			bad,
 			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
@@ -118,29 +125,53 @@ func TestSweet32(t *testing.T) {
 			},
 		},
 		{
+			bad,
 			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
 			},
 		},
+		{
+			okay,
+			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
+			map[string][]string{},
+		},
+		{
+			okay,
+			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS},
+			map[string][]string{},
+		},
+		{
+			okay,
+			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS},
+			map[string][]string{},
+		},
 	}
 	for i, st := range tests {
-		clientConf := &tls.Config{
-			CipherSuites: st.suites,
-		}
-		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
-		t.Logf("#%d, %#v", i, ci)
+		t.Run(strconv.Itoa(i),
+			func(t *testing.T) {
+				clientConf := &tls.Config{
+					CipherSuites: st.suites,
+				}
+				c := connect(t, clientConf)
+				ci := pullClientInfo(c)
+				t.Logf("#%d, %#v", i, ci)
 
-		if ci.Rating != bad {
-			t.Errorf("#%d, Go client rating: want %s, got %s", i, bad, ci.Rating)
-		}
-		if len(ci.GivenCipherSuites) != len(st.suites) {
-			t.Errorf("#%d, num cipher suites given: want %d, got %d", i, len(st.suites), len(ci.GivenCipherSuites))
-		}
-		if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
-			t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
-		}
+				if ci.Rating != st.rating {
+					t.Errorf("#%d, Go client rating: want %s, got %s", i, st.rating, ci.Rating)
+				}
+				if len(ci.GivenCipherSuites) != len(st.suites) {
+					suites := []string{}
+					for _, cs := range st.suites {
+						suites = append(suites, allCipherSuites[cs])
+					}
+					t.Errorf("#%d, num cipher suites given: want %d, got %d (%v, %v)", i, len(st.suites), len(ci.GivenCipherSuites), suites, ci.GivenCipherSuites)
+				}
+				if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
+					t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
+				}
+			},
+		)
 	}
 }
 
