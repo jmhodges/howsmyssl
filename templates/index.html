@@ -226,7 +226,7 @@
             suites that are known to be insecure:</p>
           <ul>
             {{range $cipherSuite, $reasons := .InsecureCipherSuites}}
-            <li>{{$cipherSuite}}: This cipher {{sentence $reasons}}</li>
+            <li>{{$cipherSuite}}: This cipher suite {{sentence $reasons}}</li>
             {{end}}
           </ul>
           {{else}}
