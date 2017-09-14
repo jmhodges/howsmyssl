@@ -280,7 +280,7 @@
 			"importpath": "golang.org/x/crypto/chacha20poly1305",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "453249f01cfeb54c3d549ddb75ff152ca243f9d8",
+			"revision": "faadfbdc035307d901e69eea569f5dda451a3ee3",
 			"branch": "master",
 			"path": "/chacha20poly1305",
 			"notests": true
