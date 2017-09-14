@@ -58,6 +58,14 @@ func pullClientInfo(c *conn) *clientInfo {
 			if rc4CipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], rc4Reason)
 			}
+			if sweet32CipherSuites[s] {
+				sweet32Seen = append(sweet32Seen, s)
+			} else if len(sweet32Seen) != 0 && !metaCipherSuites[ci] {
+				for _, seen := range sweet32Seen {
+					d.InsecureCipherSuites[seen] = append(d.InsecureCipherSuites[seen], sweet32Reason)
+				}
+				sweet32Seen = []string{}
+			}
 		} else {
 			w, found := weirdNSSSuites[ci]
 			if !found {
@@ -67,14 +75,6 @@ func pullClientInfo(c *conn) *clientInfo {
 				s = w
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], weirdNSSReason)
 			}
-		}
-		if sweet32CipherSuites[s] {
-			sweet32Seen = append(sweet32Seen, s)
-		} else if len(sweet32Seen) != 0 {
-			for _, seen := range sweet32Seen {
-				d.InsecureCipherSuites[seen] = append(d.InsecureCipherSuites[seen], sweet32Reason)
-			}
-			sweet32Seen = []string{}
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
