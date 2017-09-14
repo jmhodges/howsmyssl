@@ -179,7 +179,7 @@ var serverConf *tls.Config
 var rootCA *x509.Certificate
 
 func init() {
-	serverConf = makeTLSConfig("./config/development_cert.pem", "./config/development_key.pem")
+	serverConf = makeTLSConfig("./config/development_cert.pem", "./config/development_key.pem", tls.VersionSSL30)
 	certBytes, err := ioutil.ReadFile("./config/development_ca_cert.pem")
 	if err != nil {
 		log.Fatal(err)

@@ -58,6 +58,7 @@ var (
 	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
 	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
+	minVersion   = flag.String("minVersion", "SSL3.0", "The minimal ssl/tls version required: SSL3.0|TLS1|TLS1.1|TLS1.2")
 	headless     = flag.Bool("headless", false, "Run without templates")
 
 	apiVars         = expvar.NewMap("api")
@@ -99,7 +100,20 @@ func main() {
 	staticVars.Set("requests", staticRequests)
 	webVars.Set("requests", webRequests)
 
-	tlsConf := makeTLSConfig(*certPath, *keyPath)
+	var minimalTlsVersion uint16
+
+	switch *minVersion {
+	case "TLS1":
+		minimalTlsVersion = tls.VersionTLS10
+	case "TLS1.1":
+		minimalTlsVersion = tls.VersionTLS11
+	case "TLS1.2":
+		minimalTlsVersion = tls.VersionTLS12
+	default:
+		minimalTlsVersion = tls.VersionSSL30
+	}
+
+	tlsConf := makeTLSConfig(*certPath, *keyPath, minimalTlsVersion)
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
 	if err != nil {
@@ -444,7 +458,7 @@ func loadIndex() *template.Template {
 		ParseFiles(*tmplDir + "/index.html"))
 }
 
-func makeTLSConfig(certPath, keyPath string) *tls.Config {
+func makeTLSConfig(certPath, keyPath string, minVersion uint16) *tls.Config {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		log.Fatalf("unable to load TLS key cert pair %s: %s", certPath, err)
@@ -454,7 +468,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 		Certificates:             []tls.Certificate{cert},
 		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
-		MinVersion:               tls.VersionSSL30,
+		MinVersion:               minVersion,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
