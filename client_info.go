@@ -104,7 +104,7 @@ func pullClientInfo(c *conn) *clientInfo {
 	}
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || !d.SessionTicketsSupported || vers == tls.VersionTLS11 {
+	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {
 		d.Rating = improvable
 	}
 
