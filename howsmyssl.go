@@ -445,13 +445,13 @@ func loadIndex() *template.Template {
 }
 
 func makeTLSConfig(certPath, keyPath string) *tls.Config {
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	kpr, err := newKeypairReloader(certPath, keyPath)
 	if err != nil {
 		log.Fatalf("unable to load TLS key cert pair %s: %s", certPath, err)
 	}
-
+	go reloadKeypairForever(kpr, time.NewTicker(1*time.Hour))
 	tlsConf := &tls.Config{
-		Certificates:             []tls.Certificate{cert},
+		GetCertificate:           kpr.GetCertificate,
 		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionSSL30,
