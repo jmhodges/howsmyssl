@@ -4,7 +4,27 @@
     <meta charset="utf-8">
     <title>API &middot; How's My SSL?</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script>
+     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+         (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+     })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+     ga('create', 'UA-46659537-1', 'howsmyssl.com');
+     ga('send', 'pageview');
+
+    </script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <script
+        src="https://code.jquery.com/jquery-2.2.4.min.js"
+        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+        crossorigin="anonymous"></script>
+    
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    
     <style type="text/css">
       body {
         padding-top: 60px;
@@ -19,49 +39,47 @@
         margin-bottom: 500px;
       }
 
-      .container .credit {
+      .container-fluid .credit {
         margin: 20px 0;
       }
     </style>
-    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
   </head>
   <body>
-    <div class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+    <div class="navbar navbar-default navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="brand" href="/">How's My SSL?</a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li><a href="/">Home</a></li>
-              <li><a href="/s/about.html">About</a></li>
-              <li class="active"><a href="/s/api.html">API</a></li>
-            </ul>
-          </div>
+          <a class="navbar-brand" href="/">How's My SSL?</a>
+        </div>
+
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/">Home</a></li>
+            <li><a href="/s/about.html">About</a></li>
+            <li class="active"><a href="/s/api.html">API</a></li>
+          </ul>
         </div>
       </div>
     </div>
 
-    <div class="container main">
-      <div class="span1"></div>
-      <div class="span8">
+    <div class="container">
+      <div class="row">
+      <div class="col-sm-offset-1 col-sm-8">
         <div class="page-header">
           <h1>API</h1>
         </div>
 
         <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
           want to test clients without a browser
-          experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p
-
-        <p>The API is meant to test clients under your control, not the browsers of users coming to your website. If you would like to use the API to test your users' browsers, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)</p>
+          experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p>The API is meant to test clients under your control, not the browsers of users coming to your website. If you would like to use the API to test your users' browsers, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)<p></p>
 
         <p>An example response from the API:</p>
-        <p><pre>
-    GET https://www.howsmyssl.com/a/check HTTP/1.1
+        <p></p><pre>    GET https://www.howsmyssl.com/a/check HTTP/1.1
 
     {
       given_cipher_suites: [
@@ -99,7 +117,7 @@
       tls_version: "TLS 1.2",
       rating: "Bad"
     }
-        </pre></p>
+        </pre><p></p>
         <p>The returned JSON hash will have a least these keys, but
           may include more as howsmyssl evolves. Each of these keys
           map fairly obviously to the HTML version and it can be
@@ -107,29 +125,16 @@
           their meaning</a>. The source code
           that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
           the client info</a> may also be helpful. All strings
-          returned may contain HTML escaped text.</a>
+          returned may contain HTML escaped text.
 
-        <p>Let me be a little more explicit. How's My SSL is Open Source
+        </p><p>Let me be a little more explicit. How's My SSL is Open Source
           software and can
           be <a href="https://github.com/jmhodges/howsmyssl">found on
           GitHub</a>. There's a
           <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
         </p>
       </div>
+      </div>
     </div>
-
-    <script src="//code.jquery.com/jquery-1.10.2.min.js"></script>
-    <script src="/s/js/bootstrap.min.js"></script>
-
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-46659537-1', 'howsmyssl.com');
-  ga('send', 'pageview');
-
-</script>
   </body>
 </html>

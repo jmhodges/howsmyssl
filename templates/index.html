@@ -4,7 +4,27 @@
     <meta charset="utf-8">
     <title>How's My SSL?</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="/s/css/bootstrap.min.css" rel="stylesheet">
+
+    <script>
+     (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+         (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                              m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+     })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+     ga('create', 'UA-46659537-1', 'howsmyssl.com');
+     ga('send', 'pageview');
+
+    </script>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <script
+        src="https://code.jquery.com/jquery-2.2.4.min.js"
+        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+        crossorigin="anonymous"></script>
+
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
     <style type="text/css">
       body {
         padding-top: 60px;
@@ -50,39 +70,43 @@
         margin: 20px 0;
       }
     </style>
-    <link href="/s/css/bootstrap-responsive.min.css" rel="stylesheet" media="screen">
   </head>
   <body>
-    <div class="navbar navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+    <div class="navbar navbar-default navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="brand" href="/">How's My SSL?</a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li class="active"><a href="/">Home</a></li>
-              <li><a href="/s/about.html">About</a></li>
-              <li><a href="/s/api.html">API</a></li>
-            </ul>
-          </div>
+          <a class="navbar-brand" href="/">How's My SSL?</a>
+        </div>
+
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="/">Home</a></li>
+            <li><a href="/s/about.html">About</a></li>
+            <li><a href="/s/api.html">API</a></li>
+          </ul>
         </div>
       </div>
     </div>
-    <div class="container">
 
-      <div class="hero-unit">
-        <h1>Your SSL client is <span class="hero-unit-{{ratingSpan .Rating}}">{{.Rating}}</span>.</h1>
+    <div class="container-fluid">
+      <div class="row">
+      <div class="col-sm-offset-1 col-sm-9">
+      <div class="jumbotron">
+        <h1>Your SSL client is</h1>
+        <h1><span class="hero-unit-{{ratingSpan .Rating}}">{{.Rating}}</span>.</h1>
         <p>Check out the sections below for information about the SSL/TLS
           client you used to render this page.</p>
         <p><small>Yeah, we <a href="/s/about.html#tls-vs-ssl">really mean "TLS"</a>, not "SSL".</small></p>
       </div>
 
       <div class="row">
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Version</h2>
           {{if eq .TLSVersion "TLS 1.2" "TLS 1.3"}}
 
@@ -105,7 +129,7 @@
           {{end}}
           <p><a href="/s/about.html/#version">Learn More</a></p>
         </div>
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Ephemeral Key Support</h2>
           {{if .EphemeralKeysSupported}}
           <p><span class="label okay">Good</span> Ephemeral keys are
@@ -128,7 +152,7 @@
             faster. This is actually happening.</p>  {{end}}
           <p><a href="/s/about.html/#ephemeral-key-support">Learn More</a></p>
         </div>
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Session Ticket Support</h2>
           {{if .SessionTicketsSupported}}
           <p><span class="label okay">Good</span> Session tickets are supported in
@@ -144,7 +168,7 @@
         </div>
       </div>
       <div class="row">
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>TLS Compression</h2>
           {{if .TLSCompressionSupported}}
           <p><span class="label bad">Bad</span> Your TLS client supports
@@ -161,7 +185,7 @@
           {{end}}
           <p><a href="/s/about.html/#tls-compression">Learn More</a></p>
         </div>
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>BEAST Vulnerability</h2>
           {{if .BEASTVuln}}
           <p><span class="label bad">Bad</span>
@@ -219,7 +243,7 @@
           {{end}}
           <p><a href="/s/about.html/#beast-vulnerability">Learn More</a></p>
         </div>
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Insecure Cipher Suites</h2>
           {{if len .InsecureCipherSuites}}
           <p><span class="label bad">Bad</span> Your client supports cipher
@@ -238,7 +262,7 @@
       </div>
       <div class="row">
         {{if .UnknownCipherSuiteSupported}}
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Unknown Cipher Suites Supported</h2>
           <p><span class="label bad">Bad</span> Your client is using a cipher
             suite this app doesn't recognize. It's not in the standards and
@@ -246,7 +270,7 @@
         </div>
         <p><a href="/s/about.html/#unknown-cipher-suites-supported">Learn More</a></p>
         {{end}}
-        <div class="span4">
+        <div class="col-sm-4">
           <h2>Given Cipher Suites</h2>
           <p>The cipher suites your client said it supports, in the order it
           sent them, are:</p>
@@ -258,20 +282,8 @@
           <p><a href="/s/about.html/#given-cipher-suites">Learn More</a></p>
         </div>
       </div>
+      </div>
+      </div>
     </div>
-
-    <script src="//code.jquery.com/jquery-1.10.2.min.js"></script>
-    <script src="/s/js/bootstrap.min.js"></script>
-
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-46659537-1', 'howsmyssl.com');
-  ga('send', 'pageview');
-
-</script>
   </body>
 </html>
