@@ -66,6 +66,14 @@ func makeClientHello(config *Config) (*clientHelloMsg, error) {
 NextCipherSuite:
 	for _, suiteId := range possibleCipherSuites {
 		for _, suite := range cipherSuites {
+			// Explicitly whitelisting some meta cipher suites as okay to be
+			// used in TestSweet32 in howsmyssl's client config
+
+			if suiteId == 0x00FF || suiteId == 0x0A0A {
+				hello.cipherSuites = append(hello.cipherSuites, suiteId)
+				continue NextCipherSuite
+			}
+
 			if suite.id != suiteId {
 				continue
 			}
