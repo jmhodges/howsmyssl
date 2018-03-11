@@ -1402,6 +1402,7 @@ func (c *Conn) ConnectionState() ConnectionState {
 		state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
 		state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected
 		state.SessionTicketsSupported = c.clientHello.ticketSupported
+		state.SupportedVersions = c.clientHello.supportedVersions
 	}
 
 	return state
