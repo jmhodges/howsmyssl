@@ -280,7 +280,7 @@
 			"importpath": "golang.org/x/crypto/chacha20poly1305",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "faadfbdc035307d901e69eea569f5dda451a3ee3",
+			"revision": "c7dcf104e3a7a1417abc0230cb0d5240d764159d",
 			"branch": "master",
 			"path": "/chacha20poly1305",
 			"notests": true
@@ -289,16 +289,25 @@
 			"importpath": "golang.org/x/crypto/curve25519",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "453249f01cfeb54c3d549ddb75ff152ca243f9d8",
+			"revision": "c7dcf104e3a7a1417abc0230cb0d5240d764159d",
 			"branch": "master",
 			"path": "/curve25519",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/crypto/internal/chacha20",
+			"repository": "https://go.googlesource.com/crypto",
+			"vcs": "git",
+			"revision": "c7dcf104e3a7a1417abc0230cb0d5240d764159d",
+			"branch": "master",
+			"path": "/internal/chacha20",
 			"notests": true
 		},
 		{
 			"importpath": "golang.org/x/crypto/poly1305",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "453249f01cfeb54c3d549ddb75ff152ca243f9d8",
+			"revision": "c7dcf104e3a7a1417abc0230cb0d5240d764159d",
 			"branch": "master",
 			"path": "poly1305",
 			"notests": true
