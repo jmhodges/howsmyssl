@@ -11,7 +11,7 @@ The HTML code goes in `templates/`. Templates are generated with Go's
 `html/template` package. Determining the client's security is done in
 client_info.go.
 
-This project requires Go 1.8 (or newer). `go build` will generate a static
+This project requires Go 1.10 (or newer). `go build` will generate a static
 binary called howsmyssl. This repo is `go get`'able, of course.
 
 It has a fork of the Go crypto/tls library at ./tls/ in order to add a
