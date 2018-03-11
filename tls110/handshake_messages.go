@@ -28,6 +28,9 @@ type clientHelloMsg struct {
 	secureRenegotiation          []byte
 	secureRenegotiationSupported bool
 	alpnProtocols                []string
+
+	// added for howsmyssl's early TLS 1.3 support
+	supportedVersions []uint16
 }
 
 func (m *clientHelloMsg) equal(i interface{}) bool {
@@ -495,6 +498,22 @@ func (m *clientHelloMsg) unmarshal(data []byte) bool {
 			m.scts = true
 			if length != 0 {
 				return false
+			}
+		case extensionSupportedVersions:
+			// https://tools.ietf.org/html/draft-ietf-tls-tls13-18#section-4.2.1
+			if length < 1 {
+				return false
+			}
+			l := int(data[0])
+			if l%2 == 1 || length != l+1 {
+				return false
+			}
+			n := l / 2
+			d := data[1:]
+			for i := 0; i < n; i++ {
+				v := uint16(d[0])<<8 + uint16(d[1])
+				m.supportedVersions = append(m.supportedVersions, v)
+				d = d[2:]
 			}
 		}
 		data = data[length:]

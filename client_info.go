@@ -28,6 +28,36 @@ type clientInfo struct {
 	Rating                         rating              `json:"rating"`
 }
 
+const (
+	versionTLS13        uint16 = 0x0304
+	versionTLS13Draft18        = 0x7f00 | 18
+	versionTLS13Draft21        = 0x7f00 | 21
+	versionTLS13Draft22        = 0x7f00 | 22
+	versionTLS13Draft23        = 0x7f00 | 23
+	versionTLS13Draft24        = 0x7f00 | 24
+	versionTLS13Draft25        = 0x7f00 | 25
+	versionTLS13Draft26        = 0x7f00 | 26
+	versionTLS13Draft27        = 0x7f00 | 27
+	versionTLS13Draft28        = 0x7f00 | 28
+)
+
+var actualSupportedVersions = map[uint16]string{
+	tls.VersionSSL30:    "SSL 3.0",
+	tls.VersionTLS10:    "TLS 1.0",
+	tls.VersionTLS11:    "TLS 1.1",
+	tls.VersionTLS12:    "TLS 1.2",
+	versionTLS13:        "TLS 1.3", // TODO(#119): use crypto/tls's constant when it has it
+	versionTLS13Draft18: "TLS 1.3",
+	versionTLS13Draft21: "TLS 1.3",
+	versionTLS13Draft22: "TLS 1.3",
+	versionTLS13Draft23: "TLS 1.3",
+	versionTLS13Draft24: "TLS 1.3",
+	versionTLS13Draft25: "TLS 1.3",
+	versionTLS13Draft26: "TLS 1.3",
+	versionTLS13Draft27: "TLS 1.3",
+	versionTLS13Draft28: "TLS 1.3",
+}
+
 func pullClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
@@ -87,21 +117,21 @@ func pullClientInfo(c *conn) *clientInfo {
 		}
 	}
 	vers := st.Version
-	switch vers {
-	case tls.VersionSSL30:
-		d.TLSVersion = "SSL 3.0"
-	case tls.VersionTLS10:
-		d.TLSVersion = "TLS 1.0"
-	case tls.VersionTLS11:
-		d.TLSVersion = "TLS 1.1"
-	case tls.VersionTLS12:
-		d.TLSVersion = "TLS 1.2"
-	case 0x0304: // TODO(#119): use crypto/tls's constant when it has it
-		d.TLSVersion = "TLS 1.3"
+	d.TLSVersion = actualSupportedVersions[vers]
 
-	default:
+	// Check TLS 1.3's supported_versions extension for the actual TLS version
+	// if it was passed in.
+	for _, v := range st.SupportedVersions {
+		maybeStr, found := actualSupportedVersions[v]
+		if found && v > vers {
+			vers = v
+			d.TLSVersion = maybeStr
+		}
+	}
+	if d.TLSVersion == "" {
 		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
+
 	d.Rating = okay
 
 	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {

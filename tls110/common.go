@@ -84,6 +84,9 @@ const (
 	extensionSessionTicket       uint16 = 35
 	extensionNextProtoNeg        uint16 = 13172 // not IANA assigned
 	extensionRenegotiationInfo   uint16 = 0xff01
+
+	// added for howsmyssl's early TLS 1.3 support
+	extensionSupportedVersions uint16 = 43
 )
 
 // TLS signaling cipher suite values
@@ -177,6 +180,7 @@ type ConnectionState struct {
 	NMinusOneRecordSplittingDetected bool
 	AbleToDetectNMinusOneSplitting   bool
 	SessionTicketsSupported          bool
+	SupportedVersions                []uint16
 }
 
 // ClientAuthType declares the policy the server will follow for
