@@ -22,12 +22,14 @@ import (
 )
 
 type originAllower struct {
-	m        map[string]struct{}
 	ns       *expvar.Map
 	hostname string
 	gclog    logClient
 
-	mu                 *sync.RWMutex
+	mu *sync.RWMutex
+	am *allowMaps
+
+	metricsMu          *sync.RWMutex
 	topKAllDomains     *topk.Stream
 	topKOfflistDomains *topk.Stream
 }
@@ -37,34 +39,33 @@ type logClient interface {
 	Flush()
 }
 
-func newOriginAllower(blockedDomains []string, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
-	mu := &sync.RWMutex{}
+func newOriginAllower(am *allowMaps, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
+	metricsMu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
 	lifetime := new(expvar.Map).Init()
 	ns.Set("lifetime", lifetime)
 	lifetime.Set("top_all_domains", expvar.Func(func() interface{} {
-		mu.RLock()
-		defer mu.RUnlock()
+		metricsMu.RLock()
+		defer metricsMu.RUnlock()
 		return topKAllDomains.Keys()
 	}))
 	lifetime.Set("top_offlist_domains", expvar.Func(func() interface{} {
-		mu.RLock()
-		defer mu.RUnlock()
+		metricsMu.RLock()
+		defer metricsMu.RUnlock()
 		return topKOfflistDomains.Keys()
 	}))
 
+	mu := &sync.RWMutex{}
 	oa := &originAllower{
-		m:                  make(map[string]struct{}),
+		mu:                 mu,
+		am:                 am,
 		ns:                 ns,
 		hostname:           hostname,
 		gclog:              gclog,
-		mu:                 mu,
+		metricsMu:          metricsMu,
 		topKAllDomains:     topKAllDomains,
 		topKOfflistDomains: topKOfflistDomains,
-	}
-	for _, d := range blockedDomains {
-		oa.m[d] = struct{}{}
 	}
 	return oa
 }
@@ -101,24 +102,24 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return "", true
 	}
 	if origin != "" {
-		domain, fullDomain, ok := oa.checkDomain(origin)
-		entry.DetectedDomain = domain
+		etldplus1, fullDomain, ok := oa.checkDomain(origin)
+		entry.DetectedDomain = etldplus1
 		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
 		if !ok {
 			entry.RejectionReason = rejectionConfig
 		}
-		return domain, ok
+		return etldplus1, ok
 	}
 	if referrer != "" {
-		domain, fullDomain, ok := oa.checkDomain(referrer)
-		entry.DetectedDomain = domain
+		etldplus1, fullDomain, ok := oa.checkDomain(referrer)
+		entry.DetectedDomain = etldplus1
 		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
 		if !ok {
 			entry.RejectionReason = rejectionConfig
 		}
-		return domain, ok
+		return etldplus1, ok
 	}
 
 	return "", false
@@ -127,14 +128,63 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 // checkDomain checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
 func (oa *originAllower) checkDomain(d string) (string, string, bool) {
-	domain, fullDomain, err := effectiveDomain(d)
+	oa.mu.RLock()
+	defer oa.mu.RUnlock()
+
+	etldplus1, fullDomain, err := effectiveDomain(d)
+
 	if err != nil {
-		// TODO(jmhodges): replace this len check with false when we use top-k
-		return "", "", len(oa.m) == 0
+		return "", "", false
 	}
-	_, isBlocked := oa.m[domain]
-	// TODO(jmhodges): remove this len check when we use top-k
-	return domain, fullDomain, !isBlocked || len(oa.m) == 0
+	if oa.am.AllowTheseDomains[fullDomain] {
+		return etldplus1, fullDomain, true
+	}
+
+	if fullDomain != etldplus1 {
+		dom := nextDomain(fullDomain)
+		for {
+			if oa.am.AllowSubdomainsOn[dom] {
+				return etldplus1, fullDomain, true
+			}
+			if dom == etldplus1 {
+				break
+			}
+			dom = nextDomain(dom)
+			if dom == "" {
+				log.Printf("whoops, we got to an empty string subdomain of (%#v, %#v) from %#v", etldplus1, fullDomain, d)
+				break
+			}
+		}
+	}
+
+	dom := fullDomain
+	for {
+		if oa.am.BlockedDomains[dom] {
+			return etldplus1, fullDomain, false
+		}
+		if dom == etldplus1 {
+			break
+		}
+		dom = nextDomain(dom)
+		if dom == "" {
+			log.Printf("whoops, we got to an empty string subdomain of (%#v, %#v) from %#v", etldplus1, fullDomain, d)
+			break
+		}
+	}
+
+	return etldplus1, fullDomain, true
+}
+
+func nextDomain(dom string) string {
+	i := strings.Index(dom, ".")
+	if i == -1 {
+		return ""
+	}
+	ni := i + 1
+	if ni == len(dom) {
+		return ""
+	}
+	return dom[ni:]
 }
 
 func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
@@ -151,8 +201,8 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 		return
 	}
 
-	oa.mu.Lock()
-	defer oa.mu.Unlock()
+	oa.metricsMu.Lock()
+	defer oa.metricsMu.Unlock()
 	oa.topKAllDomains.Insert(entry.DetectedDomain, 1)
 	if !entry.Allowed {
 		oa.topKOfflistDomains.Insert(entry.DetectedDomain, 1)
@@ -160,6 +210,9 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 }
 
 func effectiveDomain(str string) (string, string, error) {
+	if str == "localhost" {
+		return "localhost", "localhost", nil
+	}
 	u, err := url.Parse(str)
 	if err != nil {
 		return "", "", err
@@ -172,7 +225,6 @@ func effectiveDomain(str string) (string, string, error) {
 	if i >= 0 {
 		host = host[:i]
 	}
-
 	if host == "localhost" {
 		return "localhost", "localhost", nil
 	}
@@ -183,33 +235,18 @@ func effectiveDomain(str string) (string, string, error) {
 	return d, host, nil
 }
 
-func loadOriginsConfig(fp string) *originsConfig {
+func loadAllowLists(fp string) *allowLists {
 	f, err := os.Open(fp)
 	if err != nil {
-		log.Fatalf("unable to open origins config file %#v: %s", fp, err)
+		log.Fatalf("unable to open allowlists config file %#v: %s", fp, err)
 	}
 	defer f.Close()
-	jc := &originsConfig{}
-	err = json.NewDecoder(f).Decode(jc)
+	al := &allowLists{}
+	err = json.NewDecoder(f).Decode(al)
 	if err != nil {
-		log.Fatalf("unable to parse origins config file %#v: %s", fp, err)
+		log.Fatalf("unable to parse allowlists config file %#v: %s", fp, err)
 	}
-	for _, a := range jc.BlockedOrigins {
-		if strings.HasPrefix(a, "http://") || strings.HasPrefix(a, "https://") {
-			log.Fatalf("origins config file (%#v) should have only domains without the leading scheme. For example, %#v should not have the protocol scheme at its beginning.", fp, a)
-		}
-		if strings.Contains(a, "/") {
-			log.Fatalf("origins config file (%#v) should have only domains without a path after it. For example, %#v should not have a trailing path.", fp, a)
-		}
-	}
-	return jc
-}
-
-type originsConfig struct {
-	// BlockedOrigins are domains that are not to be allowed as referrers to the
-	// API. They should not have a scheme or path, but only the domain, as in
-	// "example.com".
-	BlockedOrigins []string `json:"blocked_origins"`
+	return al
 }
 
 type rejectionReason string
@@ -266,4 +303,16 @@ func (n nullLogClient) Log(e logging.Entry) {
 }
 
 func (n nullLogClient) Flush() {
+}
+
+type allowLists struct {
+	AllowTheseDomains []string `json:"allow_these_domains"`
+	AllowSubdomainsOn []string `json:"allow_subdomains_on"`
+	BlockedDomains    []string `json:"blocked_domains"`
+}
+
+type allowMaps struct {
+	AllowTheseDomains map[string]bool
+	AllowSubdomainsOn map[string]bool
+	BlockedDomains    map[string]bool
 }
