@@ -22,7 +22,7 @@ CMD ["/bin/bash", "-c", "howsmyssl \
     -staticDir=/go/src/github.com/jmhodges/howsmyssl/static \
     -vhost=www.howsmyssl.com \
     -acmeRedirect=$ACME_REDIRECT_URL \
-    -originsConf=/etc/howsmyssl-origins/origins.json \
+    -allowListsFile=/etc/howsmyssl-allowlists/allow_lists.json \
     -googAcctConf=/secrets/howsmyssl-logging-svc-account/howsmyssl-logging.json \
     -allowLogName=howsmyssl_allowance_checks \
     -cert=/secrets/howsmyssl-tls/tls.crt \
