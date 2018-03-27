@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"cloud.google.com/go/logging"
 
@@ -26,8 +28,7 @@ type originAllower struct {
 	hostname string
 	gclog    logClient
 
-	mu *sync.RWMutex
-	am *allowMaps
+	ama *allowMapsAtomic
 
 	metricsMu          *sync.RWMutex
 	topKAllDomains     *topk.Stream
@@ -39,7 +40,7 @@ type logClient interface {
 	Flush()
 }
 
-func newOriginAllower(am *allowMaps, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
+func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
 	metricsMu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -56,10 +57,8 @@ func newOriginAllower(am *allowMaps, hostname string, gclog logClient, ns *expva
 		return topKOfflistDomains.Keys()
 	}))
 
-	mu := &sync.RWMutex{}
 	oa := &originAllower{
-		mu:                 mu,
-		am:                 am,
+		ama:                ama,
 		ns:                 ns,
 		hostname:           hostname,
 		gclog:              gclog,
@@ -128,22 +127,20 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 // checkDomain checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
 func (oa *originAllower) checkDomain(d string) (string, string, bool) {
-	oa.mu.RLock()
-	defer oa.mu.RUnlock()
-
 	etldplus1, fullDomain, err := effectiveDomain(d)
 
 	if err != nil {
 		return "", "", false
 	}
-	if oa.am.AllowTheseDomains[fullDomain] {
+	am := oa.ama.Load()
+	if am.AllowTheseDomains[fullDomain] {
 		return etldplus1, fullDomain, true
 	}
 
 	if fullDomain != etldplus1 {
 		dom := nextDomain(fullDomain)
 		for {
-			if oa.am.AllowSubdomainsOn[dom] {
+			if am.AllowSubdomainsOn[dom] {
 				return etldplus1, fullDomain, true
 			}
 			if dom == etldplus1 {
@@ -159,7 +156,7 @@ func (oa *originAllower) checkDomain(d string) (string, string, bool) {
 
 	dom := fullDomain
 	for {
-		if oa.am.BlockedDomains[dom] {
+		if am.BlockedDomains[dom] {
 			return etldplus1, fullDomain, false
 		}
 		if dom == etldplus1 {
@@ -235,18 +232,54 @@ func effectiveDomain(str string) (string, string, error) {
 	return d, host, nil
 }
 
-func loadAllowLists(fp string) *allowLists {
+func loadAllowMaps(fp string) (*allowMaps, error) {
 	f, err := os.Open(fp)
 	if err != nil {
-		log.Fatalf("unable to open allowlists config file %#v: %s", fp, err)
+		return nil, fmt.Errorf("unable to open allowlists config file %#v: %s", fp, err)
 	}
 	defer f.Close()
 	al := &allowLists{}
 	err = json.NewDecoder(f).Decode(al)
 	if err != nil {
-		log.Fatalf("unable to parse allowlists config file %#v: %s", fp, err)
+		return nil, fmt.Errorf("unable to parse allowlists config file %#v: %s", fp, err)
 	}
-	return al
+
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool, len(al.AllowTheseDomains)),
+		AllowSubdomainsOn: make(map[string]bool, len(al.AllowSubdomainsOn)),
+		BlockedDomains:    make(map[string]bool, len(al.BlockedDomains)),
+	}
+
+	for _, dom := range al.AllowTheseDomains {
+		am.AllowTheseDomains[dom] = true
+	}
+	for _, dom := range al.AllowSubdomainsOn {
+		am.AllowSubdomainsOn[dom] = true
+	}
+	for _, dom := range al.BlockedDomains {
+		am.BlockedDomains[dom] = true
+	}
+	return am, nil
+}
+
+func reloadAllowMapsForever(allowListsFile string, ama *allowMapsAtomic, tick *time.Ticker) {
+	for range tick.C {
+		am, err := loadAllowMaps(allowListsFile)
+		if err != nil {
+			log.Printf("unable to reload allowlists at %#v: %s", allowListsFile, err)
+		}
+		ama.Store(am)
+	}
+}
+
+type allowMapsAtomic atomic.Value
+
+func (a *allowMapsAtomic) Load() *allowMaps {
+	return (*atomic.Value)(a).Load().(*allowMaps)
+}
+
+func (a *allowMapsAtomic) Store(am *allowMaps) {
+	(*atomic.Value)(a).Store(am)
 }
 
 type rejectionReason string

@@ -21,7 +21,9 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    map[string]bool{"localhost": true, "example.com": true},
 	}
-	oa := newOriginAllower(am, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	ama := &allowMapsAtomic{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"", "", "", true},
@@ -90,12 +92,15 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    map[string]bool{"example.com": true},
 	}
-	oa := newOriginAllower(am, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	ama := &allowMapsAtomic{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},
 		{"", "http://localhost:3634/afda", "localhost", true},
 		{"", "http://example.com/afda", "example.com", false},
+		{"localhost", "https://localhost:8080", "localhost", true},
 		{"http://example.com", "http://localhost:3564/afda", "example.com", false},
 	}
 

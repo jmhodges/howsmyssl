@@ -53,14 +53,12 @@ var (
 	keyPath        = flag.String("key", "./config/development_key.pem", "file path to the TLS key to serve with")
 	acmeURL        = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
 	allowListsFile = flag.String("allowListsFile", "", "file path to find the allowlists JSON file")
-	// TODO(jmhodges): remove after initial deploy of allowLists
-	originsFile  = flag.String("originsConf", "", "file path to find the allowed origins configuration")
-	googAcctConf = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
-	allowLogName = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
-	staticDir    = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir      = flag.String("templateDir", "./templates", "file path to the directory of templates")
-	adminAddr    = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
-	headless     = flag.Bool("headless", false, "Run without templates")
+	googAcctConf   = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
+	allowLogName   = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
+	staticDir      = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
+	tmplDir        = flag.String("templateDir", "./templates", "file path to the directory of templates")
+	adminAddr      = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
+	headless       = flag.Bool("headless", false, "Run without templates")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -128,17 +126,16 @@ func main() {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    make(map[string]bool),
 	}
+	ama := &allowMapsAtomic{}
+	ama.Store(am)
 	if *allowListsFile != "" {
-		al := loadAllowLists(*allowListsFile)
-		for _, dom := range al.AllowTheseDomains {
-			am.AllowTheseDomains[dom] = true
+		am, err := loadAllowMaps(*allowListsFile)
+		if err != nil {
+			log.Fatal(err)
 		}
-		for _, dom := range al.AllowSubdomainsOn {
-			am.AllowSubdomainsOn[dom] = true
-		}
-		for _, dom := range al.BlockedDomains {
-			am.BlockedDomains[dom] = true
-		}
+		ama.Store(am)
+		alTick := time.NewTicker(20 * time.Second)
+		go reloadAllowMapsForever(*allowListsFile, ama, alTick)
 	}
 
 	hostname, err := os.Hostname()
@@ -161,7 +158,7 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa := newOriginAllower(am, hostname, gclog, expvar.NewMap("origins"))
+	oa := newOriginAllower(ama, hostname, gclog, expvar.NewMap("origins"))
 
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
