@@ -2,6 +2,7 @@ package main
 
 import (
 	"expvar"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -15,7 +16,12 @@ type oaTest struct {
 }
 
 func TestOriginAllowerWithLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"localhost", "example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    map[string]bool{"localhost": true, "example.com": true},
+	}
+	oa := newOriginAllower(am, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"", "", "", true},
@@ -47,6 +53,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 		{"garbage", "garbage", "", false},
 		{"garbage", "https://example.com/", "", false},
 
+		{"localhost", "https://localhost:8080", "localhost", false},
 		// Since we check Origin first, this will be banned, even though Referer
 		// is a bogus URL.
 		{"https://example.com", "garbage", "example.com", false},
@@ -63,20 +70,27 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 		t.Fatalf("unable to make request: %s", err)
 	}
 	for i, ot := range tests {
-		r.Header.Set("Origin", ot.origin)
-		r.Header.Set("Referer", ot.referrer)
-		domain, ok := oa.Allow(r)
-		if domain != ot.detectedDomain {
-			t.Errorf("#%d, Origin: %#v; Referer: %#v: want detectedDomain %#v, got %#v", i, ot.origin, ot.referrer, ot.detectedDomain, domain)
-		}
-		if ok != ot.ok {
-			t.Errorf("#%d, Origin: %#v; Referer: %#v: want ok %t, got %t", i, ot.origin, ot.referrer, ot.ok, ok)
-		}
+		t.Run(fmt.Sprintf("%02d", i), func(t *testing.T) {
+			r.Header.Set("Origin", ot.origin)
+			r.Header.Set("Referer", ot.referrer)
+			domain, ok := oa.Allow(r)
+			if domain != ot.detectedDomain {
+				t.Errorf("Origin: %#v; Referer: %#v: want detectedDomain %#v, got %#v", ot.origin, ot.referrer, ot.detectedDomain, domain)
+			}
+			if ok != ot.ok {
+				t.Errorf("Origin: %#v; Referer: %#v: want %t, got %t", ot.origin, ot.referrer, ot.ok, ok)
+			}
+		})
 	}
 }
 
 func TestOriginAllowerNoLocalhost(t *testing.T) {
-	oa := newOriginAllower([]string{"example.com"}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    map[string]bool{"example.com": true},
+	}
+	oa := newOriginAllower(am, "testhostname", nullLogClient{}, new(expvar.Map).Init())
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},
@@ -93,31 +107,15 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 	for i, ot := range tests {
 		r.Header.Set("Origin", ot.origin)
 		r.Header.Set("Referer", ot.referrer)
-		domain, ok := oa.Allow(r)
-		if domain != ot.detectedDomain {
-			t.Errorf("#%d, Origin: %s; Referer: %s: want detectedDomain %#v, got %#v", i, ot.origin, ot.referrer, ot.detectedDomain, domain)
-		}
-		if ok != ot.ok {
-			t.Errorf("#%d, Origin: %s; Referer: %s: want ok %t, got %t", i, ot.origin, ot.referrer, ot.ok, ok)
-		}
+		t.Run(fmt.Sprintf("#%02d", i), func(t *testing.T) {
+			domain, ok := oa.Allow(r)
+			if domain != ot.detectedDomain {
+				t.Errorf("Origin: %s; Referer: %s: want detectedDomain %#v, got %#v", ot.origin, ot.referrer, ot.detectedDomain, domain)
+			}
+			if ok != ot.ok {
+				t.Errorf("Origin: %s; Referer: %s: want ok %t, got %t", ot.origin, ot.referrer, ot.ok, ok)
+			}
+		})
 	}
 
-}
-
-func TestEmptyOriginAllowerAllowsAll(t *testing.T) {
-	oa := newOriginAllower([]string{}, "testhostname", nullLogClient{}, new(expvar.Map).Init())
-
-	r, err := http.NewRequest("GET", "/whatever", nil)
-	if err != nil {
-		t.Fatalf("unable to make request: %s", err)
-	}
-
-	tests := []string{"localhost", "http://example.com", "https://notreallyexample.com", "garbage"}
-	for _, d := range tests {
-		r.Header.Set("Origin", d)
-		_, ok := oa.Allow(r)
-		if !ok {
-			t.Errorf("%#v was not okay", d)
-		}
-	}
 }

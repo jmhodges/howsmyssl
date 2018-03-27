@@ -46,12 +46,14 @@ Date: %s
 )
 
 var (
-	httpsAddr    = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
-	httpAddr     = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
-	rawVHost     = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
-	certPath     = flag.String("cert", "./config/development_cert.pem", "file path to the TLS certificate to serve with")
-	keyPath      = flag.String("key", "./config/development_key.pem", "file path to the TLS key to serve with")
-	acmeURL      = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
+	httpsAddr      = flag.String("httpsAddr", "localhost:10443", "address to boot the HTTPS server on")
+	httpAddr       = flag.String("httpAddr", "localhost:10080", "address to boot the HTTP server on")
+	rawVHost       = flag.String("vhost", "localhost:10443", "public domain to use in redirects and templates")
+	certPath       = flag.String("cert", "./config/development_cert.pem", "file path to the TLS certificate to serve with")
+	keyPath        = flag.String("key", "./config/development_key.pem", "file path to the TLS key to serve with")
+	acmeURL        = flag.String("acmeRedirect", "/s/", "URL to join with .well-known/acme paths and redirect to")
+	allowListsFile = flag.String("allowListsFile", "", "file path to find the allowlists JSON file")
+	// TODO(jmhodges): remove after initial deploy of allowLists
 	originsFile  = flag.String("originsConf", "", "file path to find the allowed origins configuration")
 	googAcctConf = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
 	allowLogName = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
@@ -121,10 +123,22 @@ func main() {
 		}
 	}
 
-	blockedOrigins := []string{}
-	if *originsFile != "" {
-		jc := loadOriginsConfig(*originsFile)
-		blockedOrigins = jc.BlockedOrigins
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    make(map[string]bool),
+	}
+	if *allowListsFile != "" {
+		al := loadAllowLists(*allowListsFile)
+		for _, dom := range al.AllowTheseDomains {
+			am.AllowTheseDomains[dom] = true
+		}
+		for _, dom := range al.AllowSubdomainsOn {
+			am.AllowSubdomainsOn[dom] = true
+		}
+		for _, dom := range al.BlockedDomains {
+			am.BlockedDomains[dom] = true
+		}
 	}
 
 	hostname, err := os.Hostname()
@@ -147,7 +161,7 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa := newOriginAllower(blockedOrigins, hostname, gclog, expvar.NewMap("origins"))
+	oa := newOriginAllower(am, hostname, gclog, expvar.NewMap("origins"))
 
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
