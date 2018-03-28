@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"expvar"
 	"net/http"
 	"net/http/httptest"
@@ -175,5 +176,16 @@ func TestVHostCalculation(t *testing.T) {
 		if location != expectedLocation {
 			t.Errorf("#%d vhost %#v, httpsAddr %#v: want Location %s, got %s", i, vt.rawVHost, vt.httpsAddr, expectedLocation, location)
 		}
+	}
+}
+
+func TestDisallowedBodyParses(t *testing.T) {
+	e := &struct {
+		Error      string `json:"error"`
+		TLSVersion string `json:"tls_version"`
+	}{}
+	err := json.Unmarshal(disallowedOriginBody, e)
+	if err != nil {
+		t.Errorf("disallowedOriginBody did not parse: %s", err)
 	}
 }
