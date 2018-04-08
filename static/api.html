@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>API &middot; How's My SSL?</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     
     <script>
      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -26,22 +27,22 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
     
     <style type="text/css">
-      body {
-        padding-top: 60px;
-        padding-bottom: 40px;
-      }
+     body {
+         padding-top: 60px;
+         padding-bottom: 40px;
+     }
 
-      .main {
-        font-size: 15px;
-      }
+     .main {
+         font-size: 15px;
+     }
 
-      footer {
-        margin-bottom: 500px;
-      }
+     footer {
+         margin-bottom: 500px;
+     }
 
-      .container-fluid .credit {
-        margin: 20px 0;
-      }
+     .container-fluid .credit {
+         margin: 20px 0;
+     }
     </style>
   </head>
   <body>
@@ -69,17 +70,17 @@
 
     <div class="container-fluid">
       <div class="row">
-      <div class="col-sm-offset-1 col-sm-9">
-        <div class="page-header">
-          <h1>API</h1>
-        </div>
+        <div class="col-sm-offset-1 col-sm-9">
+          <div class="page-header">
+            <h1>API</h1>
+          </div>
 
-        <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
-          want to test clients without a browser
-          experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p>The API is meant to test clients under your control, not the browsers of users coming to your website. If you would like to use the API to test your users' browsers, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)<p></p>
+          <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
+            want to test clients without a browser
+            experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p>The API is meant to test clients under your control, not the browsers of users coming to your website. If you would like to use the API to test your users' browsers, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)<p></p>
 
-        <p>An example response from the API:</p>
-        <p></p><pre>    GET https://www.howsmyssl.com/a/check HTTP/1.1
+          <p>An example response from the API:</p>
+          <p></p><pre>    GET https://www.howsmyssl.com/a/check HTTP/1.1
 
     {
       given_cipher_suites: [
@@ -117,33 +118,33 @@
       tls_version: "TLS 1.2",
       rating: "Bad"
     }
-        </pre><p></p>
-        <p>The returned JSON hash will have a least these keys, but
-          may include more as howsmyssl evolves. Each of these keys
-          map fairly obviously to the HTML version and it can be
-          helpful to <a href="/s/about.html#what-it-means">understand
-          their meaning</a>. The source code
-          that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
-          the client info</a> may also be helpful. All strings
-          returned may contain HTML escaped text.
+          </pre><p></p>
+          <p>The returned JSON hash will have a least these keys, but
+            may include more as howsmyssl evolves. Each of these keys
+            map fairly obviously to the HTML version and it can be
+            helpful to <a href="/s/about.html#what-it-means">understand
+            their meaning</a>. The source code
+            that <a href="https://github.com/jmhodges/howsmyssl/blob/master/client_info.go">gathers
+            the client info</a> may also be helpful. All strings
+            returned may contain HTML escaped text.
 
-        </p><p>Let me be a little more explicit. How's My SSL is Open Source
-          software and can
-          be <a href="https://github.com/jmhodges/howsmyssl">found on
-          GitHub</a>. There's a
-          <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
-        </p>
-      </div>
+          </p><p>Let me be a little more explicit. How's My SSL is Open Source
+            software and can
+            be <a href="https://github.com/jmhodges/howsmyssl">found on
+            GitHub</a>. There's a
+            <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
+          </p>
+        </div>
       </div>
 
       <hr />
       <div class="row">
-        <div class="col-sm-offset-1">
+        <div class="col-sm-offset-1 col-sm-12">
           <h4>Want use the How's My SSL API on your site?  <a href="https://subscriptions.howsmyssl.com">Purchase a subscription</a>!</h4>
         </div>
       </div>
       <div class="row">
-        <div class="col-sm-offset-1">
+        <div class="col-sm-offset-1 col-sm-12">
           Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
         </div>
       </div>
