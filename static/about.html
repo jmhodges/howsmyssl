@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <title>About &middot; How's My SSL?</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <script>
      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -26,46 +27,46 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
     <style type="text/css">
-      body {
-        padding-top: 60px;
-        padding-bottom: 40px;
-      }
+     body {
+         padding-top: 60px;
+         padding-bottom: 40px;
+     }
 
-      p {
-        padding-bottom: 1em;
-      }
+     p {
+         padding-bottom: 1em;
+     }
 
-      .main {
-        font-size: 15px;
-      }
+     .main {
+         font-size: 15px;
+     }
 
-      .okay {
-        background-color: #1B9E77;
-        font-size: 0.85em;
-      }
+     .okay {
+         background-color: #1B9E77;
+         font-size: 0.85em;
+     }
 
-      .improvable {
-        background-color: #7570B3;
-        font-size: 0.85em;
-      }
+     .improvable {
+         background-color: #7570B3;
+         font-size: 0.85em;
+     }
 
-      .bad {
-        background-color: #D95F02;
-        font-size: 0.85em;
-      }
+     .bad {
+         background-color: #D95F02;
+         font-size: 0.85em;
+     }
 
-      .fragpadded {
-        padding-top: 40px;
-        margin-top: -40px;
-      }
+     .fragpadded {
+         padding-top: 40px;
+         margin-top: -40px;
+     }
 
-      footer {
-        margin-bottom: 500px;
-      }
+     footer {
+         margin-bottom: 500px;
+     }
 
-      .container-fluid .credit {
-        padding-top: 20px 0;
-      }
+     .container-fluid .credit {
+         padding-top: 20px 0;
+     }
     </style>
   </head>
   <body>
@@ -93,308 +94,308 @@
 
     <div class="container-fluid">
       <div class="row">
-      <div class="col-sm-offset-1 col-md-6">
-        <div class="page-header">
-          <h1>About this site</h1>
-        </div>
-        <p class="lead">How's My SSL? is a cute little website that
-          tells you how secure your <a href="#tls-vs-ssl">TLS
-          client</a> is. TLS clients just like the browser you're
-          reading this with.</p>
+        <div class="col-sm-offset-1 col-md-6">
+          <div class="page-header">
+            <h1>About this site</h1>
+          </div>
+          <p class="lead">How's My SSL? is a cute little website that
+            tells you how secure your <a href="#tls-vs-ssl">TLS
+            client</a> is. TLS clients just like the browser you're
+            reading this with.</p>
 
-        <p>How's My SSL? was originally made to help a web server
-          developer learn what real world TLS clients were capable
-          of. It's been expanded to give developers and the very
-          technically-savvy a quick and easy way to learn more about
-          the TLS tools they use.</p>
+          <p>How's My SSL? was originally made to help a web server
+            developer learn what real world TLS clients were capable
+            of. It's been expanded to give developers and the very
+            technically-savvy a quick and easy way to learn more about
+            the TLS tools they use.</p>
 
-        <p>It's also meant to impel developers to modernize and
-          improve their TLS stacks. Many security problems come from
-          engineers simply not knowing what worries to have. How's My
-          SSL? is a demonstration of what those TLS client worries
-          should be.</p>
+          <p>It's also meant to impel developers to modernize and
+            improve their TLS stacks. Many security problems come from
+            engineers simply not knowing what worries to have. How's My
+            SSL? is a demonstration of what those TLS client worries
+            should be.</p>
 
-        <p>How's My SSL? chooses topics important to today's security
-          environment and analyzes clients in that context. It will
-          never be a complete audit, but it can hit the high
-          notes. Over time, How's My SSL? will change to live in an
-          ever more difficult security environment. It will be kept up
-          by <a href="#contributing">people who care</a>.</p>
+          <p>How's My SSL? chooses topics important to today's security
+            environment and analyzes clients in that context. It will
+            never be a complete audit, but it can hit the high
+            notes. Over time, How's My SSL? will change to live in an
+            ever more difficult security environment. It will be kept up
+            by <a href="#contributing">people who care</a>.</p>
 
-        <hr />
+          <hr />
 
-        <h3 class="fragpadded" id="rating">Rating</h3>
-        <p>How's My SSL? gives a rating to each client that connects to
-          it. These ratings are not the final word on "how secure" a TLS
-          client is, but captures important aspects of its security.</p>
+          <h3 class="fragpadded" id="rating">Rating</h3>
+          <p>How's My SSL? gives a rating to each client that connects to
+            it. These ratings are not the final word on "how secure" a TLS
+            client is, but captures important aspects of its security.</p>
 
-        <p>Clients are rated as <span class="label okay">Probably Okay</span> if no security problems could
-          be detected.</p>
+          <p>Clients are rated as <span class="label okay">Probably Okay</span> if no security problems could
+            be detected.</p>
 
-        <p>Clients are downgraded
-          to <span class="label improvable">Improvable</span> if they do not support
-          ephemeral key cipher suites, do not support session tickets, or are
-          using TLS 1.1.</p>
-        <p>Clients are downgraded to <span class="label bad">Bad</span> if any of
-          the following are true:</p>
-        <ul>
-          <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
-            earlier.</li>
-          <li>It supports known insecure cipher suites. Developers can find
-            the list of known insecure cipher suites in
-            the <a href="https://github.com/jmhodges/howsmyssl/blob/master/insecure_suites.go">howsmyssl
-            repository</a> on GitHub.</li>
-          <li>It supports TLS compression (that is compression of the
-            encryption information used to secure your connection) which
-            exposes it to the
-            <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
-              attack</a>.</li>
-          <li>It is susceptible to the
-            <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-            attack</a>.</li>
-        </ul>
-        <p>How's My SSL? always selects the worst rating the client could
-          receive.  That is, clients rated as "Bad" may also have problems
-          that, on their own, would have rated them as "Improvable".</p>
+          <p>Clients are downgraded
+            to <span class="label improvable">Improvable</span> if they do not support
+            ephemeral key cipher suites, do not support session tickets, or are
+            using TLS 1.1.</p>
+          <p>Clients are downgraded to <span class="label bad">Bad</span> if any of
+            the following are true:</p>
+          <ul>
+            <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
+              earlier.</li>
+            <li>It supports known insecure cipher suites. Developers can find
+              the list of known insecure cipher suites in
+              the <a href="https://github.com/jmhodges/howsmyssl/blob/master/insecure_suites.go">howsmyssl
+              repository</a> on GitHub.</li>
+            <li>It supports TLS compression (that is compression of the
+              encryption information used to secure your connection) which
+              exposes it to the
+              <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+                attack</a>.</li>
+            <li>It is susceptible to the
+              <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+                attack</a>.</li>
+          </ul>
+          <p>How's My SSL? always selects the worst rating the client could
+            receive.  That is, clients rated as "Bad" may also have problems
+            that, on their own, would have rated them as "Improvable".</p>
 
-        <hr />
+          <hr />
 
-        <h3 class="fragpadded" id="what-it-means">What It Means</h3>
-        <p>How's My SSL has a lot of jargon on it. We're going to discuss the
-        sections on its homepage. While it won't help everyone understand all
-        of it, those who have a glimmer of an idea of what they mean will be
-        better off reading these.</p>
+          <h3 class="fragpadded" id="what-it-means">What It Means</h3>
+          <p>How's My SSL has a lot of jargon on it. We're going to discuss the
+            sections on its homepage. While it won't help everyone understand all
+            of it, those who have a glimmer of an idea of what they mean will be
+            better off reading these.</p>
 
-        <h4 class="fragpadded" id="version">Version</h4>
-        <p>The Version section discusses the security of the highest version
-          of the TLS protocol your client supports. (Formerly, TLS
-          was <a href="#tls-vs-ssl">known as "SSL"</a>.)</p>
-        <p>TLS 1.2 is latest version of TLS and it is recommended for clients
-          to implement. It is the new normal for highly secure websites. TLS
-          1.2 provides access to advanced cipher suites that support
-          elliptical curve cryptography (large efficiency wins) and AEAD block
-          cipher modes (like the very nice GCM cipher suites). Clients using
-          TLS 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
-        <p>TLS 1.1 is the second most recent version of TLS. It fixes some
-          security problems in TLS 1.0, removing the need for many of the
-          workarounds built into clients and servers. Many deployed clients
-          and servers of TLS 1.0 do not implement those workarounds and, so,
-          TLS 1.1 is a good improvement. However, the modern security
-          environment has pushed us to TLS 1.2. Clients using TLS 1.1 will be
-          marked down to at least
-          <span class="label improvable">Improvable</span>.</p>
-        <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
-          and requires workarounds in both the client and server to work
-          securely for all cipher suites. TLS 1.0 is also unable to use modern
-          cipher suites that offer greater security and efficiency. Clients
-          using it will be marked as <span class="label bad">Bad</span>.</p>
-        <p>SSLv3, the last version of SSL, and the first before TLS 1.0, is
-          considered insecure. Clients using it or older versions of SSL will
-          be marked as <span class="label bad">Bad</span>.</p>
+          <h4 class="fragpadded" id="version">Version</h4>
+          <p>The Version section discusses the security of the highest version
+            of the TLS protocol your client supports. (Formerly, TLS
+            was <a href="#tls-vs-ssl">known as "SSL"</a>.)</p>
+          <p>TLS 1.2 is latest version of TLS and it is recommended for clients
+            to implement. It is the new normal for highly secure websites. TLS
+            1.2 provides access to advanced cipher suites that support
+            elliptical curve cryptography (large efficiency wins) and AEAD block
+            cipher modes (like the very nice GCM cipher suites). Clients using
+            TLS 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
+          <p>TLS 1.1 is the second most recent version of TLS. It fixes some
+            security problems in TLS 1.0, removing the need for many of the
+            workarounds built into clients and servers. Many deployed clients
+            and servers of TLS 1.0 do not implement those workarounds and, so,
+            TLS 1.1 is a good improvement. However, the modern security
+            environment has pushed us to TLS 1.2. Clients using TLS 1.1 will be
+            marked down to at least
+            <span class="label improvable">Improvable</span>.</p>
+          <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
+            and requires workarounds in both the client and server to work
+            securely for all cipher suites. TLS 1.0 is also unable to use modern
+            cipher suites that offer greater security and efficiency. Clients
+            using it will be marked as <span class="label bad">Bad</span>.</p>
+          <p>SSLv3, the last version of SSL, and the first before TLS 1.0, is
+            considered insecure. Clients using it or older versions of SSL will
+            be marked as <span class="label bad">Bad</span>.</p>
 
-        <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
-        <p>The Ephemeral Key Support section says if your client tells
-          the service that it supports cipher suites that include an
-          additional private key created for each connection to the
-          service. This allows servers that support it to
-          provide <a href="https://en.wikipedia.org/wiki/Forward_secrecy">forward
-          secrecy</a> to the client.</p>
-        <p>This extra key prevents attackers from storing all of
-          your encrypted communication with the website, then later
-          gaining access to the website's private key, and decrypting
-          all of your (and others') traffic to the website. This
-          additional key, however, is expensive to transfer,
-          especially without elliptical curve cryptography support in
-          the client and server to make the key smaller at the same
-          security. Clients with support for ephemeral key cipher
-          suites will be defaulted to <span class="label
-          okay">Probably Okay</span>. Clients without it will be
-          marked as <span class="label bad">Bad</span>.</p>
+          <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
+          <p>The Ephemeral Key Support section says if your client tells
+            the service that it supports cipher suites that include an
+            additional private key created for each connection to the
+            service. This allows servers that support it to
+            provide <a href="https://en.wikipedia.org/wiki/Forward_secrecy">forward
+            secrecy</a> to the client.</p>
+          <p>This extra key prevents attackers from storing all of
+            your encrypted communication with the website, then later
+            gaining access to the website's private key, and decrypting
+            all of your (and others') traffic to the website. This
+            additional key, however, is expensive to transfer,
+            especially without elliptical curve cryptography support in
+            the client and server to make the key smaller at the same
+            security. Clients with support for ephemeral key cipher
+            suites will be defaulted to <span class="label
+                                                     okay">Probably Okay</span>. Clients without it will be
+            marked as <span class="label bad">Bad</span>.</p>
 
-        <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
-        <p>Session tickets are a mechanism to speed up resumption of encrypted
-          communication with a server. When a client and server first connect
-          over TLS, they perform a complicated, time-consuming handshake. This
-          handshake lets the client and the server communicate a shared secret
-          (basically, a password) without exposing that secret to people
-          tapping the line. However, it only allows the client and the
-          specific computer that served the client communicate. Since websites
-          can (and, often, must) serve their traffic from many physical
-          computers, if the client disconnects and reconnects to the website,
-          the client could connect to another machine that knew nothing about
-          the shared secret. When that happens, the client and server have to
-          perform the slow handshake again.</p>
-        <p>If the client supports session tickets, the physical machines that
-          serve a website's traffic and share a special second key called a
-          session ticket key can deterministically generate a secret shared
-          with the client called a session ticket. If the client connects and
-          reconnects it includes this session ticket and most of the expensive
-          reconnection process can be skipped. This is a huge performance
-          boost, making users happier.</p>
-        <p>However, the session ticket key living on all of the website's
-          computers means there is a secret that could be leaked to an
-          attacker. Worse, it undermines the security
-          of <a href="#ephemeral-key-support">ephemeral key cipher
-          suites</a>. Preventing this is often a source
-          of <a href="https://googleonlinesecurity.blogspot.com/2011/11/protecting-data-for-long-term-with.html">important</a>
-          <a href="https://blog.twitter.com/2013/forward-secrecy-at-twitter-0">engineering</a>
-          <a href="https://www.imperialviolet.org/2013/06/27/botchingpfs.html">work</a>
-          for a security engineer team. Of course, another alternative is for
-          the website to simply turn off support for session tickets and
-          enable support for ephemeral keys.</p>
+          <h4 class="fragpadded" id="session-ticket-support">Session Ticket Support</h4>
+          <p>Session tickets are a mechanism to speed up resumption of encrypted
+            communication with a server. When a client and server first connect
+            over TLS, they perform a complicated, time-consuming handshake. This
+            handshake lets the client and the server communicate a shared secret
+            (basically, a password) without exposing that secret to people
+            tapping the line. However, it only allows the client and the
+            specific computer that served the client communicate. Since websites
+            can (and, often, must) serve their traffic from many physical
+            computers, if the client disconnects and reconnects to the website,
+            the client could connect to another machine that knew nothing about
+            the shared secret. When that happens, the client and server have to
+            perform the slow handshake again.</p>
+          <p>If the client supports session tickets, the physical machines that
+            serve a website's traffic and share a special second key called a
+            session ticket key can deterministically generate a secret shared
+            with the client called a session ticket. If the client connects and
+            reconnects it includes this session ticket and most of the expensive
+            reconnection process can be skipped. This is a huge performance
+            boost, making users happier.</p>
+          <p>However, the session ticket key living on all of the website's
+            computers means there is a secret that could be leaked to an
+            attacker. Worse, it undermines the security
+            of <a href="#ephemeral-key-support">ephemeral key cipher
+            suites</a>. Preventing this is often a source
+            of <a href="https://googleonlinesecurity.blogspot.com/2011/11/protecting-data-for-long-term-with.html">important</a>
+            <a href="https://blog.twitter.com/2013/forward-secrecy-at-twitter-0">engineering</a>
+            <a href="https://www.imperialviolet.org/2013/06/27/botchingpfs.html">work</a>
+            for a security engineer team. Of course, another alternative is for
+            the website to simply turn off support for session tickets and
+            enable support for ephemeral keys.</p>
           <p>How's My SSL will rate clients with session ticket
-          support as <span class="label okay">Probably Okay</span>,
-          but not having it will only have it defaulted to
-          <span class="label improvable">Improvable</span>.</p>
+            support as <span class="label okay">Probably Okay</span>,
+            but not having it will only have it defaulted to
+            <span class="label improvable">Improvable</span>.</p>
 
-        <h4 class="fragpadded" id="tls-compression">TLS Compression</h4>
-        <p>TLS compression was a specification of a way to make the data in
-          the encrypted connection smaller in order to speed up the transfer
-          of data across those connections. Unfortunately, applying this
-          technique makes it easy for attackers to learn information about the
-          encrypted data if the attackers can make the user's computer make
-          connections to the website. In practice, this turns out to be
-          easy. This is now referred to as
-          the <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
-          attack</a>. While some clients have mitigations in place, it's been
-          determined that the best way to avoid the attack is to disable TLS 
-          compression entirely. Clients that do so will be defaulted to 
-          <span class="label okay">Probably Okay</span> while clients
-          that leave it enabled will be marked
-          as <span class="label bad">Bad</span>.</p>
+          <h4 class="fragpadded" id="tls-compression">TLS Compression</h4>
+          <p>TLS compression was a specification of a way to make the data in
+            the encrypted connection smaller in order to speed up the transfer
+            of data across those connections. Unfortunately, applying this
+            technique makes it easy for attackers to learn information about the
+            encrypted data if the attackers can make the user's computer make
+            connections to the website. In practice, this turns out to be
+            easy. This is now referred to as
+            the <a href="https://en.wikipedia.org/wiki/CRIME_(security_exploit)">CRIME
+            attack</a>. While some clients have mitigations in place, it's been
+            determined that the best way to avoid the attack is to disable TLS 
+            compression entirely. Clients that do so will be defaulted to 
+            <span class="label okay">Probably Okay</span> while clients
+            that leave it enabled will be marked
+            as <span class="label bad">Bad</span>.</p>
 
-        <h4 class="fragpadded" id="beast-vulnerability">BEAST Vulnerability</h4>
-        <p>The <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-        vulnerability</a> is an attack on TLS 1.0 connections using a
-        cipher suite in a cipher block chaining (CBC) mode. An
-        attacker is able
-        to <a href="https://vnhacker.blogspot.com/2011/09/beast.html">decrypt
-        the data</a> on a TLS connection matching that
-        criteria. Upgrading to TLS 1.1 or greater or not using CBC
-        cipher suites prevents the attack (though, RC4 has its own
-        issues). Another mitigation strategy is called 1/n-1 record
-        splitting. 1/n-1 record splitting allows TLS 1.0 clients
-        using CBC cipher modes to mitigate the attack by sending only
-        a single byte in the first encrypted application data record
-        of the connection, which fixes up the initialization vector
-        for the rest of the connection.</p>
-        <p>A caveat here: Certain TLS libraries, like Java's
-        javax.net.ssl, use a slightly different form of 1/n-1 record
-        splitting that is not detectable by How's My SSL? as most
-        requests to How's My SSL? are too small to trigger
-        it. However, these libraries have usually implemented TLS 1.2
-        and clients should use it to remove this error.</p>
-        <p>If the client supports CBC mode cipher suites on TLS 1.0
-        and does not implement the 1/n-1 record splitting mitigation
-        detectable by How's My SSL?, it will be marked
-        as <span class="label bad">Bad</span>.</p>
-        <p>Clients using versions of TLS greater than 1.0 or not using
-        CBC cipher suites or are using both but also implement 1/n-1
-        record splitting, will be marked as <span class="label
-        okay">Probably Okay</span></p>
+          <h4 class="fragpadded" id="beast-vulnerability">BEAST Vulnerability</h4>
+          <p>The <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+            vulnerability</a> is an attack on TLS 1.0 connections using a
+            cipher suite in a cipher block chaining (CBC) mode. An
+            attacker is able
+            to <a href="https://vnhacker.blogspot.com/2011/09/beast.html">decrypt
+            the data</a> on a TLS connection matching that
+            criteria. Upgrading to TLS 1.1 or greater or not using CBC
+            cipher suites prevents the attack (though, RC4 has its own
+            issues). Another mitigation strategy is called 1/n-1 record
+            splitting. 1/n-1 record splitting allows TLS 1.0 clients
+            using CBC cipher modes to mitigate the attack by sending only
+            a single byte in the first encrypted application data record
+            of the connection, which fixes up the initialization vector
+            for the rest of the connection.</p>
+          <p>A caveat here: Certain TLS libraries, like Java's
+            javax.net.ssl, use a slightly different form of 1/n-1 record
+            splitting that is not detectable by How's My SSL? as most
+            requests to How's My SSL? are too small to trigger
+            it. However, these libraries have usually implemented TLS 1.2
+            and clients should use it to remove this error.</p>
+          <p>If the client supports CBC mode cipher suites on TLS 1.0
+            and does not implement the 1/n-1 record splitting mitigation
+            detectable by How's My SSL?, it will be marked
+            as <span class="label bad">Bad</span>.</p>
+          <p>Clients using versions of TLS greater than 1.0 or not using
+            CBC cipher suites or are using both but also implement 1/n-1
+            record splitting, will be marked as <span class="label
+                                                             okay">Probably Okay</span></p>
 
-        <h4 class="fragpadded" id="insecure-cipher-suites">Insecure Cipher Suites</h4>
-        <p>This section displayed any cipher suites the client supports that
-          are known to be insecure. Insecure cipher suites make it easy for
-          attackers to decrypt data on tapped lines, or make it easy for the
-          attacker to pretend to be the website, stealing secrets directly
-          from the client. Cipher suites are found here for one of many
-          reasons. Insecure cipher suites are only a problem if the server
-          also supports it. Of course, some of these suites don't require the
-          server to prove that they can serve the traffic for the site they
-          claim to, making them easy to man-in-the-middle.</p>
-        <p> The first among these reasons is if the size of the keys created
-          by the cipher suite are too small. Small keys are easier to guess
-          (or "brute force"), and there are many cipher suites that have been
-          defined with far, far too small keys.</p>
-        <p>A cipher suite supported by the client will be put here if it
-          does not ensure that the server you connected to was actually for
-          the website you wanted. Cipher suites are to do so by inspecting the
-          certificate the server sends and verifying it trusts the other
-          entities (called "certificate authorities") that have "signed" the
-          certificate. This is called the "certificate authority trust model",
-          and if this sounds crazy to you on many levels, you are not
-          alone. It's currently the best security we have,
-          however. <a href="https://tack.io/index.html">TACK</a> is one good
-          attempt to, in a backwards compatible way, replace it.</p>
-        <p>A cipher suite may also be added if it's a "null cipher suite"
-          which is a funny way of saying the cipher does not encrypt the data
-          at all. In a truly bizarre set of decisions these were put in the
-          SSL/TLS specifications even though offer no privacy or security for
-          the user or the web service. These are giant, glowing "rob me" signs
-          on the web.</p>
-        <p>Finally, a cipher suite can be added here if it is known to be
-          obsolete in some way. Currently, some NSS clients (like Firefox)
-          will allow for the use of under-specified or broken cipher suites
-          that were meant to be killed off after the death of SSLv3 and were
-          never really specified well in the first place.</p>
-        <p>Any client supporting an insecure cipher suite will be marked as
-          <span class="label bad">Bad</span>.</p>
+          <h4 class="fragpadded" id="insecure-cipher-suites">Insecure Cipher Suites</h4>
+          <p>This section displayed any cipher suites the client supports that
+            are known to be insecure. Insecure cipher suites make it easy for
+            attackers to decrypt data on tapped lines, or make it easy for the
+            attacker to pretend to be the website, stealing secrets directly
+            from the client. Cipher suites are found here for one of many
+            reasons. Insecure cipher suites are only a problem if the server
+            also supports it. Of course, some of these suites don't require the
+            server to prove that they can serve the traffic for the site they
+            claim to, making them easy to man-in-the-middle.</p>
+          <p> The first among these reasons is if the size of the keys created
+            by the cipher suite are too small. Small keys are easier to guess
+            (or "brute force"), and there are many cipher suites that have been
+            defined with far, far too small keys.</p>
+          <p>A cipher suite supported by the client will be put here if it
+            does not ensure that the server you connected to was actually for
+            the website you wanted. Cipher suites are to do so by inspecting the
+            certificate the server sends and verifying it trusts the other
+            entities (called "certificate authorities") that have "signed" the
+            certificate. This is called the "certificate authority trust model",
+            and if this sounds crazy to you on many levels, you are not
+            alone. It's currently the best security we have,
+            however. <a href="https://tack.io/index.html">TACK</a> is one good
+            attempt to, in a backwards compatible way, replace it.</p>
+          <p>A cipher suite may also be added if it's a "null cipher suite"
+            which is a funny way of saying the cipher does not encrypt the data
+            at all. In a truly bizarre set of decisions these were put in the
+            SSL/TLS specifications even though offer no privacy or security for
+            the user or the web service. These are giant, glowing "rob me" signs
+            on the web.</p>
+          <p>Finally, a cipher suite can be added here if it is known to be
+            obsolete in some way. Currently, some NSS clients (like Firefox)
+            will allow for the use of under-specified or broken cipher suites
+            that were meant to be killed off after the death of SSLv3 and were
+            never really specified well in the first place.</p>
+          <p>Any client supporting an insecure cipher suite will be marked as
+            <span class="label bad">Bad</span>.</p>
 
-        <h4 class="fragpadded" id="unknown-cipher-suites-supported">Unknown Cipher Suites
-          Supported</h4>
-        <p>This section notes any cipher suites that How's My SSL did not
-          recognize. How's My SSL has a very complete knowledge of cipher
-          suites both specified and in use. If a cipher suite is unknown, the
-          client is being, well, "interesting", and "interesting" usually
-          means broken. Without a specification, a cipher suite has not been
-          publicly vetted by the community of cryptographers and the vast,
-          vast, vast majority of unvetted security systems are entirely
-          insecure. Clients supporting unknown cipher suites will be marked
-          as <span class="label bad">Bad</span>.</p>
-        
-        <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
-        <p>This section is one of the most often needed by developers and was
-          the original reason this webapp was made. It simply prints out the
-          standard names of the cipher suites that the client says it supports
-          in the same order the client gave them to the server. This ordering
-          is sometimes used to determine which cipher suite a client prefers,
-          but TLS servers tend to choose their own preference of those cipher
-          suits. No rating will be given in this section.</p>
+          <h4 class="fragpadded" id="unknown-cipher-suites-supported">Unknown Cipher Suites
+            Supported</h4>
+          <p>This section notes any cipher suites that How's My SSL did not
+            recognize. How's My SSL has a very complete knowledge of cipher
+            suites both specified and in use. If a cipher suite is unknown, the
+            client is being, well, "interesting", and "interesting" usually
+            means broken. Without a specification, a cipher suite has not been
+            publicly vetted by the community of cryptographers and the vast,
+            vast, vast majority of unvetted security systems are entirely
+            insecure. Clients supporting unknown cipher suites will be marked
+            as <span class="label bad">Bad</span>.</p>
+          
+          <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
+          <p>This section is one of the most often needed by developers and was
+            the original reason this webapp was made. It simply prints out the
+            standard names of the cipher suites that the client says it supports
+            in the same order the client gave them to the server. This ordering
+            is sometimes used to determine which cipher suite a client prefers,
+            but TLS servers tend to choose their own preference of those cipher
+            suits. No rating will be given in this section.</p>
 
-        <hr />
-        <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
-        <p>Okay, last thing. The jargon around is a little funny, so
-           let's be a little more explicit. The 'S' in "HTTPS" is the
-           TLS protocol. When folks refer to the
-           "<a href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
-           they are referring to the most common of modern protocols
-           of encrypting data across the
-           internet. "<a href="https://en.wikipedia.org/wiki/SSL">SSL</a>",
-           when used by experts, refers to the older versions of these
-           protocols. In general, people use "SSL" and "TLS"
-           interchangeably, but that's changing towards everyone
-           saying "TLS". "TLS" is what everyone will call it in the
-           future, while "SSL" is the phrase everyone knows right
-           now.</p>
+          <hr />
+          <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
+          <p>Okay, last thing. The jargon around is a little funny, so
+            let's be a little more explicit. The 'S' in "HTTPS" is the
+            TLS protocol. When folks refer to the
+            "<a href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+            they are referring to the most common of modern protocols
+            of encrypting data across the
+            internet. "<a href="https://en.wikipedia.org/wiki/SSL">SSL</a>",
+            when used by experts, refers to the older versions of these
+            protocols. In general, people use "SSL" and "TLS"
+            interchangeably, but that's changing towards everyone
+            saying "TLS". "TLS" is what everyone will call it in the
+            future, while "SSL" is the phrase everyone knows right
+            now.</p>
 
-        <p>(Heck, at some point, this site will redirect
-          to <a href="https://howsmytls.com">howsmytls.com</a> instead
-          of it redirecting here.)</p>
+          <p>(Heck, at some point, this site will redirect
+            to <a href="https://howsmytls.com">howsmytls.com</a> instead
+            of it redirecting here.)</p>
 
-        <hr />
+          <hr />
 
-        <h3 class="fragpadded" id="contributing">Contributing</h3>
-        <p>Have feedback? Leave it on
-        the <a href="https://groups.google.com/forum/#!forum/howsmyssl-upkeep">howsmyssl-upkeep
-        mailing list</a>. Notice a
-        bug? <a href="https://github.com/jmhodges/howsmyssl/issues">Create
-        an issue</a> on
-        the <a href="https://github.com/jmhodges/howsmyssl">Github
-        repository</a>.</p>
+          <h3 class="fragpadded" id="contributing">Contributing</h3>
+          <p>Have feedback? Leave it on
+            the <a href="https://groups.google.com/forum/#!forum/howsmyssl-upkeep">howsmyssl-upkeep
+            mailing list</a>. Notice a
+            bug? <a href="https://github.com/jmhodges/howsmyssl/issues">Create
+            an issue</a> on
+            the <a href="https://github.com/jmhodges/howsmyssl">Github
+            repository</a>.</p>
 
-        <p>Feedback is very welcome.</p>
-      </div>
+          <p>Feedback is very welcome.</p>
+        </div>
       </div>
 
       <hr />
       <div class="row">
-          <div class="col-sm-offset-1">
-            <h4>Want use the How's My SSL API on your site?  <a href="https://subscriptions.howsmyssl.com">Purchase a subscription</a>!</h4>
-          </div>
+        <div class="col-sm-offset-1 col-sm-12">
+          <h4>Want use the How's My SSL API on your site?  <a href="https://subscriptions.howsmyssl.com">Purchase a subscription</a>!</h4>
+        </div>
       </div>
       <div class="row">
-        <div class="col-sm-offset-1">
+        <div class="col-sm-offset-1 col-sm-12">
           Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
         </div>
       </div>
