@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -310,27 +309,41 @@ func plaintextMux(redirectHost string) http.Handler {
 
 const htmlContentType = "text/html;charset=utf-8"
 
-func renderHTML(r *http.Request, data *clientInfo) ([]byte, string, error) {
+func renderHTML(r *http.Request, data *clientInfo) ([]byte, int, string, error) {
 	b := new(bytes.Buffer)
 	err := index.Execute(b, data)
 	if err != nil {
-		return nil, htmlContentType, err
+		return nil, 0, "", err
 	}
-	return b.Bytes(), htmlContentType, nil
+	return b.Bytes(), http.StatusOK, htmlContentType, nil
 }
 
-func renderJSON(r *http.Request, data *clientInfo) ([]byte, string, error) {
-	marshalled, err := json.Marshal(data)
-	if err != nil {
-		return nil, htmlContentType, err
-	}
+func disallowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, string, error) {
 	callback := r.FormValue("callback")
 	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
+
+	if len(sanitizedCallback) != 0 {
+		body := []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, disallowedOriginBody))
+		// Browsers won't run this code unless the status is OK.
+		return body, http.StatusOK, "application/javascript", nil
+
+	}
+	return disallowedOriginBody, http.StatusTooManyRequests, "application/json", nil
+}
+
+func allowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, string, error) {
+	callback := r.FormValue("callback")
+	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
+
+	marshalled, err := json.Marshal(data)
+	if err != nil {
+		return nil, 0, htmlContentType, err
+	}
 	if len(sanitizedCallback) > 0 {
-		return []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, marshalled)), "application/javascript", nil
+		return []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, marshalled)), http.StatusOK, "application/javascript", nil
 	}
 
-	return marshalled, "application/json", nil
+	return marshalled, http.StatusOK, "application/json", nil
 }
 
 func handleWeb(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +355,9 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 	hijackHandle(w, r, webStatuses, renderHTML)
 }
 
-var disallowedOriginBody = []byte(`{"error": "See tls_version for the sign up link", "tls_version": "The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com/signup for how to get one."}`)
+var (
+	disallowedOriginBody = []byte(`{"error": "See tls_version for the sign up link", "tls_version": "The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com/signup for how to get one."}`)
+)
 
 type apiHandler struct {
 	oa *originAllower
@@ -353,20 +368,18 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	detectedDomain, ok := ah.oa.Allow(r)
 
-	if !ok {
-		defaultResponseHeaders(w.Header(), r, "application/json")
-		w.Header().Set("Content-Length", strconv.Itoa(len(disallowedOriginBody)))
-		w.WriteHeader(http.StatusTooManyRequests)
-		w.Write(disallowedOriginBody)
+	renderJSON := allowedRenderJSON
+	if ok {
+		log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
+	} else {
+		renderJSON = disallowedRenderJSON
 		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
-		return
 	}
-	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 
 	hijackHandle(w, r, apiStatuses, renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, string, error)) {
+func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, int, string, error)) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -389,9 +402,9 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 		return
 	}
 	data := pullClientInfo(tc)
-	bs, contentType, err := render(r, data)
+	bs, status, contentType, err := render(r, data)
 	if err != nil {
-		log.Printf("Unable to execute index template: %s\n", err)
+		log.Printf("Unable to execute render: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)
 		return
 	}
@@ -399,7 +412,7 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 	h := make(http.Header)
 	defaultResponseHeaders(h, r, contentType)
 	resp := &http.Response{
-		StatusCode:    200,
+		StatusCode:    status,
 		ContentLength: contentLength,
 		Header:        h,
 		Body:          ioutil.NopCloser(bytes.NewBuffer(bs)),

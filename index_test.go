@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	tls110 "github.com/jmhodges/howsmyssl/tls110"
 )
 
@@ -198,14 +200,14 @@ func TestDisallowedBodyParses(t *testing.T) {
 	}
 }
 
-func TestJSONPCallback(t *testing.T) {
+func TestJSONAPI(t *testing.T) {
 	staticVars := new(expvar.Map).Init()
 	staticHandler := makeStaticHandler("/static", staticVars)
 	webHandleFunc := http.NotFound
 	am := &allowMaps{
 		AllowTheseDomains: make(map[string]bool),
 		AllowSubdomainsOn: make(map[string]bool),
-		BlockedDomains:    make(map[string]bool),
+		BlockedDomains:    map[string]bool{"blocked.com": true},
 	}
 	ama := &allowMapsAtomic{}
 	ama.Store(am)
@@ -223,6 +225,8 @@ func TestJSONPCallback(t *testing.T) {
 	// Intentionally not using StartTLS to avoid stomping on our special listener.
 	srv.Start()
 	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 	c := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -243,49 +247,71 @@ func TestJSONPCallback(t *testing.T) {
 			return errors.New("no redirects should be seen")
 		},
 	}
+
+	type apiTest struct {
+		path        string
+		origin      string
+		status      int
+		contentType string
+		body        string
+	}
+	tests := []apiTest{
+		{
+			path:        "/a/check",
+			status:      http.StatusOK,
+			contentType: "application/json",
+			body:        expectedJSONBody,
+		},
+		{
+			path:        "/a/check?callback=parseTLS",
+			status:      http.StatusOK,
+			contentType: "application/javascript",
+			body:        "parseTLS(" + expectedJSONBody + ");",
+		},
+		{
+			path:        "/a/check",
+			origin:      "https://blocked.com",
+			status:      http.StatusTooManyRequests,
+			contentType: "application/json",
+			body:        string(disallowedOriginBody),
+		},
+		{
+			path:        "/a/check?callback=foobarParse",
+			origin:      "https://blocked.com",
+			status:      http.StatusOK,
+			contentType: "application/javascript",
+			body:        "foobarParse(" + string(disallowedOriginBody) + ");",
+		},
+	}
 	u := strings.Replace(srv.URL, "http://", "https://", -1)
-	r, err := http.NewRequest("GET", u+"/a/check", nil)
-	if err != nil {
-		t.Fatalf("NewRequest: %s", err)
-	}
-
-	resp, err := c.Do(r)
-	if err != nil {
-		t.Fatalf("Get: %s", err)
-	}
-	b, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-	if err != nil {
-		t.Fatalf("ReadAll: %s", err)
-	}
-	if string(b) != expectedJSONBody {
-		t.Errorf("json body, want:\n%#v\ngot:%#v\n", expectedJSONBody, string(b))
-	}
-	ct := resp.Header.Get("Content-Type")
-	if ct != "application/json" {
-		t.Errorf("json Content-Type, want application/json, got %s", ct)
-	}
-
-	rcall, err := http.NewRequest("GET", u+"/a/check?callback=parseTLS", nil)
-	if err != nil {
-		t.Fatalf("NewRequest rcall: %s", err)
-	}
-	respcall, err := c.Do(rcall)
-	if err != nil {
-		t.Fatalf("Get: %s", err)
-	}
-	bcall, err := ioutil.ReadAll(respcall.Body)
-	defer respcall.Body.Close()
-	if err != nil {
-		t.Fatalf("ReadAll rcall: %s", err)
-	}
-	jsonp := "parseTLS(" + expectedJSONBody + ");"
-	if string(bcall) != jsonp {
-		t.Errorf("jsonp callback body, want:\n%#v\ngot:%#v\n", jsonp, string(bcall))
-	}
-	ctcall := respcall.Header.Get("Content-Type")
-	if ctcall != "application/javascript" {
-		t.Errorf("jsonp Content-Type, want application/javascript, got %s", ctcall)
+	for _, at := range tests {
+		t.Run(at.path, func(t *testing.T) {
+			r, err := http.NewRequest("GET", u+at.path, nil)
+			if err != nil {
+				t.Fatalf("NewRequest: %s", err)
+			}
+			r = r.WithContext(ctx)
+			r.Header.Set("Origin", at.origin)
+			resp, err := c.Do(r)
+			if err != nil {
+				t.Fatalf("Get: %s", err)
+			}
+			b, err := ioutil.ReadAll(resp.Body)
+			defer resp.Body.Close()
+			if err != nil {
+				t.Fatalf("ReadAll: %s", err)
+			}
+			if resp.StatusCode != at.status {
+				t.Errorf("status code, want: %d, got: %d", at.status, resp.StatusCode)
+			}
+			if string(b) != at.body {
+				t.Errorf("body, want:\n%#v\ngot:%#v\n", at.body, string(b))
+			}
+			ct := resp.Header.Get("Content-Type")
+			if ct != at.contentType {
+				t.Errorf("Content-Type, want %s, got %s", at.contentType, ct)
+			}
+		})
 	}
 }
 
