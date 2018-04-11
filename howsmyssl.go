@@ -291,9 +291,13 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
 	m.HandleFunc(routeHost+"/", webHandleFunc)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
-	m.HandleFunc("/healthcheck", healthcheck)
+	if routeHost != "" {
+		m.HandleFunc("/healthcheck", healthcheck)
+	}
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
-	m.Handle("/", commonRedirect(redirectHost))
+	if routeHost != "" {
+		m.Handle("/", commonRedirect(redirectHost))
+	}
 	return protoHandler{logHandler{m}, "https"}
 }
 
@@ -304,27 +308,29 @@ func plaintextMux(redirectHost string) http.Handler {
 	return protoHandler{logHandler{m}, "http"}
 }
 
-func renderHTML(r *http.Request, data *clientInfo) ([]byte, error) {
+const htmlContentType = "text/html;charset=utf-8"
+
+func renderHTML(r *http.Request, data *clientInfo) ([]byte, string, error) {
 	b := new(bytes.Buffer)
 	err := index.Execute(b, data)
 	if err != nil {
-		return nil, err
+		return nil, htmlContentType, err
 	}
-	return b.Bytes(), nil
+	return b.Bytes(), htmlContentType, nil
 }
 
-func renderJSON(r *http.Request, data *clientInfo) ([]byte, error) {
+func renderJSON(r *http.Request, data *clientInfo) ([]byte, string, error) {
 	marshalled, err := json.Marshal(data)
 	if err != nil {
-		return nil, err
+		return nil, htmlContentType, err
 	}
 	callback := r.FormValue("callback")
 	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
-
 	if len(sanitizedCallback) > 0 {
-		return []byte(fmt.Sprintf("%s(%s)", sanitizedCallback, marshalled)), nil
+		return []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, marshalled)), "application/javascript", nil
 	}
-	return marshalled, nil
+
+	return marshalled, "application/json", nil
 }
 
 func handleWeb(w http.ResponseWriter, r *http.Request) {
@@ -333,7 +339,7 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	webRequests.Add(1)
-	hijackHandle(w, r, "text/html;charset=utf-8", webStatuses, renderHTML)
+	hijackHandle(w, r, webStatuses, renderHTML)
 }
 
 var disallowedOriginBody = []byte(`{"error": "See tls_version for the sign up link", "tls_version": "The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com/signup for how to get one."}`)
@@ -357,10 +363,10 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 
-	hijackHandle(w, r, "application/json", apiStatuses, renderJSON)
+	hijackHandle(w, r, apiStatuses, renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, error)) {
+func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, string, error)) {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		log.Printf("server not hijackable\n")
@@ -378,11 +384,12 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, contentType string, st
 	defer c.Close()
 	tc, ok := c.(*conn)
 	if !ok {
-		log.Printf("Unable to convert net.Conn to *conn: %s\n", err)
+		log.Printf("Unable to convert net.Conn to *conn: %#v\n", c)
 		hijacked500(brw, r.ProtoMinor, statuses)
+		return
 	}
 	data := pullClientInfo(tc)
-	bs, err := render(r, data)
+	bs, contentType, err := render(r, data)
 	if err != nil {
 		log.Printf("Unable to execute index template: %s\n", err)
 		hijacked500(brw, r.ProtoMinor, statuses)

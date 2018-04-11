@@ -2,11 +2,19 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"expvar"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
+
+	tls110 "github.com/jmhodges/howsmyssl/tls110"
 )
 
 func TestDumbNilishIndex(t *testing.T) {
@@ -189,3 +197,98 @@ func TestDisallowedBodyParses(t *testing.T) {
 		t.Errorf("disallowedOriginBody did not parse: %s", err)
 	}
 }
+
+func TestJSONPCallback(t *testing.T) {
+	staticVars := new(expvar.Map).Init()
+	staticHandler := makeStaticHandler("/static", staticVars)
+	webHandleFunc := http.NotFound
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    make(map[string]bool),
+	}
+	ama := &allowMapsAtomic{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa)
+
+	tl, err := tls110.Listen("tcp", "127.0.0.1:0", serverConf)
+	if err != nil {
+		t.Fatalf("NewListener: %s", err)
+	}
+	li := newListener(tl, new(expvar.Map).Init())
+
+	srv := httptest.NewUnstartedServer(tm)
+	srv.Listener = li
+	// Intentionally not using StartTLS to avoid stomping on our special listener.
+	srv.Start()
+	defer srv.Close()
+	c := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return errors.New("no redirects should be seen")
+		},
+	}
+	u := strings.Replace(srv.URL, "http://", "https://", -1)
+	r, err := http.NewRequest("GET", u+"/a/check", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %s", err)
+	}
+
+	resp, err := c.Do(r)
+	if err != nil {
+		t.Fatalf("Get: %s", err)
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		t.Fatalf("ReadAll: %s", err)
+	}
+	if string(b) != expectedJSONBody {
+		t.Errorf("json body, want:\n%#v\ngot:%#v\n", expectedJSONBody, string(b))
+	}
+	ct := resp.Header.Get("Content-Type")
+	if ct != "application/json" {
+		t.Errorf("json Content-Type, want application/json, got %s", ct)
+	}
+
+	rcall, err := http.NewRequest("GET", u+"/a/check?callback=parseTLS", nil)
+	if err != nil {
+		t.Fatalf("NewRequest rcall: %s", err)
+	}
+	respcall, err := c.Do(rcall)
+	if err != nil {
+		t.Fatalf("Get: %s", err)
+	}
+	bcall, err := ioutil.ReadAll(respcall.Body)
+	defer respcall.Body.Close()
+	if err != nil {
+		t.Fatalf("ReadAll rcall: %s", err)
+	}
+	jsonp := "parseTLS(" + expectedJSONBody + ");"
+	if string(bcall) != jsonp {
+		t.Errorf("jsonp callback body, want:\n%#v\ngot:%#v\n", jsonp, string(bcall))
+	}
+	ctcall := respcall.Header.Get("Content-Type")
+	if ctcall != "application/javascript" {
+		t.Errorf("jsonp Content-Type, want application/javascript, got %s", ctcall)
+	}
+}
+
+const (
+	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_RSA_WITH_AES_128_GCM_SHA256","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_CBC_SHA","TLS_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA","TLS_RSA_WITH_3DES_EDE_CBC_SHA"],"ephemeral_keys_supported":true,"session_ticket_supported":false,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.2","rating":"Probably Okay"}`
+)
