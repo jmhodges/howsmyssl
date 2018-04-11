@@ -328,7 +328,7 @@ func disallowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, strin
 		return body, http.StatusOK, "application/javascript", nil
 
 	}
-	return disallowedOriginBody, http.StatusTooManyRequests, "application/json", nil
+	return disallowedOriginBody, http.StatusBadRequest, "application/json", nil
 }
 
 func allowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, string, error) {

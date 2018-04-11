@@ -271,7 +271,7 @@ func TestJSONAPI(t *testing.T) {
 		{
 			path:        "/a/check",
 			origin:      "https://blocked.com",
-			status:      http.StatusTooManyRequests,
+			status:      http.StatusBadRequest,
 			contentType: "application/json",
 			body:        string(disallowedOriginBody),
 		},
