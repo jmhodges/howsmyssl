@@ -356,7 +356,13 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 }
 
 var (
-	disallowedOriginBody = []byte(`{"error": "See tls_version for the sign up link", "tls_version": "The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com/signup for how to get one."}`)
+	// disallowedOriginBody's tls_version has a special format in order to
+	// ensure that folks with weird JavaScript parsing conditions show their
+	// users a failure. We've seen `tls_version.split(' ')[1] < 1.2` without any
+	// other checks, so we have that 0 in there. The "Err" is intentionally 3
+	// characters long to avoid anyone parsing it by character count. (We've not
+	// seen that 3 char check, but I can imagine it.)
+	disallowedOriginBody = []byte(`{"error": "See tls_version for the sign up link", "tls_version": "Err 0 The website calling howsmyssl.com's API has been making many calls and does not have a subscription. See https://subscriptions.howsmyssl.com/signup for how to get one."}`)
 )
 
 type apiHandler struct {
