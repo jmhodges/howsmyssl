@@ -65,6 +65,8 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 
 		{"https://example.com:3336/", "", "example.com", false},
 		{"", "http://example.com:4444/asdf", "example.com", false},
+		{"https://eXampLe.com", "", "example.com", false},
+		{"", "https://eXaMPle.com/foobar", "example.com", false},
 	}
 
 	r, err := http.NewRequest("GET", "/whatever", nil)

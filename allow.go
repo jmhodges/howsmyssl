@@ -127,6 +127,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 // checkDomain checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
 func (oa *originAllower) checkDomain(d string) (string, string, bool) {
+	d = strings.ToLower(d)
 	etldplus1, fullDomain, err := effectiveDomain(d)
 
 	if err != nil {
