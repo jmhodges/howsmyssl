@@ -361,7 +361,7 @@
 			"importpath": "golang.org/x/net/publicsuffix",
 			"repository": "https://go.googlesource.com/net",
 			"vcs": "git",
-			"revision": "ef00b378c73f107bf44d5c9b69875255ce89b79a",
+			"revision": "2491c5de3490fced2f6cff376127c667efeed857",
 			"branch": "master",
 			"path": "/publicsuffix",
 			"notests": true
