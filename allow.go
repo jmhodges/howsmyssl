@@ -219,9 +219,13 @@ func effectiveDomain(str string) (string, string, error) {
 	if host == "" {
 		return "", "", fmt.Errorf("unparsable domain string %#v", str)
 	}
-	i := strings.Index(host, ":")
-	if i >= 0 {
-		host = host[:i]
+	h2, _, err := net.SplitHostPort(host)
+	if err == nil {
+		host = h2
+	}
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return host, host, nil
 	}
 	if host == "localhost" {
 		return "localhost", "localhost", nil
