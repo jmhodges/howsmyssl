@@ -46,11 +46,11 @@ function auth_gcloud() {
   # This is for when we're on the first install of gcloud.
   gcloud components update kubectl || die "unable to install kubectl"
 
-  gcloud config set container/cluster sites
+  gcloud config set container/cluster dg
   gcloud config set compute/zone us-east1-c
   gcloud config set project personal-sites-1295
 
-  gcloud container clusters get-credentials sites || die "unable to get credentials for GKE cluster"
+  gcloud container clusters get-credentials dg || die "unable to get credentials for GKE cluster"
 }
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
