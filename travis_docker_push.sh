@@ -46,11 +46,11 @@ function auth_gcloud() {
   # This is for when we're on the first install of gcloud.
   gcloud components update kubectl || die "unable to install kubectl"
 
-  gcloud config set container/cluster sites
+  gcloud config set container/cluster dg
   gcloud config set compute/zone us-east1-c
   gcloud config set project personal-sites-1295
 
-  gcloud container clusters get-credentials sites || die "unable to get credentials for GKE cluster"
+  gcloud container clusters get-credentials dg || die "unable to get credentials for GKE cluster"
 }
 
 export PATH=${HOME}/google-cloud-sdk/bin:$PATH
@@ -92,4 +92,4 @@ PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image
 # See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
 export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/howsmyssl-gcloud-credentials.json"
 # quotes around PATCH are important since there are spaces in it.
-kubectl patch deployment --namespace=prod howsmyssl-deployment --type="json" -p "${PATCH}" || die "unable to deploy new image"
+kubectl patch deployment --namespace=prod howsmyssl --type="json" -p "${PATCH}" || die "unable to deploy new image"
