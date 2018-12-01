@@ -19,10 +19,10 @@ cache:
     - $HOME/google-cloud-sdk
 
 env:
-  - GOARCH=amd64 GOOS=linux
+  - GOARCH=amd64 GOOS=linux GO111MODULE=on
 
 install:
-  - go test -i -race . ./tls110 ./gzip # Mostly to avoid Travis's default `go get`
+  - go test -mod=vendor -i -race . ./tls110 ./gzip # Mostly to avoid Travis's default `go get`
 
 script:
-  - go test -v -race . ./tls110 ./gzip && ./travis_docker_push.sh
+  - go test -mod=vendor -v -race . ./tls110 ./gzip && ./travis_docker_push.sh

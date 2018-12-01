@@ -1,0 +1,85 @@
+# cloud.google.com/go v0.0.0-20161227155656-4e436992a513
+cloud.google.com/go/logging
+cloud.google.com/go/logging/apiv2
+cloud.google.com/go/logging/internal
+cloud.google.com/go/compute/metadata
+cloud.google.com/go/internal
+# github.com/dgryski/go-topk v0.0.0-20150925113624-6b42aca27653
+github.com/dgryski/go-topk
+# github.com/golang/protobuf v0.0.0-20161117033126-8ee79997227b
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/struct
+github.com/golang/protobuf/ptypes/timestamp
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/empty
+github.com/golang/protobuf/protoc-gen-go/descriptor
+# github.com/googleapis/gax-go v0.0.0-20161107002406-da06d194a00e
+github.com/googleapis/gax-go
+# golang.org/x/crypto v0.0.0-20180308185624-c7dcf104e3a7
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/internal/chacha20
+golang.org/x/crypto/poly1305
+# golang.org/x/net v0.0.0-20180511174649-2491c5de3490
+golang.org/x/net/context
+golang.org/x/net/publicsuffix
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/http2
+golang.org/x/net/trace
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/internal/timeseries
+# golang.org/x/oauth2 v0.0.0-20161219192954-314dd2c0bf3e
+golang.org/x/oauth2/google
+golang.org/x/oauth2/jwt
+golang.org/x/oauth2
+golang.org/x/oauth2/internal
+golang.org/x/oauth2/jws
+# golang.org/x/text v0.3.0
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
+# google.golang.org/api v0.0.0-20161214193051-55146ba61254
+google.golang.org/api/option
+google.golang.org/api/support/bundler
+google.golang.org/api/internal
+google.golang.org/api/iterator
+google.golang.org/api/transport
+google.golang.org/api/googleapi/transport
+# google.golang.org/appengine v0.0.0-20160810205538-e951d3868b37
+google.golang.org/appengine
+google.golang.org/appengine/urlfetch
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/app_identity
+google.golang.org/appengine/internal/modules
+google.golang.org/appengine/socket
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/socket
+# google.golang.org/genproto v0.0.0-20161215203640-b3e7c2fb0403
+google.golang.org/genproto/googleapis/api/monitoredres
+google.golang.org/genproto/googleapis/logging/type
+google.golang.org/genproto/googleapis/logging/v2
+google.golang.org/genproto/googleapis/api/label
+google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v0.0.0-20161222001925-9d682f9293b4
+google.golang.org/grpc
+google.golang.org/grpc/codes
+google.golang.org/grpc/metadata
+google.golang.org/grpc/naming
+google.golang.org/grpc/credentials
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/stats
+google.golang.org/grpc/tap
+google.golang.org/grpc/transport
+google.golang.org/grpc/credentials/oauth
+google.golang.org/grpc/peer
