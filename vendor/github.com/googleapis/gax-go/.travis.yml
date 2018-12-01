@@ -1,14 +1,11 @@
 sudo: false
 language: go
 go:
-  - 1.6
-  - 1.7
-before_install:
-  - go get golang.org/x/tools/cmd/cover
-  - go get golang.org/x/tools/cmd/goimports
+  - 1.9.x
+  - 1.10.x
+  - 1.11.x
 script:
   - gofmt -l .
-  - goimports -l .
   - go tool vet .
   - go test -coverprofile=coverage.txt -covermode=atomic
 after_success:

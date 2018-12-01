@@ -1,17 +1,18 @@
 module github.com/jmhodges/howsmyssl
 
 require (
-	cloud.google.com/go v0.0.0-20161227155656-4e436992a513
-	github.com/dgryski/go-topk v0.0.0-20150925113624-6b42aca27653
-	github.com/golang/protobuf v0.0.0-20161117033126-8ee79997227b // indirect
-	github.com/googleapis/gax-go v0.0.0-20161107002406-da06d194a00e // indirect
-	golang.org/x/crypto v0.0.0-20180308185624-c7dcf104e3a7
-	golang.org/x/net v0.0.0-20180511174649-2491c5de3490
-	golang.org/x/oauth2 v0.0.0-20161219192954-314dd2c0bf3e
+	cloud.google.com/go v0.33.1
+	github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954 // indirect
+	github.com/dgryski/go-topk v0.0.0-20170530140213-125785487421
+	github.com/google/martian v2.1.0+incompatible // indirect
+	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
+	go.opencensus.io v0.18.0 // indirect
+	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
+	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc
+	golang.org/x/oauth2 v0.0.0-20181128211412-28207608b838
 	golang.org/x/sync v0.0.0-20181108010431-42b317875d0f // indirect
-	golang.org/x/text v0.3.0 // indirect
-	google.golang.org/api v0.0.0-20161214193051-55146ba61254
-	google.golang.org/appengine v0.0.0-20160810205538-e951d3868b37 // indirect
-	google.golang.org/genproto v0.0.0-20161215203640-b3e7c2fb0403 // indirect
-	google.golang.org/grpc v0.0.0-20161222001925-9d682f9293b4 // indirect
+	golang.org/x/sys v0.0.0-20181128092732-4ed8d59d0b35 // indirect
+	google.golang.org/api v0.0.0-20181129220737-af4fc4062c26
+	google.golang.org/appengine v1.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20181127195345-31ac5d88444a // indirect
 )

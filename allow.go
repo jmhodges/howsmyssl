@@ -37,7 +37,7 @@ type originAllower struct {
 
 type logClient interface {
 	Log(logging.Entry)
-	Flush()
+	Flush() error
 }
 
 func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
@@ -340,7 +340,8 @@ type nullLogClient struct{}
 func (n nullLogClient) Log(e logging.Entry) {
 }
 
-func (n nullLogClient) Flush() {
+func (n nullLogClient) Flush() error {
+	return nil
 }
 
 type allowLists struct {
