@@ -186,7 +186,7 @@ func nextDomain(dom string) string {
 }
 
 func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remoteIP string) {
-	oa.gclog.Log(logging.Entry{
+	err := oa.gclog.Log(logging.Entry{
 		Payload:     entry,
 		HTTPRequest: &logging.HTTPRequest{Request: r, RemoteIP: remoteIP},
 		Labels: map[string]string{
@@ -194,7 +194,9 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 			"app":             "howsmyssl",
 		},
 	})
-
+	if err != nil {
+		log.Printf("unable to Google log to allowance check: %s", err)
+	}
 	if entry.DetectedDomain == "" {
 		return
 	}
