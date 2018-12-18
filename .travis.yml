@@ -1,6 +1,6 @@
 language: go
 go:
-  - "1.11.2"
+  - "1.11.4"
 
 sudo: required
 
