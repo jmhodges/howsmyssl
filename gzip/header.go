@@ -15,7 +15,7 @@ const (
 	HmContains
 )
 
-// Check if the specified header matches the test string, applying the header match type
+// HeaderMatch checks if the specified header matches the test string, applying the header match type
 // specified.
 func HeaderMatch(hdr http.Header, nm string, matchType HeaderMatchType, test string) bool {
 	// First get the header value
