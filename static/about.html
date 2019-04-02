@@ -170,18 +170,20 @@
           <p>The Version section discusses the security of the highest version
             of the TLS protocol your client supports. (Formerly, TLS
             was <a href="#tls-vs-ssl">known as "SSL"</a>.)</p>
-          <p>TLS 1.2 is latest version of TLS and it is recommended for clients
-            to implement. It is the new normal for highly secure websites. TLS
+          <p>TLS 1.3 and 1.2 are the most recent versions of TLS and they're recommended for clients
+            to implement. They're the new normal for highly secure websites. TLS
             1.2 provides access to advanced cipher suites that support
             elliptical curve cryptography (large efficiency wins) and AEAD block
-            cipher modes (like the very nice GCM cipher suites). Clients using
-            TLS 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
-          <p>TLS 1.1 is the second most recent version of TLS. It fixes some
+            cipher modes (like the very nice GCM cipher suites). TLS 1.3 adds those 
+            plus all of the ciphersuites are forward secret, has downgrade attack 
+            prevention, supports more modern elliptical curves, and has lower-latency handshake.
+            Clients using TLS 1.3 and 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
+          <p>TLS 1.1 is the third most recent version of TLS. It fixes some
             security problems in TLS 1.0, removing the need for many of the
             workarounds built into clients and servers. Many deployed clients
             and servers of TLS 1.0 do not implement those workarounds and, so,
             TLS 1.1 is a good improvement. However, the modern security
-            environment has pushed us to TLS 1.2. Clients using TLS 1.1 will be
+            environment has pushed us to TLS 1.3. Clients using TLS 1.1 will be
             marked down to at least
             <span class="label improvable">Improvable</span>.</p>
           <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
