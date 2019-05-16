@@ -6,13 +6,14 @@ package logging
 import (
 	context "context"
 	fmt "fmt"
+	math "math"
+
 	proto "github.com/golang/protobuf/proto"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	field_mask "google.golang.org/genproto/protobuf/field_mask"
 	grpc "google.golang.org/grpc"
-	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,7 +25,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 // Available log entry formats. Log entries can be written to
 // Logging in either format and can be exported in either format.
@@ -408,7 +409,8 @@ type CreateSinkRequest struct {
 	// If this field is set to true, or if the sink is owned by a non-project
 	// resource such as an organization, then the value of `writer_identity` will
 	// be a unique service account used only for exports from the new sink.  For
-	// more information, see `writer_identity` in [LogSink][google.logging.v2.LogSink].
+	// more information, see `writer_identity` in
+	// [LogSink][google.logging.v2.LogSink].
 	UniqueWriterIdentity bool     `protobuf:"varint,3,opt,name=unique_writer_identity,json=uniqueWriterIdentity,proto3" json:"unique_writer_identity,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -940,8 +942,9 @@ type UpdateExclusionRequest struct {
 	Exclusion *LogExclusion `protobuf:"bytes,2,opt,name=exclusion,proto3" json:"exclusion,omitempty"`
 	// Required. A nonempty list of fields to change in the existing exclusion.
 	// New values for the fields are taken from the corresponding fields in the
-	// [LogExclusion][google.logging.v2.LogExclusion] included in this request. Fields not mentioned in
-	// `update_mask` are not changed and are ignored in the request.
+	// [LogExclusion][google.logging.v2.LogExclusion] included in this request.
+	// Fields not mentioned in `update_mask` are not changed and are ignored in
+	// the request.
 	//
 	// For example, to change the filter and description of an exclusion,
 	// specify an `update_mask` of `"filter,description"`.
