@@ -28,10 +28,10 @@ func main() {
 	if goarch == "" {
 		goarch = os.Getenv("GOARCH")
 	}
-	// Check that we are using the new build system if we should be.
-	if goos == "linux" && goarch != "sparc64" {
+	// Check that we are using the Docker-based build system if we should be.
+	if goos == "linux" {
 		if os.Getenv("GOLANG_SYS_BUILD") != "docker" {
-			os.Stderr.WriteString("In the new build system, mkpost should not be called directly.\n")
+			os.Stderr.WriteString("In the Docker-based build system, mkpost should not be called directly.\n")
 			os.Stderr.WriteString("See README.md\n")
 			os.Exit(1)
 		}
@@ -95,6 +95,15 @@ func main() {
 // +build %s,%s`, goarch, goos)
 	cgoCommandRegex := regexp.MustCompile(`(cgo -godefs .*)`)
 	b = cgoCommandRegex.ReplaceAll(b, []byte(replacement))
+
+	// Rename Stat_t time fields
+	if goos == "freebsd" && goarch == "386" {
+		// Hide Stat_t.[AMCB]tim_ext fields
+		renameStatTimeExtFieldsRegex := regexp.MustCompile(`[AMCB]tim_ext`)
+		b = renameStatTimeExtFieldsRegex.ReplaceAll(b, []byte("_"))
+	}
+	renameStatTimeFieldsRegex := regexp.MustCompile(`([AMCB])(?:irth)?time?(?:spec)?\s+(Timespec|StTimespec)`)
+	b = renameStatTimeFieldsRegex.ReplaceAll(b, []byte("${1}tim ${2}"))
 
 	// gofmt
 	b, err = format.Source(b)
