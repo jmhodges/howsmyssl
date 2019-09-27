@@ -419,3 +419,12 @@ var metaCipherSuites = map[uint16]bool{
 	// TLS_EMPTY_RENEGOTIATION_INFO_SCSV
 	0x00FF: true,
 }
+
+// TLS 1.3 cipher suites
+var tls13Suites = map[uint16]bool{
+	0x1301: true,
+	0x1302: true,
+	0x1303: true,
+	0x1304: true,
+	0x1305: true,
+}

@@ -115,14 +115,15 @@ func TestSweet32(t *testing.T) {
 	// Since the Sweet32 vulnerable ciphersuites are still used by many servers,
 	// Sweet32 mitigation involves moving those ciphersuites to the end of the
 	// ciphersuite list the client announces it can support. However, meta
-	// ciphersuites like the GREASE or renegotiation ciphersuites are also
-	// attached to the end. So, howsmyssl says a client is vulnerable to Sweet32
-	// if the Sweet32 vulnerable ciphersuites are last or would be last except
-	// for some known meta ciphersuites like GREASE, etc. In order to support
-	// testing this behavior, we had to hardcode into tls110/handshake_client.go
-	// the meta ciphersuites we support here to pass them to the server without
-	// dropping them like the client usually would.  We don't use the tls110
-	// client code anywhere but in these tests, so this isn't so bad.
+	// ciphersuites like the GREASE or renegotiation ciphersuites and the TLS
+	// 1.3 ciphersuites are also attached to the end. So, howsmyssl says a
+	// client is vulnerable to Sweet32 if the Sweet32 vulnerable ciphersuites
+	// are last or would be last except for some known meta ciphersuites like
+	// GREASE, etc. In order to support testing this behavior, we had to
+	// hardcode into tls110/handshake_client.go the meta ciphersuites we support
+	// here to pass them to the server without dropping them like the client
+	// usually would.  We don't use the tls110 client code anywhere but in these
+	// tests, so this isn't so bad.
 	greaseCS := uint16(0x0A0A)
 	renegCS := uint16(0x00FF)
 	tests := []sweetTest{
