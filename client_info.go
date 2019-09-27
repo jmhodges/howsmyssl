@@ -100,7 +100,7 @@ func pullClientInfo(c *conn) *clientInfo {
 			}
 			if sweet32CipherSuites[s] {
 				sweet32Seen = append(sweet32Seen, s)
-			} else if len(sweet32Seen) != 0 && !metaCipherSuites[ci] {
+			} else if len(sweet32Seen) != 0 && !metaCipherSuites[ci] && !tls13Suites[ci] {
 				for _, seen := range sweet32Seen {
 					d.InsecureCipherSuites[seen] = append(d.InsecureCipherSuites[seen], sweet32Reason)
 				}
