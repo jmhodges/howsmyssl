@@ -51,4 +51,4 @@ require (
 	honnef.co/go/tools v0.0.0-20190418001031-e561f6794a2a // indirect
 )
 
-go 1.13.1
+go 1.12.9
