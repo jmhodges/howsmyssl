@@ -88,5 +88,4 @@ wait $AUTH_PID || die "unable to auth_gcloud"
 
 # See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
 export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/howsmyssl-gcloud-credentials.json"
-# quotes around PATCH are important since there are spaces in it.
 kubectl -n prod set image deployment/howsmyssl "howsmyssl=${DEPLOY_IMAGE}" || die "unable to deploy new image"
