@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"expvar"
 	"flag"
@@ -26,7 +27,6 @@ import (
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
 	tls "github.com/jmhodges/howsmyssl/tls110"
-	"golang.org/x/net/context"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
@@ -145,7 +145,7 @@ func main() {
 
 	var gclog logClient
 	if *googAcctConf != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		googConf := loadGoogleServiceAccount(*googAcctConf)
 		client, err := logging.NewClient(ctx,
