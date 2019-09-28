@@ -86,10 +86,7 @@ fi
 
 wait $AUTH_PID || die "unable to auth_gcloud"
 
-# all the escapes are to get access to ${DEPLOY_IMAGE} inside the string
-PATCH="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/image\", \"value\": \"${DEPLOY_IMAGE}\"}]"
-
 # See https://github.com/jmhodges/howsmyssl/pull/132 (and the other comment mentioning that pull request).
 export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/howsmyssl-gcloud-credentials.json"
 # quotes around PATCH are important since there are spaces in it.
-kubectl patch deployment --namespace=prod howsmyssl --type="json" -p "${PATCH}" || die "unable to deploy new image"
+kubectl -n prod set image deployment/howsmyssl "howsmyssl=${DEPLOY_IMAGE}" || die "unable to deploy new image"
