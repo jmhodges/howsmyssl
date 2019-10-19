@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@master
         with:
           ref: master
-      - uses: jmhodges/ensure-latest-go@v1.0.0
+      - uses: jmhodges/ensure-latest-go@v1.0.1
         id: ensure_go
       - run: echo "##[set-output name=pr_title;]update to latest Go release ${{ steps.ensure_go.outputs.go_version}}"
         id: pr_title_maker
