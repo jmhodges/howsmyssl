@@ -23,3 +23,5 @@ jobs:
           PULL_REQUEST_BODY: Auto-generated pull request created by the GitHub Actions [create-pull-request](https://github.com/peter-evans/create-pull-request) and [ensure-latest-go](https://github.com/jmhodges/ensure-latest-go). 
           COMMIT_MESSAGE: ${{ steps.pr_title_maker.outputs.pr_title }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_SUFFIX: none
+          PULL_REQUEST_BRANCH: ensure-latest-go/patch-${{ steps.ensure_go.outputs.go_version }}
