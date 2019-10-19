@@ -1,0 +1,21 @@
+language: go
+go:
+- 1.13.3
+sudo: required
+services:
+- docker
+branches:
+  only:
+  - master
+  - /^test_/
+  - /^test-/
+cache:
+  edge: true
+  directories:
+  - $HOME/google-cloud-sdk
+env:
+- GOARCH=amd64 GOOS=linux GO111MODULE=on
+install:
+- go test -mod=vendor -i -race . ./tls110 ./gzip
+script:
+- go test -mod=vendor -v -race . ./tls110 ./gzip && ./travis_docker_push.sh
