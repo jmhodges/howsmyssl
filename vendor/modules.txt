@@ -39,10 +39,10 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
+# golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/curve25519
-golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
 # golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
