@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
-	golang.org/x/net v0.0.0-20190514140710-3ec191127204
+	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	golang.org/x/sys v0.0.0-20190516110030-61b9204099cb // indirect
