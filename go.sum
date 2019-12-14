@@ -6,8 +6,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b h1:Yqiad0+sloMPdd/0Fg22actpFx0dekpzt1xJmVNVkU0=
 github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
-github.com/dgryski/go-topk v0.0.0-20170530140213-125785487421 h1:WzBppckSUjJ1R0jTbxmuw6YKfuk5Rq5pniF5rcH/whA=
-github.com/dgryski/go-topk v0.0.0-20170530140213-125785487421/go.mod h1:XdUF+2m4elfTD0SvaJqRmv2OxJsC1YUz+7ONws6WOQU=
+github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9 h1:HfZ80aZcSOYwC3YC1FQ3Etrk5mXWfZfRCHJhrnrDDm0=
+github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9/go.mod h1:XdUF+2m4elfTD0SvaJqRmv2OxJsC1YUz+7ONws6WOQU=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b h1:VKtxabqXZkF25pY9ekfRL6a582T4P37/31XEstQ5p58=
 github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b/go.mod h1:SBH7ygxi8pfUlaOkMMuAQtPIUF8ecWP5IEl/CR7VP2Q=
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=

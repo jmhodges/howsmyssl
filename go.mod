@@ -3,7 +3,7 @@ module github.com/jmhodges/howsmyssl
 require (
 	cloud.google.com/go v0.39.0
 	github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b // indirect
-	github.com/dgryski/go-topk v0.0.0-20170530140213-125785487421
+	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	github.com/google/go-cmp v0.3.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.1 // indirect
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
