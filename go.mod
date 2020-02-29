@@ -1,5 +1,7 @@
 module github.com/jmhodges/howsmyssl
 
+go 1.14
+
 require (
 	cloud.google.com/go v0.49.0 // indirect
 	cloud.google.com/go/logging v1.0.0
@@ -11,5 +13,3 @@ require (
 	google.golang.org/api v0.19.0
 	google.golang.org/grpc v1.27.1
 )
-
-go 1.13.1
