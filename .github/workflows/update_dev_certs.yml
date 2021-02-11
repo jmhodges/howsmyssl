@@ -8,7 +8,7 @@ on:
     branches:
       - force_update_dev_certs
 jobs:
-  make_pr:
+  make_cert_pr:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -17,13 +17,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v1
         with:
-          go-version: 1.13.1
+          go-version: 1.15.8
       - run: go build -o ./gendevcerts/gendevcerts ./gendevcerts
       - run: ./gendevcerts/gendevcerts -d ./config
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m')"
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v1.3.1
-        env:
-          PULL_REQUEST_TITLE: four month update of dev environment certificates
-          COMMIT_MESSAGE: four month update of dev env certificates
-          PULL_REQUEST_BRANCH: auto_update_dev_certs
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: peter-evans/create-pull-request@v3.8.2
+        with:
+          commit-message: "four month update of dev env certificates"
+          title: "four month update of dev environment certificates (for ${{ steps.date.outputs.date }})"
+          branch: auto_update_dev_certs
+          token: ${{ secrets.CREATE_PR_TOKEN }}
