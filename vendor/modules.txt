@@ -84,7 +84,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/api v0.39.0
+# google.golang.org/api v0.40.0
 ## explicit
 google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
