@@ -8,7 +8,7 @@ require (
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-	golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd
+	golang.org/x/oauth2 v0.0.0-20210216194517-16ff1888fd2e
 	google.golang.org/api v0.40.0
 	google.golang.org/grpc v1.35.0
 )
