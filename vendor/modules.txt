@@ -121,7 +121,7 @@ google.golang.org/genproto/googleapis/api/monitoredres
 google.golang.org/genproto/googleapis/logging/type
 google.golang.org/genproto/googleapis/logging/v2
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.35.0
+# google.golang.org/grpc v1.36.0
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
