@@ -53,15 +53,16 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
-## explicit; go 1.11
+# golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+## explicit; go 1.17
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/curve25519
+golang.org/x/crypto/curve25519/internal/field
+golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/internal/subtle
-golang.org/x/crypto/poly1305
-# golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-## explicit; go 1.11
+# golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
+## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -83,12 +84,12 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20210305230114-8fe3ee5dd75b
-## explicit; go 1.12
+# golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.5
+# golang.org/x/text v0.3.6
 ## explicit; go 1.11
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
