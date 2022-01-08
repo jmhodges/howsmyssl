@@ -1,9 +1,10 @@
 # cloud.google.com/go v0.99.0
 ## explicit; go 1.11
+cloud.google.com/go
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/internal/version
-# cloud.google.com/go/logging v1.0.0
-## explicit; go 1.9
+# cloud.google.com/go/logging v1.4.2
+## explicit; go 1.11
 cloud.google.com/go/logging
 cloud.google.com/go/logging/apiv2
 cloud.google.com/go/logging/internal
@@ -44,8 +45,6 @@ go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricdata
 go.opencensus.io/metric/metricproducer
 go.opencensus.io/plugin/ocgrpc
-go.opencensus.io/plugin/ochttp
-go.opencensus.io/plugin/ochttp/propagation/b3
 go.opencensus.io/resource
 go.opencensus.io/stats
 go.opencensus.io/stats/internal
@@ -100,18 +99,15 @@ golang.org/x/text/unicode/norm
 # google.golang.org/api v0.64.0
 ## explicit; go 1.11
 google.golang.org/api/googleapi
-google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
 google.golang.org/api/internal/impersonate
 google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/iterator
 google.golang.org/api/option
+google.golang.org/api/option/internaloption
 google.golang.org/api/support/bundler
-google.golang.org/api/transport
 google.golang.org/api/transport/cert
 google.golang.org/api/transport/grpc
-google.golang.org/api/transport/http
-google.golang.org/api/transport/http/internal/propagation
 google.golang.org/api/transport/internal/dca
 # google.golang.org/appengine v1.6.7
 ## explicit; go 1.11
