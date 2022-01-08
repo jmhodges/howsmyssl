@@ -1,6 +1,6 @@
 module github.com/jmhodges/howsmyssl
 
-go 1.17
+go 1.14
 
 require (
 	cloud.google.com/go/logging v1.0.0
