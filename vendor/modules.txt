@@ -1,8 +1,10 @@
-# cloud.google.com/go v0.99.0
+# cloud.google.com/go v0.100.2
 ## explicit; go 1.11
 cloud.google.com/go
-cloud.google.com/go/compute/metadata
 cloud.google.com/go/internal/version
+# cloud.google.com/go/compute v0.1.0
+## explicit; go 1.11
+cloud.google.com/go/compute/metadata
 # cloud.google.com/go/logging v1.4.2
 ## explicit; go 1.11
 cloud.google.com/go/logging
@@ -96,7 +98,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/api v0.64.0
+# google.golang.org/api v0.65.0
 ## explicit; go 1.11
 google.golang.org/api/googleapi
 google.golang.org/api/internal
@@ -123,7 +125,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20211223182754-3ac035c7e7cb
+# google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
 ## explicit; go 1.11
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
