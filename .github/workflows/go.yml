@@ -24,7 +24,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version:  ${{ steps.go_versions.outputs.go_version }}
+        go-version-file: "go.mod"
       id: go
 
     - name: Install test dependencies
