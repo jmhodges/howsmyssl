@@ -14,10 +14,13 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: master
+      - name: Read Go version
+        run: echo "##[set-output name=go_version;]$(cat .github/versions/go)"
+        id: go_version
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: "go.mod"
+          go-version:  ${{ steps.go_version.outputs.go_version }}
       - run: go build -o ./gendevcerts/gendevcerts ./gendevcerts
       - run: ./gendevcerts/gendevcerts -d ./config
       - name: Get current date
