@@ -1,6 +1,9 @@
+//go:build !(linux || windows)
+// +build !linux,!windows
+
 /*
  *
- * Copyright 2021 gRPC authors.
+ * Copyright 2022 gRPC authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +19,8 @@
  *
  */
 
-package grpcutil
+package googlecloud
 
-import "regexp"
-
-// FullMatchWithRegex returns whether the full text matches the regex provided.
-func FullMatchWithRegex(re *regexp.Regexp, text string) bool {
-	if len(text) == 0 {
-		return re.MatchString(text)
-	}
-	re.Longest()
-	rem := re.FindString(text)
-	return len(rem) == len(text)
+func manufacturer() ([]byte, error) {
+	return nil, nil
 }
