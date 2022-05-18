@@ -1,7 +1,7 @@
 name: Go
 on:
   push:
-    branches:    
+    branches:
       - master
       - 'test_*'
       - 'test-*'
@@ -17,14 +17,14 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Read Go versions
+    - name: Read Go version
       run: echo "##[set-output name=go_version;]$(cat .github/versions/go)"
-      id: go_versions
+      id: go_version
 
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version:  ${{ steps.go_versions.outputs.go_version }}
+        go-version:  ${{ steps.go_version.outputs.go_version }}
       id: go
 
     - name: Install test dependencies
