@@ -22,10 +22,6 @@ jobs:
           go-version-file: .github/versions/go
         id: go
 
-      - name: Install test dependencies
-        run: |
-          go test -mod=vendor -i -race . ./tls110 ./gzip
-
       - name: Run tests
         run: |
-          go test -mod=vendor -race . ./tls110 ./gzip
+          go test -mod=vendor -race ./...
