@@ -1,16 +1,17 @@
 # cloud.google.com/go v0.105.0
 ## explicit; go 1.19
 cloud.google.com/go
-# cloud.google.com/go/compute v1.12.1
+# cloud.google.com/go/compute v1.14.0
 ## explicit; go 1.19
 cloud.google.com/go/compute/internal
-# cloud.google.com/go/compute/metadata v0.2.1
+# cloud.google.com/go/compute/metadata v0.2.3
 ## explicit; go 1.19
 cloud.google.com/go/compute/metadata
 # cloud.google.com/go/logging v1.6.1
 ## explicit; go 1.19
 cloud.google.com/go/logging
 cloud.google.com/go/logging/apiv2
+cloud.google.com/go/logging/apiv2/loggingpb
 cloud.google.com/go/logging/internal
 # cloud.google.com/go/longrunning v0.3.0
 ## explicit; go 1.19
@@ -42,8 +43,8 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/googleapis/enterprise-certificate-proxy v0.2.0
-## explicit; go 1.18
+# github.com/googleapis/enterprise-certificate-proxy v0.2.1
+## explicit; go 1.19
 github.com/googleapis/enterprise-certificate-proxy/client
 github.com/googleapis/enterprise-certificate-proxy/client/util
 # github.com/googleapis/gax-go/v2 v2.7.0
@@ -107,13 +108,13 @@ golang.org/x/sync/semaphore
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.4.0
+# golang.org/x/text v0.5.0
 ## explicit; go 1.17
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/api v0.103.0
+# google.golang.org/api v0.106.0
 ## explicit; go 1.19
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -143,7 +144,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20221201164419-0e50fba7f41c
+# google.golang.org/genproto v0.0.0-20221227171554-f9683d7f8bef
 ## explicit; go 1.19
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
