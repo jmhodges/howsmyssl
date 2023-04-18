@@ -1,4 +1,4 @@
-FROM golang:1.19.4
+FROM golang:1.20.3
 
 EXPOSE 10080
 EXPOSE 10443
