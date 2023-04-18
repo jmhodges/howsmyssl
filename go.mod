@@ -5,7 +5,7 @@ go 1.17
 require (
 	cloud.google.com/go/logging v1.6.1
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
-	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
+	golang.org/x/crypto v0.8.0
 	golang.org/x/net v0.9.0
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.106.0
