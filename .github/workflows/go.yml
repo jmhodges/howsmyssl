@@ -10,12 +10,17 @@ jobs:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - id: auth
+        uses: google-github-actions/auth@v0.4.0
         with:
-          go-version-file: .github/versions/go
-        id: go
+          workload_identity_provider: "projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider"
+          service_account: "my-service-account@my-project.iam.gserviceaccount.com"
 
-      - name: Run tests
-        run: |
-          go test -mod=vendor -race ./...
+      - id: get-gke-credentials
+        uses: google-github-actions/get-gke-credentials@v0.4.0
+        with:
+          cluster_name: my-cluster
+          location: us-central1-a
+
+      - id: get-pods
+        run: kubectl get pods
