@@ -23,4 +23,4 @@ jobs:
           location: us-central1-c
 
       - id: get-pods
-        run: kubectl -n prod get pods
+        run: kubectl -n prod get deploy
