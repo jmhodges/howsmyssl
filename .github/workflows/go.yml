@@ -20,7 +20,7 @@ jobs:
         uses: google-github-actions/get-gke-credentials@v1.0.1
         with:
           cluster_name: dg
-          location: us-central1-a
+          location: us-central1-c
 
       - id: get-pods
         run: kubectl get pods
