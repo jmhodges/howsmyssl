@@ -19,7 +19,7 @@ jobs:
       - id: get-gke-credentials
         uses: google-github-actions/get-gke-credentials@v1.0.1
         with:
-          cluster_name: my-cluster
+          cluster_name: dg
           location: us-central1-a
 
       - id: get-pods
