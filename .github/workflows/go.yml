@@ -25,5 +25,5 @@ jobs:
       - id: get-pods
         run: kubectl -n prod get deploy
 
-      - id: update label
+      - id: update-label
         run: kubectl -n prod label deploy howsmyssl lookatme=$GITHUB_SHA
