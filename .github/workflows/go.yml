@@ -7,18 +7,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout actions-oidc-debugger
-        uses: actions/checkout@v3
-        with:
-          repository: github/actions-oidc-debugger
-          ref: main
-          token: ${{ secrets.your-checkout-token }}
-          path: ./.github/actions/actions-oidc-debugger
-      - name: Debug OIDC Claims
-        uses: ./.github/actions/actions-oidc-debugger
-        with:
-          audience: "https://github.com/github"
-
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
 
