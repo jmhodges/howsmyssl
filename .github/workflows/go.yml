@@ -15,6 +15,7 @@ jobs:
         with:
           workload_identity_provider: "projects/852340051888/locations/global/workloadIdentityPools/github-deploy/providers/github-deploy"
           service_account: "howsmyssl-deploy@personal-sites-1295.iam.gserviceaccount.com"
+          export_default_credentials: true
 
       - id: get-gke-credentials
         uses: google-github-actions/get-gke-credentials@v1.0.1
@@ -22,7 +23,7 @@ jobs:
           cluster_name: dg
           location: us-central1-c
 
-      - id: get-pods
+      - id: get-deploys
         run: kubectl -n prod get deploy
 
       - id: update-label
