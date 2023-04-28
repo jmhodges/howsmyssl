@@ -19,7 +19,8 @@ jobs:
       - id: "gcloud"
         name: "gcloud"
         run: |-
-          gcloud services list
+          gcloud auth list
+        continue-on-error: true
 
       - id: get-gke-credentials
         uses: google-github-actions/get-gke-credentials@v1.0.1
