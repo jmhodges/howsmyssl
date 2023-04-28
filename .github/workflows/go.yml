@@ -27,4 +27,4 @@ jobs:
         run: kubectl -n prod get deploy
 
       - id: update-label
-        run: kubectl -n prod label deploy howsmyssl lookatme="${GITHUB_SHA}-${GITHUB_RUN_NUMBER}"
+        run: kubectl -n prod label --overwrite deploy howsmyssl lookatme="${GITHUB_SHA}-${GITHUB_RUN_NUMBER}"
