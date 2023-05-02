@@ -1,0 +1,27 @@
+# Copyright 2022 Jeffrey M Hodges.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Deploy
+on:
+  workflow_run:
+    workflows:
+      - Go
+    types:
+      - completed
+    branches:
+      - master
+      - "test_deploy_*"
+      - "test-deploy-*"
+      - "test_deploy-*"
+      - "test-deploy_*"
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: Do nothing
+        run: echo "Doing nothing"
