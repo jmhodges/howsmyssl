@@ -1,21 +1,24 @@
-FROM golang:1.20.3
+FROM golang:1.20.3-alpine as builder
 
 EXPOSE 10080
 EXPOSE 10443
 
-ENV GO111MODULE=on
-ADD . /go/src/github.com/jmhodges/howsmyssl
+WORKDIR /go/src/github.com/jmhodges/howsmyssl
+COPY . .
 
-RUN cd /go/src/github.com/jmhodges/howsmyssl && go install -mod=vendor github.com/jmhodges/howsmyssl
+RUN go install -mod=vendor .
+
+FROM alpine:3.17.3
+
+COPY --from=builder /go/bin/howsmyssl /usr/bin/howsmyssl
+
+COPY templates templates
+COPY static static
 
 # Provided by kubernetes secrets or some such
 VOLUME "/secrets"
 
-RUN chown -R www-data /go/src/github.com/jmhodges/howsmyssl
-
-USER www-data
-
-CMD ["/bin/bash", "-c", "howsmyssl \
+CMD ["/bin/sh", "-c", "howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
     -adminAddr=:4567 \
