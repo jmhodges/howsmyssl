@@ -13,14 +13,6 @@ jobs:
   build:
     name: Build
     uses: ./.github/workflows/go.yml
-  debug:
-    name: Debug
-    runs-on: ubuntu-latest
-    steps:
-      - id: wha
-        run: echo "REF IS ${{github.ref}}"
-      - id: wha2
-        run: echo "STARTSWITH IS ${{startsWith(github.ref, 'refs/heads/test-deploy-')}}"
   deploy:
     needs: build
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
