@@ -13,6 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Go
-        uses: jmhodges/howsmyssl/.github/workflows/go.yml
+        uses: ./.github/workflows/go.yml
       - name: Deploy
-        uses: jmhodges/howsmyssl/.github/workflows/deploy.yml
+        uses: ./.github/workflows/deploy.yml
