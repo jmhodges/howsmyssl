@@ -15,7 +15,7 @@ jobs:
     uses: ./.github/workflows/go.yml
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_docker_') || startsWith(github.ref, 'refs/heads/test-docker-')
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
     name: Deploy
     concurrency: production
     uses: ./.github/workflows/deploy.yml
