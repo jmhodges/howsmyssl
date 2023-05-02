@@ -45,10 +45,10 @@ jobs:
         run: docker push us-central1-docker.pkg.dev/personal-sites-1295/deploys/howsmyssl:v1-${GITHUB_SHA}
 
       - id: sha256-of-docker-image
-        run: echo "IMAGE_SHA256=$(docker inspect --format='{{index .RepoDigests}}' us-central1-docker.pkg.dev/personal-sites-1295/deploys/howsmyssl:v1-${GITHUB_SHA})" >> "$GITHUB_OUTPUT"
+        run: echo "IMAGE_WITH_SHA256=$(docker inspect --format='{{index .RepoDigests 0}}' us-central1-docker.pkg.dev/personal-sites-1295/deploys/howsmyssl:v1-${GITHUB_SHA})" >> "$GITHUB_OUTPUT"
 
       - id: check-output
-        run: echo "found as ${{steps.sha256-of-docker-image.outputs.IMAGE_SHA256}}"
+        run: echo "found as ${{steps.sha256-of-docker-image.outputs.IMAGE_WITH_SHA256}}"
 
-      - id: get-deploys
-        run: kubectl -n prod set image deployment/howsmyssl howsmyssl=us-central1-docker.pkg.dev/personal-sites-1295/deploys/howsmyssl:v1-${GITHUB_SHA}@sha256:${{ steps.sha256-of-docker-image.outputs.IMAGE_SHA256 }}
+      - id: update-deploy
+        run: kubectl -n prod set image deployment/howsmyssl howsmyssl=${{ steps.sha256-of-docker-image.outputs.IMAGE_WITH_SHA256 }}
