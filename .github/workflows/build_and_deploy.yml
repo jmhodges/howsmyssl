@@ -10,11 +10,8 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Go
-        uses: ./.github/workflows/go.yml
-      - name: Deploy
-        uses: ./.github/workflows/deploy.yml
+    uses: ./.github/workflows/go.yml
+  deploy:
+    needs: build
+    name: Deploy
+    uses: ./.github/workflows/deploy.yml
