@@ -20,7 +20,7 @@ jobs:
       - id: wha
         run: echo "REF IS ${{github.ref}}"
       - id: wha2
-        run: echo "STARTSWITH IS ${{startsWith('refs/heads/test-deploy-', github.ref)}}"
+        run: echo "STARTSWITH IS ${{startsWith(github.ref, 'refs/heads/test-deploy-')}}"
   deploy:
     needs: build
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
