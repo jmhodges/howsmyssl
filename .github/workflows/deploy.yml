@@ -3,17 +3,7 @@
 
 name: Deploy
 on:
-  workflow_run:
-    workflows:
-      - Go
-    types:
-      - completed
-    branches:
-      - master
-      - "test_deploy_*"
-      - "test-deploy-*"
-      - "test_deploy-*"
-      - "test-deploy_*"
+  workflow_call:
 
 jobs:
   deploy:
