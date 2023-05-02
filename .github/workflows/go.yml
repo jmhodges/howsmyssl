@@ -23,8 +23,11 @@ jobs:
           cluster_name: dg
           location: us-central1-c
 
+      - id: docker-build
+        run: docker build -t gcr.io/personal-sites-1295/howsmyssl:${GITHUB_SHA} .
+
+      - id: docker-push
+        run: docker push gcr.io/personal-sites-1295/howsmyssl:${GITHUB_SHA}
+
       - id: get-deploys
         run: kubectl -n prod get deploy
-
-      - id: update-label
-        run: kubectl -n prod label --overwrite deploy howsmyssl lookatme="${GITHUB_SHA}-${GITHUB_RUN_NUMBER}"
