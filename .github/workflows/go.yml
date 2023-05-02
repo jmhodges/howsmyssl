@@ -24,7 +24,7 @@ jobs:
           location: us-central1-c
 
       - id: gcloud-config-docker
-        run: gcloud auth configure-docker -q
+        run: gcloud auth configure-docker -q gcr.io
 
       - id: docker-build
         run: docker build -t gcr.io/personal-sites-1295/howsmyssl:${GITHUB_SHA} .
