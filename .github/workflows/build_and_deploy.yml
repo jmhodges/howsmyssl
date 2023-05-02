@@ -3,15 +3,18 @@ on:
   push:
     branches:
       - master
-      - "test_deploy_*"
-      - "test-deploy-*"
-      - "test_deploy-*"
-      - "test-deploy_*"
+      - "test_*"
+      - "test-*"
+  pull_request:
+    branches:
+      - master
+
 jobs:
   build:
     name: Build
     uses: ./.github/workflows/go.yml
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_docker_') || startsWith(github.ref, 'refs/heads/test-docker-')
     name: Deploy
     uses: ./.github/workflows/deploy.yml

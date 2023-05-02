@@ -1,12 +1,5 @@
 name: Go
 on:
-  push:
-    branches:
-      - "test_*"
-      - "test-*"
-  pull_request:
-    branches:
-      - master
   workflow_call:
 
 jobs:
