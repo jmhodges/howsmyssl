@@ -30,10 +30,10 @@ jobs:
         run: gcloud auth configure-docker -q us-central1-docker.pkg.dev
 
       - id: docker-build
-        run: docker build -t us-central1-docker.pkg.dev/deploys/howsmyssl:v1-${GITHUB_SHA}-v1 .
+        run: docker build -t us-central1-docker.pkg.dev/deploys/howsmyssl:v1-${GITHUB_SHA} .
 
       - id: docker-push
-        run: docker push us-central1-docker.pkg.dev/deploys/howsmyssl:${GITHUB_SHA}-v1
+        run: docker push us-central1-docker.pkg.dev/deploys/howsmyssl:v1-${GITHUB_SHA}
 
       - id: get-deploys
         run: kubectl -n prod get deploy
