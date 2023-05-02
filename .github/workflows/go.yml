@@ -27,13 +27,13 @@ jobs:
         run: kubectl -n prod label --overwrite deploy howsmyssl lookatme="${GITHUB_SHA}-${GITHUB_RUN_NUMBER}"
 
       - id: gcloud-config-docker
-        run: gcloud auth configure-docker -q gcr.io
+        run: gcloud auth configure-docker -q us-central1-docker.pkg.dev
 
       - id: docker-build
-        run: docker build -t gcr.io/personal-sites-1295/howsmyssl:${GITHUB_SHA} .
+        run: docker build -t us-central1-docker.pkg.dev/deploys/howsmyssl:v1-${GITHUB_SHA}-v1 .
 
       - id: docker-push
-        run: docker push gcr.io/personal-sites-1295/howsmyssl:${GITHUB_SHA}
+        run: docker push us-central1-docker.pkg.dev/deploys/howsmyssl:${GITHUB_SHA}-v1
 
       - id: get-deploys
         run: kubectl -n prod get deploy
