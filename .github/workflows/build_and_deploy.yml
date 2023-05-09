@@ -2,12 +2,10 @@ name: Build and deploy
 on:
   push:
     branches:
-      - master
       - "test_*"
       - "test-*"
   pull_request:
-    branches:
-      - master
+  merge_group:
 
 jobs:
   build:
