@@ -32,9 +32,6 @@ jobs:
           cluster_name: dg
           location: us-central1-c
 
-      - id: update-label
-        run: kubectl -n prod label --overwrite deploy howsmyssl lookatme="${GITHUB_SHA}-${GITHUB_RUN_NUMBER}"
-
       - id: gcloud-config-docker
         run: gcloud auth configure-docker -q us-central1-docker.pkg.dev
 
