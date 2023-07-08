@@ -10,7 +10,6 @@ import (
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/hmac"
-	"crypto/internal/boring"
 	"crypto/rc4"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -18,6 +17,8 @@ import (
 	"hash"
 	"internal/cpu"
 	"runtime"
+
+	"github.com/jmhodges/howsmyssl/tls120/internal/boring"
 
 	"golang.org/x/crypto/chacha20poly1305"
 )
