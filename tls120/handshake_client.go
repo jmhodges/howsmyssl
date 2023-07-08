@@ -94,6 +94,12 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *ecdh.PrivateKey, error) {
 	hello.cipherSuites = make([]uint16, 0, len(configCipherSuites))
 
 	for _, suiteId := range preferenceOrder {
+		fmt.Printf("FIXME Conn.makeClientHello suite ids 1: %04X\n", hello.cipherSuites)
+		if suiteId == 0x00FF || suiteId == 0x0A0A {
+			hello.cipherSuites = append(hello.cipherSuites, suiteId)
+			continue
+		}
+
 		suite := mutualCipherSuite(configCipherSuites, suiteId)
 		if suite == nil {
 			continue
@@ -105,6 +111,8 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *ecdh.PrivateKey, error) {
 		}
 		hello.cipherSuites = append(hello.cipherSuites, suiteId)
 	}
+
+	fmt.Printf("FIXME Conn.makeClientHello suite ids 50: %04X\n", hello.cipherSuites)
 
 	_, err := io.ReadFull(config.rand(), hello.random)
 	if err != nil {

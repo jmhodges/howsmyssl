@@ -14,17 +14,18 @@ import (
 	"testing"
 	"time"
 
-	tls "github.com/jmhodges/howsmyssl/tls120"
+	tls110 "github.com/jmhodges/howsmyssl/tls110"
+	tls120 "github.com/jmhodges/howsmyssl/tls120"
 )
 
 func TestBEASTVuln(t *testing.T) {
 	t.Run("TLS10OnlyCBC", func(t *testing.T) {
-		clientConf := &tls.Config{
-			MaxVersion:   tls.VersionTLS10,
-			CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+		clientConf := &tls110.Config{
+			MaxVersion:   tls110.VersionTLS10,
+			CipherSuites: []uint16{tls110.TLS_RSA_WITH_AES_128_CBC_SHA},
 		}
 
-		c := connect(t, clientConf)
+		c := connectWithOldTLS(t, clientConf)
 		st := c.ConnectionState()
 		if !st.AbleToDetectNMinusOneSplitting {
 			t.Errorf("TLS 1.0, CBC suite, Conn: AbleToDetectNMinusOneSplitting was false")
@@ -44,11 +45,11 @@ func TestBEASTVuln(t *testing.T) {
 	// AbleToDetectNMinusOneSplitting shouldn't be set unless there are BEAST vuln cipher suites included
 	// and we're talking over TLS 1.0.
 	t.Run("TLS10NoCBC", func(t *testing.T) {
-		clientConf := &tls.Config{
-			MaxVersion:   tls.VersionTLS10,
-			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
+		clientConf := &tls110.Config{
+			MaxVersion:   tls110.VersionTLS10,
+			CipherSuites: []uint16{tls110.TLS_RSA_WITH_RC4_128_SHA},
 		}
-		c := connect(t, clientConf)
+		c := connectWithOldTLS(t, clientConf)
 		st := c.ConnectionState()
 		if st.AbleToDetectNMinusOneSplitting {
 			t.Errorf("TLS 1.0, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
@@ -63,11 +64,11 @@ func TestBEASTVuln(t *testing.T) {
 	})
 
 	t.Run("TLS12NoCBC", func(t *testing.T) {
-		clientConf := &tls.Config{
-			CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305},
+		clientConf := &tls110.Config{
+			CipherSuites: []uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305},
 		}
 
-		c := connect(t, clientConf)
+		c := connectWithOldTLS(t, clientConf)
 		st := c.ConnectionState()
 		if st.AbleToDetectNMinusOneSplitting {
 			t.Errorf("TLS 1.2+, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
@@ -86,8 +87,8 @@ func TestBEASTVuln(t *testing.T) {
 // but, instead, we assume the client is "Probably Okay" and look to see that we
 // can handle that golden path.
 func TestGoDefaultIsOkay(t *testing.T) {
-	clientConf := &tls.Config{}
-	c := connect(t, clientConf)
+	clientConf := &tls120.Config{}
+	c := connectWithLatestTLS(t, clientConf)
 	ci := pullClientInfo(c)
 	t.Logf("%#v", ci)
 
@@ -129,7 +130,7 @@ func TestSweet32(t *testing.T) {
 	tests := []sweetTest{
 		{
 			bad,
-			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
 				"TLS_RSA_WITH_3DES_EDE_CBC_SHA":       []string{sweet32Reason},
@@ -137,37 +138,37 @@ func TestSweet32(t *testing.T) {
 		},
 		{
 			bad,
-			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
+			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": []string{sweet32Reason},
 			},
 		},
 		{
 			okay,
-			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
+			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
 			map[string][]string{},
 		},
 		{
 			okay,
-			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS},
+			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS},
 			map[string][]string{},
 		},
 		{
 			okay,
-			[]uint16{tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS},
+			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS},
 			map[string][]string{},
 		},
 	}
 	for i, st := range tests {
 		t.Run(strconv.Itoa(i),
 			func(t *testing.T) {
-				clientConf := &tls.Config{
+				clientConf := &tls110.Config{
 					CipherSuites: st.suites,
 					// This MaxVersion being TLS 1.2 is required as TLS 1.3
 					// ciphersuites aren't configurable in the Go TLS client.
-					MaxVersion: tls.VersionTLS12,
+					MaxVersion: tls110.VersionTLS12,
 				}
-				c := connect(t, clientConf)
+				c := connectWithOldTLS(t, clientConf)
 				ci := pullClientInfo(c)
 				t.Logf("#%d, %#v", i, ci)
 
@@ -182,14 +183,24 @@ func TestSweet32(t *testing.T) {
 					t.Errorf("#%d, num cipher suites given: want %d, got %d (\n%v\n%v)", i, len(st.suites), len(ci.GivenCipherSuites), suites, ci.GivenCipherSuites)
 				}
 				if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
-					t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
+					invertedAllCipherSuites := map[string]uint16{}
+					for k, v := range allCipherSuites {
+						invertedAllCipherSuites[v] = k
+					}
+					givenSuiteIDs := []uint16{}
+					for _, cs := range ci.GivenCipherSuites {
+						givenSuiteIDs = append(givenSuiteIDs, invertedAllCipherSuites[cs])
+					}
+					t.Logf("FIXME sent cipher suite ids: %04X", st.suites)
+					t.Logf("FIXME received GivenCipherSuites ids: %04X", givenSuiteIDs)
+					t.Errorf("#%d, insecure cipher suites found:\n\twant %s\n\tgot  %s", i, st.expected, ci.InsecureCipherSuites)
 				}
 			},
 		)
 	}
 }
 
-var serverConf *tls.Config
+var serverConf *tls120.Config
 var rootCA *x509.Certificate
 
 func init() {
@@ -207,18 +218,18 @@ func init() {
 	rootCA = certs[0]
 }
 
-func connect(t *testing.T, clientConf *tls.Config) *conn {
+func connectWithOldTLS(t *testing.T, clientConf *tls110.Config) *conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
-	clientConf.ClientSessionCache = tls.NewLRUClientSessionCache(-1)
+	clientConf.ClientSessionCache = tls110.NewLRUClientSessionCache(-1)
 
 	// Required to avoid InsecureSkipVerify (which is probably unnecessary, but
 	// nice to be Good™.)
 	clientConf.RootCAs = x509.NewCertPool()
 	clientConf.RootCAs.AddCert(rootCA)
 
-	tl, err := tls.Listen("tcp", "localhost:0", serverConf)
+	tl, err := tls120.Listen("tcp", "localhost:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
@@ -242,12 +253,85 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		tc := c.(*conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
-	var c *tls.Conn
+	var c *tls110.Conn
 	for i := 0; i < 10; i++ {
 		d := &net.Dialer{
 			Timeout: 500 * time.Millisecond,
 		}
-		c, err = tls.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		c, err = tls110.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		if err == nil {
+			break
+		} else {
+			t.Logf("unable to connect on attempt %d: %s", i, err)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+	if err != nil {
+		logErrFromServer(t, errCh)
+		t.Fatalf("Dial: %s", err)
+	}
+	defer c.Close()
+	sent := []byte("a")
+	_, err = c.Write(sent)
+	if err != nil {
+		logErrFromServer(t, errCh)
+		t.Fatalf("unable to send data to the conn: %s", err)
+	}
+	var cr connRes
+	select {
+	case err := <-errCh:
+		t.Fatalf("Accept: %s", err)
+	case cr = <-ch:
+		if !bytes.Equal(cr.recv, sent) {
+			t.Fatalf("expected bytes %#v, got %#v", string(sent), string(cr.recv))
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatalf("timed out")
+	}
+	return cr.conn
+}
+
+func connectWithLatestTLS(t *testing.T, clientConf *tls120.Config) *conn {
+	clientConf.ServerName = "localhost"
+
+	// Required to flip on session ticket keys
+	clientConf.ClientSessionCache = tls120.NewLRUClientSessionCache(-1)
+
+	// Required to avoid InsecureSkipVerify (which is probably unnecessary, but
+	// nice to be Good™.)
+	clientConf.RootCAs = x509.NewCertPool()
+	clientConf.RootCAs.AddCert(rootCA)
+
+	tl, err := tls120.Listen("tcp", "localhost:0", serverConf)
+	if err != nil {
+		t.Fatalf("NewListener: %s", err)
+	}
+	li := newListener(tl, new(expvar.Map).Init())
+	type connRes struct {
+		recv []byte
+		conn *conn
+	}
+	ch := make(chan connRes)
+	errCh := make(chan error)
+	go func() {
+		c, err := li.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		b := make([]byte, 1)
+		io.ReadFull(c, b)
+		c.Close()
+		li.Close()
+		tc := c.(*conn)
+		ch <- connRes{recv: b, conn: tc}
+	}()
+	var c *tls120.Conn
+	for i := 0; i < 10; i++ {
+		d := &net.Dialer{
+			Timeout: 500 * time.Millisecond,
+		}
+		c, err = tls120.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
 		if err == nil {
 			break
 		} else {

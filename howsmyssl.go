@@ -497,7 +497,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 		GetCertificate:           kpr.GetCertificate,
 		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
-		MinVersion:               tls.VersionSSL30,
+		MinVersion:               tls.VersionTLS10,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,

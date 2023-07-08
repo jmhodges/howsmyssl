@@ -82,6 +82,7 @@ func (hs *serverHandshakeStateTLS13) handshake() error {
 	}
 
 	c.isHandshakeComplete.Store(true)
+	c.clientHello = hs.clientHello
 
 	return nil
 }

@@ -70,7 +70,11 @@ func (hs *serverHandshakeState) handshake() error {
 
 	// For an overview of TLS handshaking, see RFC 5246, Section 7.3.
 	c.buffering = true
-	if hs.checkForResumption() {
+
+	// Disallow resumption when client is at TLS 1.0 or below so that
+	// we can be sure the checks for HasBeastVulnSuites is set
+	// correctly. A latency and CPU hit, but tolerable for accuracy.
+	if hs.clientHello.vers > VersionTLS10 && hs.checkForResumption() {
 		// The client has included a session ticket and so we do an abbreviated handshake.
 		c.didResume = true
 		if err := hs.doResumeHandshake(); err != nil {
@@ -122,6 +126,7 @@ func (hs *serverHandshakeState) handshake() error {
 
 	c.ekm = ekmFromMasterSecret(c.vers, hs.suite, hs.masterSecret, hs.clientHello.random, hs.hello.random)
 	c.isHandshakeComplete.Store(true)
+	c.clientHello = hs.clientHello
 
 	return nil
 }
@@ -352,7 +357,22 @@ func (hs *serverHandshakeState) pickCipherSuite() error {
 		}
 	}
 
-	hs.suite = selectCipherSuite(preferenceList, hs.clientHello.cipherSuites, hs.cipherSuiteOk)
+	// If the client is newer than TLS 1.0, do the normal ciphersuite detection.
+	// But if they're TLS 1.0 or newer, try to select a BEAST vuln.
+	if c.vers > VersionTLS10 {
+		hs.suite = selectCipherSuite(preferenceList, hs.clientHello.cipherSuites, hs.cipherSuiteOk)
+	} else {
+		beastSuites := []uint16{TLS_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA256}
+		suite := selectCipherSuite(beastSuites, hs.clientHello.cipherSuites, hs.cipherSuiteOk)
+		if suite == nil {
+			hs.suite = selectCipherSuite(preferenceList, hs.clientHello.cipherSuites, hs.cipherSuiteOk)
+		}
+		if suite != nil {
+			hs.suite = suite
+			c.ableToDetectNMinusOneSplitting = true
+		}
+	}
+
 	if hs.suite == nil {
 		c.sendAlert(alertHandshakeFailure)
 		return errors.New("tls: no cipher suite supported by both client and server")

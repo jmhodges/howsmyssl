@@ -280,6 +280,14 @@ type ConnectionState struct {
 
 	// ekm is a closure exposed via ExportKeyingMaterial.
 	ekm func(label string, context []byte, length int) ([]byte, error)
+
+	// Added for howsmyssl's use
+	ClientCipherSuites               []uint16
+	CompressionMethods               []uint8
+	NMinusOneRecordSplittingDetected bool
+	AbleToDetectNMinusOneSplitting   bool
+	SessionTicketsSupported          bool
+	SupportedVersions                []uint16
 }
 
 // ExportKeyingMaterial returns length bytes of exported key material in a new
