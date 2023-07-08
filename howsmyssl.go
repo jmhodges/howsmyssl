@@ -26,7 +26,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
-	tls "github.com/jmhodges/howsmyssl/tls110"
+	tls "github.com/jmhodges/howsmyssl/tls120"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )

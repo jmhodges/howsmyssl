@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	tls "github.com/jmhodges/howsmyssl/tls110"
+	tls "github.com/jmhodges/howsmyssl/tls120"
 )
 
 func TestBEASTVuln(t *testing.T) {
