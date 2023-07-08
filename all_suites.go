@@ -2,7 +2,8 @@ package main
 
 // All cipher suites in the TLS standards.
 // Generated with:
-//   curl -s https://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
+//
+//	curl -s https://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | awk '{ print $1":","\""$2"\","}' | sed 's/,0x//'
 //
 // Plus appending a few ones that were asked for in #56 and the quantum
 // resistant ones that Chrome is testing.
