@@ -163,6 +163,9 @@ func TestSweet32(t *testing.T) {
 			func(t *testing.T) {
 				clientConf := &tls.Config{
 					CipherSuites: st.suites,
+					// This MaxVersion being TLS 1.2 is required as TLS 1.3
+					// ciphersuites aren't configurable in the Go TLS client.
+					MaxVersion: tls.VersionTLS12,
 				}
 				c := connect(t, clientConf)
 				ci := pullClientInfo(c)
@@ -176,7 +179,7 @@ func TestSweet32(t *testing.T) {
 					for _, cs := range st.suites {
 						suites = append(suites, allCipherSuites[cs])
 					}
-					t.Errorf("#%d, num cipher suites given: want %d, got %d (%v, %v)", i, len(st.suites), len(ci.GivenCipherSuites), suites, ci.GivenCipherSuites)
+					t.Errorf("#%d, num cipher suites given: want %d, got %d (\n%v\n%v)", i, len(st.suites), len(ci.GivenCipherSuites), suites, ci.GivenCipherSuites)
 				}
 				if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
 					t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
