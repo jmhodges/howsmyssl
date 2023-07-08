@@ -2,7 +2,8 @@ package main
 
 // All CBC mode cipher suites. This is used in BEAST attack vulnerability detection. While this list contains non-TLS 1.0 cipher suites, the existence checks are done behind a client version check. We'll just have extras that are never touched in this list.
 // Generated from:
-//   curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | grep CBC | awk '{ print $1": true,"}' | sed 's/,0x//'
+//
+//	curl -s http://www.iana.org/assignments/tls-parameters/tls-parameters.txt | grep '0x.* TLS_' | grep CBC | awk '{ print $1": true,"}' | sed 's/,0x//'
 var cbcSuites = map[uint16]bool{
 	0x0006: true,
 	0x0007: true,
