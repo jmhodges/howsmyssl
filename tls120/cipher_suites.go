@@ -15,8 +15,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"hash"
-	"internal/cpu"
 	"runtime"
+
+	"github.com/jmhodges/howsmyssl/tls120/internal/cpu"
 
 	"github.com/jmhodges/howsmyssl/tls120/internal/boring"
 
