@@ -230,7 +230,7 @@ func main() {
 
 func configureHTTPSServer(srv *http.Server) {
 	// If you add HTTP/2 or HTTP/3 support here, be sure that the Connection:
-	// close header is being set properly
+	// close header is being set properly elsewhere
 	srv.ReadTimeout = 10 * time.Second
 	srv.WriteTimeout = 15 * time.Second
 	srv.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
@@ -311,7 +311,20 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	if routeHost != "" {
 		m.Handle("/", commonRedirect(redirectHost))
 	}
-	return protoHandler{logHandler{m}, "https"}
+	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
+		if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
+			// We always disconnect folks after their request is done to ensure
+			// we don't keep our tls.Conn fork with it's extra large memory
+			// needs (including the `clientHelloMsg`) around for too long. This
+			// also helps prevent any TLS resumptions from happening and
+			// breaking our vuln detection. We do this on all requests to avoid
+			// races.
+			w.Header().Set("Connection", "close")
+		}
+		m.ServeHTTP(w, r)
+	})
+	return protoHandler{logHandler{wrapper}, "https"}
 }
 
 func plaintextMux(redirectHost string) http.Handler {
@@ -435,11 +448,6 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 
 func defaultResponseHeaders(h http.Header, r *http.Request, contentType string) {
 	h.Set("Content-Type", contentType)
-	if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
-		h.Set("Connection", "close")
-	}
-	// TODO(#525): replace with STS applied to all handlers in tlsMux
-	h.Set("Strict-Transport-Security", hstsHeaderValue)
 	// Allow CORS requests from any domain, for easy API access
 	h.Set("Access-Control-Allow-Origin", "*")
 }
@@ -458,10 +466,6 @@ func healthcheck(w http.ResponseWriter, r *http.Request) {
 func commonRedirect(redirectHost string) http.Handler {
 	hf := func(w http.ResponseWriter, r *http.Request) {
 		commonRedirects.Add(1)
-		if r.Header.Get(xForwardedProto) == "https" {
-			// TODO(#525): replace with STS applied to all handlers in tlsMux
-			w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
-		}
 		u := r.URL
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
