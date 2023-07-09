@@ -439,9 +439,6 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 	// clients who wouldn't be able to handle a `Transfer-Encoding: chunked`
 	// response. The Go http server won't automatically add it over a few KB.
 	w.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
-
-	// TODO(#524): this only increments 2xx when (in extremely hard to create
-	// circumstances) the render func could return other status codes.
 	w.WriteHeader(status)
 	w.Write(bs)
 }
