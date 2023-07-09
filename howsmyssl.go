@@ -379,7 +379,7 @@ func handleWeb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	webRequests.Add(1)
-	hijackHandle(w, r, webStatuses, renderHTML)
+	handleTLSClientInfo(w, r, webStatuses, renderHTML)
 }
 
 var (
@@ -409,10 +409,10 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 	}
 
-	hijackHandle(w, r, apiStatuses, renderJSON)
+	handleTLSClientInfo(w, r, apiStatuses, renderJSON)
 }
 
-func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, int, string, error)) {
+func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, int, string, error)) {
 	// Instead of using w.(http.Hijacker).Hijack to pull the underlying
 	// connection, we grab the one we smuggled into the context for this
 	// request. We do this smuggling instead of using http.Hijcker.Hijack to
@@ -422,14 +422,14 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 	c := r.Context().Value(smuggledConnKey)
 	tc, ok := c.(*conn)
 	if !ok {
-		log.Printf("Unable to convert smuggledConnKey to *conn: %#v\n", c)
+		log.Printf("handleTLSClientInfo: nable to convert smuggledConnKey to *conn: %#v\n", c)
 		response500(w, r)
 		return
 	}
 	data := pullClientInfo(tc)
 	bs, status, contentType, err := render(r, data)
 	if err != nil {
-		log.Printf("Unable to execute render: %s\n", err)
+		log.Printf("handleTLSClientInfo: unable to execute render: %s\n", err)
 		response500(w, r)
 		return
 	}
@@ -554,8 +554,9 @@ type logHandler struct {
 	inner http.Handler
 }
 
-// Since we have a Hijack in our code, this simple writer will suffice for
-// now.
+// TODO(#537): use a real logging library. This simple writer was made because
+// the Hijack we previously had in our handlers wouldn't let us use the typical
+// logging ones.
 func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
