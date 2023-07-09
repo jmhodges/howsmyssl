@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"expvar"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -220,6 +221,7 @@ func TestJSONAPI(t *testing.T) {
 	li := newListener(tl, new(expvar.Map).Init())
 
 	srv := httptest.NewUnstartedServer(tm)
+	configureHTTPSServer(srv.Config)
 	srv.Listener = li
 	// Intentionally not using StartTLS to avoid stomping on our special listener.
 	srv.Start()
@@ -283,8 +285,8 @@ func TestJSONAPI(t *testing.T) {
 		},
 	}
 	u := strings.Replace(srv.URL, "http://", "https://", -1)
-	for _, at := range tests {
-		t.Run(at.path, func(t *testing.T) {
+	for i, at := range tests {
+		t.Run(fmt.Sprintf("%d-%s", i, at.path), func(t *testing.T) {
 			r, err := http.NewRequest("GET", u+at.path, nil)
 			if err != nil {
 				t.Fatalf("NewRequest: %s", err)
@@ -309,6 +311,9 @@ func TestJSONAPI(t *testing.T) {
 			ct := resp.Header.Get("Content-Type")
 			if ct != at.contentType {
 				t.Errorf("Content-Type, want %s, got %s", at.contentType, ct)
+			}
+			if !resp.Close {
+				t.Errorf("want connection to be closed after each request, but was left open")
 			}
 		})
 	}

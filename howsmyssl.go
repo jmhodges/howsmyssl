@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,18 +8,16 @@ import (
 	"flag"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -32,15 +29,6 @@ import (
 )
 
 const (
-	resp500Format = `HTTP/1.%d 500 Internal Server Error
-Content-Length: 26
-Connection: close
-Content-Type: text/plain; charset="utf-8"
-Strict-Transport-Security: max-age=631138519; includeSubdomains; preload
-Date: %s
-
-500 Internal Server Error
-`
 	hstsHeaderValue = "max-age=631138519; includeSubdomains; preload"
 	xForwardedProto = "X-Forwarded-Proto"
 )
@@ -74,12 +62,15 @@ var (
 	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
 
 	index *template.Template
-
-	// liveHijackCount is for counting hijacked connections so that we can do
-	// clean shutdowns. It's global state because this app is small and we only
-	// use it in this file.
-	liveHijackCount = newUint64()
 )
+
+type contextKey struct{ name string }
+
+func (k *contextKey) String() string { return "howsmyssl context value " + k.name }
+
+// smuggledConnKey is for smuggling our wrapping *conn to the apiHandler that
+// needs its conn.Conn.ConnectionState to investigate the client's TLS settings.
+var smuggledConnKey = &contextKey{"smuggledConn"}
 
 func main() {
 	flag.Parse()
@@ -189,11 +180,8 @@ func main() {
 		}
 	}()
 
-	httpsSrv := &http.Server{
-		Handler:      m,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Second,
-	}
+	httpsSrv := &http.Server{Handler: m}
+	configureHTTPSServer(httpsSrv)
 
 	httpSrv := &http.Server{
 		Handler:      plaintextMux(redirectHost),
@@ -236,11 +224,31 @@ func main() {
 		}
 	}()
 	wg.Wait()
-	for atomic.LoadUint64(liveHijackCount) != 0 && ctx.Err() == nil {
-		time.Sleep(100 * time.Millisecond)
-	}
 	cancel()
 	gclog.Flush()
+}
+
+func configureHTTPSServer(srv *http.Server) {
+	// If you add HTTP/2 or HTTP/3 support here, be sure that the Connection:
+	// close header is being set properly
+	srv.ReadTimeout = 10 * time.Second
+	srv.WriteTimeout = 15 * time.Second
+	srv.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
+		tc, ok := c.(*conn)
+		if !ok {
+			log.Printf("Server.ConnContext: unable to convert net.Conn to *conn: %#v\n", c)
+			return ctx
+		}
+		// We do this smuggling instead of using http.Hijcker.Hijack to avoid
+		// needing to do a bunch of connection management and HTTP response
+		// formatting ourselves. We smuggle the whole *conn into the context
+		// instead of just its ConnectionState because the handshake may not yet
+		// be performed, and I don't want to lock here waiting for the handshake
+		// to finish. It might be fine, but I've not verified there's nothing
+		// that would be delayed by doing so.
+		ctx = context.WithValue(ctx, smuggledConnKey, tc)
+		return ctx
+	}
 }
 
 // Returns routeHost, redirectHost
@@ -392,73 +400,54 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, int, string, error)) {
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		log.Printf("server not hijackable\n")
-		http.Error(w, "500 Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
-	c, brw, err := hj.Hijack()
-	if err != nil {
-		log.Printf("server errored during hijack: %s\n", err)
-		return
-	}
-	incrementHijack()
-	defer decrementHijack()
-	defer c.Close()
+	// Instead of using w.(http.Hijacker).Hijack to pull the underlying
+	// connection, we grab the one we smuggled into the context for this
+	// request. We do this smuggling instead of using http.Hijcker.Hijack to
+	// avoid needing to do a bunch of connection management and HTTP response
+	// formatting ourselves.
+	c := r.Context().Value(smuggledConnKey)
 	tc, ok := c.(*conn)
 	if !ok {
-		log.Printf("Unable to convert net.Conn to *conn: %#v\n", c)
-		hijacked500(brw, r.ProtoMinor, statuses)
+		log.Printf("Unable to convert smuggledConnKey to *conn: %#v\n", c)
+		response500(w, r, statuses)
 		return
 	}
 	data := pullClientInfo(tc)
 	bs, status, contentType, err := render(r, data)
 	if err != nil {
 		log.Printf("Unable to execute render: %s\n", err)
-		hijacked500(brw, r.ProtoMinor, statuses)
+		response500(w, r, statuses)
 		return
 	}
+	defaultResponseHeaders(w.Header(), r, contentType)
 	contentLength := int64(len(bs))
-	h := make(http.Header)
-	defaultResponseHeaders(h, r, contentType)
-	resp := &http.Response{
-		StatusCode:    status,
-		ContentLength: contentLength,
-		Header:        h,
-		Body:          ioutil.NopCloser(bytes.NewBuffer(bs)),
-		ProtoMajor:    1, // Assumes HTTP/1.x
-		ProtoMinor:    r.ProtoMinor,
-	}
-	bs, err = httputil.DumpResponse(resp, true)
-	if err != nil {
-		log.Printf("unable to write response: %s\n", err)
-		hijacked500(brw, r.ProtoMinor, statuses)
-		return
-	}
+	// We set Content-Length here to stay backwards compatiable with some
+	// clients who wouldn't be able to handle a `Transfer-Encoding: chunked`
+	// response. The Go http server won't automatically add it over a few KB.
+	w.Header().Set("Content-Length", strconv.FormatInt(contentLength, 10))
+
+	// TODO(#524): this only increments 2xx when (in extremely hard to create
+	// circumstances) the render func could return other status codes.
 	statuses.status2xx.Add(1)
-	brw.Write(bs)
-	brw.Flush()
+	w.WriteHeader(status)
+	w.Write(bs)
 }
 
 func defaultResponseHeaders(h http.Header, r *http.Request, contentType string) {
-	h.Set("Date", time.Now().Format(http.TimeFormat))
 	h.Set("Content-Type", contentType)
 	if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
 		h.Set("Connection", "close")
 	}
+	// TODO(#525): replace with STS applied to all handlers in tlsMux
 	h.Set("Strict-Transport-Security", hstsHeaderValue)
 	// Allow CORS requests from any domain, for easy API access
 	h.Set("Access-Control-Allow-Origin", "*")
-
 }
-func hijacked500(brw *bufio.ReadWriter, protoMinor int, statuses *statusStats) {
-	statuses.status5xx.Add(1)
-	// Assumes HTTP/1.x
-	s := fmt.Sprintf(resp500Format, protoMinor, time.Now().Format(http.TimeFormat))
-	brw.WriteString(s)
-	brw.Flush()
+
+func response500(w http.ResponseWriter, r *http.Request, statuses *statusStats) {
+	defaultResponseHeaders(w.Header(), r, "text/plain")
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte("500 Internal Server Error"))
 }
 
 func healthcheck(w http.ResponseWriter, r *http.Request) {
@@ -470,6 +459,7 @@ func commonRedirect(redirectHost string) http.Handler {
 	hf := func(w http.ResponseWriter, r *http.Request) {
 		commonRedirects.Add(1)
 		if r.Header.Get(xForwardedProto) == "https" {
+			// TODO(#525): replace with STS applied to all handlers in tlsMux
 			w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
 		}
 		u := r.URL
@@ -623,29 +613,4 @@ func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p += "?" + r.URL.RawQuery
 	}
 	http.Redirect(w, r, string(a)+p, http.StatusFound)
-}
-
-func newUint64() *uint64 {
-	var i uint64
-	return &i
-}
-
-func incrementHijack() {
-	for {
-		old := atomic.LoadUint64(liveHijackCount)
-		new := old + 1
-		if atomic.CompareAndSwapUint64(liveHijackCount, old, new) {
-			break
-		}
-	}
-}
-
-func decrementHijack() {
-	for {
-		old := atomic.LoadUint64(liveHijackCount)
-		new := old - 1
-		if atomic.CompareAndSwapUint64(liveHijackCount, old, new) {
-			break
-		}
-	}
 }
