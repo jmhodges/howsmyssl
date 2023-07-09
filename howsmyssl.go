@@ -422,7 +422,7 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	c := r.Context().Value(smuggledConnKey)
 	tc, ok := c.(*conn)
 	if !ok {
-		log.Printf("handleTLSClientInfo: nable to convert smuggledConnKey to *conn: %#v\n", c)
+		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *conn: %#v", c)
 		response500(w, r)
 		return
 	}
