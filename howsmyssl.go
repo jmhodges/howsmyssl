@@ -418,18 +418,19 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 	// request. We do this smuggling instead of using http.Hijcker.Hijack to
 	// avoid needing to do a bunch of connection management and HTTP response
 	// formatting ourselves.
+	w = &statWriter{w: w, stats: statuses}
 	c := r.Context().Value(smuggledConnKey)
 	tc, ok := c.(*conn)
 	if !ok {
 		log.Printf("Unable to convert smuggledConnKey to *conn: %#v\n", c)
-		response500(w, r, statuses)
+		response500(w, r)
 		return
 	}
 	data := pullClientInfo(tc)
 	bs, status, contentType, err := render(r, data)
 	if err != nil {
 		log.Printf("Unable to execute render: %s\n", err)
-		response500(w, r, statuses)
+		response500(w, r)
 		return
 	}
 	defaultResponseHeaders(w.Header(), r, contentType)
@@ -441,7 +442,6 @@ func hijackHandle(w http.ResponseWriter, r *http.Request, statuses *statusStats,
 
 	// TODO(#524): this only increments 2xx when (in extremely hard to create
 	// circumstances) the render func could return other status codes.
-	statuses.status2xx.Add(1)
 	w.WriteHeader(status)
 	w.Write(bs)
 }
@@ -452,7 +452,7 @@ func defaultResponseHeaders(h http.Header, r *http.Request, contentType string) 
 	h.Set("Access-Control-Allow-Origin", "*")
 }
 
-func response500(w http.ResponseWriter, r *http.Request, statuses *statusStats) {
+func response500(w http.ResponseWriter, r *http.Request) {
 	defaultResponseHeaders(w.Header(), r, "text/plain")
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte("500 Internal Server Error"))
