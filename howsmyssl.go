@@ -311,6 +311,10 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	if routeHost != "" {
 		m.Handle("/", commonRedirect(redirectHost))
 	}
+
+	gzippedM := gzip.GZIPHandler(m, func(w http.ResponseWriter, r *http.Request) bool {
+		return !strings.Contains(r.URL.Path, "/img/")
+	})
 	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
 		if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
@@ -322,7 +326,7 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 			// races.
 			w.Header().Set("Connection", "close")
 		}
-		m.ServeHTTP(w, r)
+		gzippedM.ServeHTTP(w, r)
 	})
 	return protoHandler{logHandler{wrapper}, "https"}
 }
@@ -521,7 +525,6 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
 	stats := newStatusStats(vars)
 	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
-	h = gzip.GZIPHandler(h, nil)
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
 		w = &statWriter{w: w, stats: stats}
