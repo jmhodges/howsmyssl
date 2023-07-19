@@ -23,7 +23,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 	}
 	ama := &allowMapsAtomic{}
 	ama.Store(am)
-	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 
 	tests := []oaTest{
 		{"", "", "", true},
@@ -99,7 +99,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 	}
 	ama := &allowMapsAtomic{}
 	ama.Store(am)
-	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 
 	tests := []oaTest{
 		{"https://localhost:3634", "", "localhost", true},

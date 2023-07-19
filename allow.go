@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"expvar"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"cloud.google.com/go/logging"
 
 	topk "github.com/dgryski/go-topk"
+	"golang.org/x/exp/slog"
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
@@ -33,6 +35,8 @@ type originAllower struct {
 	metricsMu          *sync.RWMutex
 	topKAllDomains     *topk.Stream
 	topKOfflistDomains *topk.Stream
+
+	errLogger *slog.Logger
 }
 
 type logClient interface {
@@ -40,7 +44,7 @@ type logClient interface {
 	Flush() error
 }
 
-func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns *expvar.Map) *originAllower {
+func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns *expvar.Map, allowErrLogger *slog.Logger) *originAllower {
 	metricsMu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -65,6 +69,7 @@ func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns
 		metricsMu:          metricsMu,
 		topKAllDomains:     topKAllDomains,
 		topKOfflistDomains: topKOfflistDomains,
+		errLogger:          allowErrLogger,
 	}
 	return oa
 }
@@ -78,7 +83,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		log.Printf("error splitting %#v as host:port: %s", r.RemoteAddr, err)
+		oa.errLogger.ErrorContext(r.Context(), "error splitting RemoteAddr as host:port", "RemoteAddr", r.RemoteAddr, "err", err)
 		remoteIP = "0.0.0.0"
 	}
 	entry := &apiLogEntry{
@@ -101,7 +106,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return "", true
 	}
 	if origin != "" {
-		etldplus1, fullDomain, ok := oa.checkDomain(origin)
+		etldplus1, fullDomain, ok := oa.checkDomain(r.Context(), origin)
 		entry.DetectedDomain = etldplus1
 		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
@@ -111,7 +116,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 		return etldplus1, ok
 	}
 	if referrer != "" {
-		etldplus1, fullDomain, ok := oa.checkDomain(referrer)
+		etldplus1, fullDomain, ok := oa.checkDomain(r.Context(), referrer)
 		entry.DetectedDomain = etldplus1
 		entry.DetectedFullDomain = fullDomain
 		entry.Allowed = ok
@@ -126,7 +131,7 @@ func (oa *originAllower) Allow(r *http.Request) (string, bool) {
 
 // checkDomain checks if the detected domain from the request headers and
 // whether domain is allowed to make requests against howsmyssl's API.
-func (oa *originAllower) checkDomain(d string) (string, string, bool) {
+func (oa *originAllower) checkDomain(ctx context.Context, d string) (string, string, bool) {
 	d = strings.ToLower(d)
 	etldplus1, fullDomain, err := effectiveDomain(d)
 
@@ -149,7 +154,7 @@ func (oa *originAllower) checkDomain(d string) (string, string, bool) {
 			}
 			dom = nextDomain(dom)
 			if dom == "" {
-				log.Printf("whoops, we got to an empty string subdomain of (%#v, %#v) from %#v", etldplus1, fullDomain, d)
+				oa.errLogger.ErrorContext(ctx, "when fullDomain isn't eTLD+1, got an empty string domain. Bug?", "etldplus1", etldplus1, "fullDomain", fullDomain)
 				break
 			}
 		}
@@ -165,7 +170,7 @@ func (oa *originAllower) checkDomain(d string) (string, string, bool) {
 		}
 		dom = nextDomain(dom)
 		if dom == "" {
-			log.Printf("whoops, we got to an empty string subdomain of (%#v, %#v) from %#v", etldplus1, fullDomain, d)
+			oa.errLogger.ErrorContext(ctx, "when checking fullDomain, got an empty string domain. Bug?", "etldplus1", etldplus1, "fullDomain", fullDomain)
 			break
 		}
 	}
