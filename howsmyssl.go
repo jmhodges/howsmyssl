@@ -160,7 +160,7 @@ func main() {
 	webHandleFunc := http.NotFound
 	if !*headless {
 		index = loadIndex()
-		staticHandler = makeStaticHandler(*staticDir, staticVars)
+		staticHandler = makeStaticHandler(*staticDir, staticStatuses)
 		webHandleFunc = handleWeb
 	}
 
@@ -522,8 +522,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	return tlsConf
 }
 
-func makeStaticHandler(dir string, vars *expvar.Map) http.HandlerFunc {
-	stats := newStatusStats(vars)
+func makeStaticHandler(dir string, stats *statusStats) http.HandlerFunc {
 	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)

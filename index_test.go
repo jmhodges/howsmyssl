@@ -39,8 +39,8 @@ type acmeTest struct {
 }
 
 func TestACMERedirect(t *testing.T) {
-	staticVars := new(expvar.Map).Init()
-	staticHandler := makeStaticHandler("/static", staticVars)
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
 	webHandleFunc := http.NotFound
 	tests := []acmeTest{
 		// same domain redirect, acmeRedirectURL leads with "/"
@@ -158,8 +158,8 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRedirectHost: "example.com",
 		},
 	}
-	staticVars := new(expvar.Map).Init()
-	staticHandler := makeStaticHandler("/static", staticVars)
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
 	webHandleFunc := http.NotFound
 
 	for i, vt := range tests {
@@ -201,8 +201,8 @@ func TestDisallowedBodyParses(t *testing.T) {
 }
 
 func TestJSONAPI(t *testing.T) {
-	staticVars := new(expvar.Map).Init()
-	staticHandler := makeStaticHandler("/static", staticVars)
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
 	webHandleFunc := http.NotFound
 	am := &allowMaps{
 		AllowTheseDomains: make(map[string]bool),
