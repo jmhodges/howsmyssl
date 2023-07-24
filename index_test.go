@@ -147,25 +147,25 @@ type vhostTest struct {
 
 func TestVHostCalculation(t *testing.T) {
 	tests := []vhostTest{
-		vhostTest{
+		{
 			rawVHost:             "www.howsmyssl.com",
 			httpsAddr:            "0:10443",
 			expectedRouteHost:    "www.howsmyssl.com",
 			expectedRedirectHost: "www.howsmyssl.com",
 		},
-		vhostTest{
+		{
 			rawVHost:             "localhost:10443",
 			httpsAddr:            "localhost:10443",
 			expectedRouteHost:    "localhost",
 			expectedRedirectHost: "localhost:10443",
 		},
-		vhostTest{
+		{
 			rawVHost:             "example.com:10443",
 			httpsAddr:            "localhost:10443",
 			expectedRouteHost:    "example.com",
 			expectedRedirectHost: "example.com:10443",
 		},
-		vhostTest{
+		{
 			rawVHost:             "example.com:443",
 			httpsAddr:            "0:443",
 			expectedRouteHost:    "example.com",
