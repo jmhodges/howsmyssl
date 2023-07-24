@@ -587,7 +587,13 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent)
+	tlsConn, ok := r.Context().Value(smuggledConnKey).(*conn)
+	tlsVersion := "none"
+	if ok && tlsConn != nil {
+		version := tlsConn.ConnectionState().Version
+		tlsVersion = actualSupportedVersions[version]
+	}
+	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion)
 	h.inner.ServeHTTP(w, r)
 }
 
