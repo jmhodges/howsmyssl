@@ -24,6 +24,7 @@ import (
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
 	tls "github.com/jmhodges/howsmyssl/tls110"
+	"golang.org/x/exp/slog"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 )
@@ -154,7 +155,9 @@ func main() {
 	} else {
 		gclog = nullLogClient{}
 	}
-	oa := newOriginAllower(ama, hostname, gclog, expvar.NewMap("origins"))
+
+	allowErrLogger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{AddSource: true})).WithGroup("originAllower.errors")
+	oa := newOriginAllower(ama, hostname, gclog, expvar.NewMap("origins"), allowErrLogger)
 
 	staticHandler := http.NotFoundHandler()
 	webHandleFunc := http.NotFound
@@ -164,6 +167,8 @@ func main() {
 		webHandleFunc = handleWeb
 	}
 
+	requestLogger := slog.Default().WithGroup("requests")
+
 	m := tlsMux(
 		routeHost,
 		redirectHost,
@@ -171,6 +176,8 @@ func main() {
 		staticHandler,
 		webHandleFunc,
 		oa,
+		requestLogger,
+		slog.Default().WithGroup("originAllower"),
 	)
 
 	go func() {
@@ -184,7 +191,7 @@ func main() {
 	configureHTTPSServer(httpsSrv)
 
 	httpSrv := &http.Server{
-		Handler:      plaintextMux(redirectHost),
+		Handler:      plaintextMux(redirectHost, requestLogger),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
@@ -297,11 +304,11 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	return routeHost, redirectHost
 }
 
-func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandleFunc http.HandlerFunc, oa *originAllower) http.Handler {
+func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandleFunc http.HandlerFunc, oa *originAllower, requestLogger *slog.Logger, allowLogger *slog.Logger) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
 	m := http.NewServeMux()
 	m.Handle(routeHost+"/s/", staticHandler)
-	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa})
+	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa, allowLogger: allowLogger})
 	m.HandleFunc(routeHost+"/", webHandleFunc)
 	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
 	if routeHost != "" {
@@ -328,14 +335,14 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 		}
 		gzippedM.ServeHTTP(w, r)
 	})
-	return protoHandler{logHandler{wrapper}, "https"}
+	return protoHandler{logHandler{wrapper, requestLogger}, "https"}
 }
 
-func plaintextMux(redirectHost string) http.Handler {
+func plaintextMux(redirectHost string, requestLogger *slog.Logger) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(redirectHost))
-	return protoHandler{logHandler{m}, "http"}
+	return protoHandler{logHandler{m, requestLogger}, "http"}
 }
 
 const htmlContentType = "text/html;charset=utf-8"
@@ -397,7 +404,8 @@ var (
 )
 
 type apiHandler struct {
-	oa *originAllower
+	oa          *originAllower
+	allowLogger *slog.Logger
 }
 
 func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -406,13 +414,11 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	detectedDomain, ok := ah.oa.Allow(r)
 
 	renderJSON := allowedRenderJSON
-	if ok {
-		log.Printf("allowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
-	} else {
+	if !ok {
 		renderJSON = disallowedRenderJSON
-		log.Printf("disallowed domain: %#v; Origin: %#v; Referrer: %#v", detectedDomain, r.Header.Get("Origin"), r.Header.Get("Referer"))
 	}
 
+	ah.allowLogger.InfoContext(r.Context(), "API allowance decision", "detectedDomain", detectedDomain, "allowed", ok, "originHeader", r.Header.Get("Origin"), "referrerHeader", r.Header.Get("Referer"))
 	handleTLSClientInfo(w, r, apiStatuses, renderJSON)
 }
 
@@ -553,10 +559,11 @@ func sentence(parts []string) string {
 }
 
 type logHandler struct {
-	inner http.Handler
+	inner         http.Handler
+	requestLogger *slog.Logger
 }
 
-// TODO(#537): use a real logging library. This simple writer was made because
+// TODO(#537): use a real logging handler. This simple writer was made because
 // the Hijack we previously had in our handlers wouldn't let us use the typical
 // logging ones.
 func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -580,7 +587,7 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	fmt.Printf("request: %s %s %s %s %s %s\n", host, proto, r.URL, referrer, origin, userAgent)
+	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent)
 	h.inner.ServeHTTP(w, r)
 }
 

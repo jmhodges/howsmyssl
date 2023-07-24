@@ -17,7 +17,21 @@ import (
 	"time"
 
 	tls110 "github.com/jmhodges/howsmyssl/tls110"
+	"golang.org/x/exp/slog"
 )
+
+type testWriter struct {
+	t *testing.T
+}
+
+func (tl testWriter) Write(b []byte) (int, error) {
+	tl.t.Logf(string(b))
+	return len(b), nil
+}
+
+func newTestLogger(t *testing.T) *slog.Logger {
+	return slog.New(slog.NewTextHandler(testWriter{t}, nil))
+}
 
 func TestDumbNilishIndex(t *testing.T) {
 	tmpl := loadIndex()
@@ -102,7 +116,7 @@ func TestACMERedirect(t *testing.T) {
 		},
 	}
 	for i, tt := range tests {
-		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, webHandleFunc, nil)
+		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
 		r, err := http.NewRequest("GET", tt.challPath, nil)
 		if err != nil {
 			t.Fatalf("borked request for %#v: %s", tt.challPath, err)
@@ -171,7 +185,7 @@ func TestVHostCalculation(t *testing.T) {
 			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
 		}
 
-		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, webHandleFunc, nil)
+		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
 		r, err := http.NewRequest("GET", "https://howsmyssl.com/", nil)
 		if err != nil {
 			t.Fatalf("borked request")
@@ -211,8 +225,8 @@ func TestJSONAPI(t *testing.T) {
 	}
 	ama := &allowMapsAtomic{}
 	ama.Store(am)
-	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init())
-	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
+	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))
 
 	tl, err := tls110.Listen("tcp", "127.0.0.1:0", serverConf)
 	if err != nil {
