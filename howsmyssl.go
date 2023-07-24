@@ -167,8 +167,8 @@ func main() {
 		webHandleFunc = handleWeb
 	}
 
-	requestLogger := slog.Default().WithGroup("requests")
-
+	stdoutLogger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	requestLogger := stdoutLogger.WithGroup("requests")
 	m := tlsMux(
 		routeHost,
 		redirectHost,
@@ -177,7 +177,7 @@ func main() {
 		webHandleFunc,
 		oa,
 		requestLogger,
-		slog.Default().WithGroup("originAllower"),
+		stdoutLogger.WithGroup("originAllower"),
 	)
 
 	go func() {
