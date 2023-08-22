@@ -3,7 +3,7 @@ module github.com/jmhodges/howsmyssl
 go 1.20
 
 require (
-	cloud.google.com/go/logging v1.8.0
+	cloud.google.com/go/logging v1.8.1
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	golang.org/x/crypto v0.12.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
