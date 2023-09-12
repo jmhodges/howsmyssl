@@ -8,7 +8,7 @@ require (
 	golang.org/x/crypto v0.13.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.15.0
-	golang.org/x/oauth2 v0.11.0
+	golang.org/x/oauth2 v0.12.0
 	google.golang.org/api v0.138.0
 	google.golang.org/grpc v1.57.0
 )
