@@ -10,7 +10,7 @@ require (
 	golang.org/x/net v0.22.0
 	golang.org/x/oauth2 v0.17.0
 	google.golang.org/api v0.167.0
-	google.golang.org/grpc v1.62.0
+	google.golang.org/grpc v1.62.1
 )
 
 require (
