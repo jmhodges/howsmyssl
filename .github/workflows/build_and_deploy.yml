@@ -3,11 +3,13 @@ on:
   push:
     branches:
       - master
+      - main
       - "test_*"
       - "test-*"
   pull_request:
     branches:
       - master
+      - main
 
 jobs:
   build:
