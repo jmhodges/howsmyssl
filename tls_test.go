@@ -6,9 +6,9 @@ import (
 	"encoding/pem"
 	"expvar"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"reflect"
 	"strconv"
 	"testing"
@@ -191,7 +191,7 @@ var rootCA *x509.Certificate
 
 func init() {
 	serverConf = makeTLSConfig("./config/development_cert.pem", "./config/development_key.pem")
-	certBytes, err := ioutil.ReadFile("./config/development_ca_cert.pem")
+	certBytes, err := os.ReadFile("./config/development_ca_cert.pem")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -8,7 +8,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -311,7 +311,7 @@ func TestJSONAPI(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Get: %s", err)
 			}
-			b, err := ioutil.ReadAll(resp.Body)
+			b, err := io.ReadAll(resp.Body)
 			defer resp.Body.Close()
 			if err != nil {
 				t.Fatalf("ReadAll: %s", err)

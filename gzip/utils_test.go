@@ -4,18 +4,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"testing"
 )
-
-func assertTrue(cond bool, msg string, t *testing.T) bool {
-	if !cond {
-		t.Error(msg)
-		return false
-	}
-	return true
-}
 
 func assertStatus(ex, ac int, t *testing.T) {
 	if ex != ac {
@@ -24,7 +15,7 @@ func assertStatus(ex, ac int, t *testing.T) {
 }
 
 func assertBody(ex []byte, res *http.Response, t *testing.T) {
-	buf, err := ioutil.ReadAll(res.Body)
+	buf, err := io.ReadAll(res.Body)
 	if err != nil {
 		panic(err)
 	}
