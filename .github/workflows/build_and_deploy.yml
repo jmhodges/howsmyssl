@@ -2,13 +2,11 @@ name: Build and deploy
 on:
   push:
     branches:
-      - master
       - main
       - "test_*"
       - "test-*"
   pull_request:
     branches:
-      - master
       - main
 
 jobs:
@@ -17,7 +15,7 @@ jobs:
     uses: ./.github/workflows/go.yml
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
     name: Deploy
     concurrency: production
     uses: ./.github/workflows/deploy.yml
