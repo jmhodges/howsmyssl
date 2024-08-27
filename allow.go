@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"expvar"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -312,7 +311,7 @@ type headers struct {
 }
 
 func loadGoogleServiceAccount(fp string) *googleConfig {
-	bs, err := ioutil.ReadFile(fp)
+	bs, err := os.ReadFile(fp)
 	if err != nil {
 		log.Fatalf("unable to read Google service account config %#v: %s", fp, err)
 	}
