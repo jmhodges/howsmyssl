@@ -3,7 +3,7 @@ on:
   schedule:
     # Do this every 4 months. 3:01 AM on every 7th of the month was picked
     # arbitrarily (c.f. fine-structure constant)
-    - cron: '1 3 7 */4 *'
+    - cron: "1 3 7 */4 *"
   push:
     branches:
       - force_update_dev_certs
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: master
+          ref: main
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
