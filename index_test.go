@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+
 	tls110 "github.com/jmhodges/howsmyssl/tls110"
 	"golang.org/x/exp/slog"
 )
@@ -320,6 +322,7 @@ func TestJSONAPI(t *testing.T) {
 				t.Errorf("status code, want: %d, got: %d", at.status, resp.StatusCode)
 			}
 			if string(b) != at.body {
+				t.Errorf("body, diff: %s", cmp.Diff(at.body, string(b)))
 				t.Errorf("body, want:\n%#v\ngot:%#v\n", at.body, string(b))
 			}
 			ct := resp.Header.Get("Content-Type")
