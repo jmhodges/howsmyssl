@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -118,7 +119,7 @@ func main() {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    make(map[string]bool),
 	}
-	ama := &allowMapsAtomic{}
+	ama := &atomic.Pointer[allowMaps]{}
 	ama.Store(am)
 	if *allowListsFile != "" {
 		am, err := loadAllowMaps(*allowListsFile)

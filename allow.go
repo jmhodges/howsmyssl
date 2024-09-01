@@ -29,7 +29,7 @@ type originAllower struct {
 	hostname string
 	gclog    logClient
 
-	ama *allowMapsAtomic
+	ama *atomic.Pointer[allowMaps]
 
 	metricsMu          *sync.RWMutex
 	topKAllDomains     *topk.Stream
@@ -43,7 +43,7 @@ type logClient interface {
 	Flush() error
 }
 
-func newOriginAllower(ama *allowMapsAtomic, hostname string, gclog logClient, ns *expvar.Map, allowErrLogger *slog.Logger) *originAllower {
+func newOriginAllower(ama *atomic.Pointer[allowMaps], hostname string, gclog logClient, ns *expvar.Map, allowErrLogger *slog.Logger) *originAllower {
 	metricsMu := &sync.RWMutex{}
 	topKAllDomains := topk.New(100)
 	topKOfflistDomains := topk.New(100)
@@ -271,7 +271,7 @@ func loadAllowMaps(fp string) (*allowMaps, error) {
 	return am, nil
 }
 
-func reloadAllowMapsForever(allowListsFile string, ama *allowMapsAtomic, tick *time.Ticker) {
+func reloadAllowMapsForever(allowListsFile string, ama *atomic.Pointer[allowMaps], tick *time.Ticker) {
 	for range tick.C {
 		am, err := loadAllowMaps(allowListsFile)
 		if err != nil {
@@ -279,16 +279,6 @@ func reloadAllowMapsForever(allowListsFile string, ama *allowMapsAtomic, tick *t
 		}
 		ama.Store(am)
 	}
-}
-
-type allowMapsAtomic atomic.Value
-
-func (a *allowMapsAtomic) Load() *allowMaps {
-	return (*atomic.Value)(a).Load().(*allowMaps)
-}
-
-func (a *allowMapsAtomic) Store(am *allowMaps) {
-	(*atomic.Value)(a).Store(am)
 }
 
 type rejectionReason string
