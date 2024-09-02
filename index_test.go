@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -225,7 +226,7 @@ func TestJSONAPI(t *testing.T) {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    map[string]bool{"blocked.com": true},
 	}
-	ama := &allowMapsAtomic{}
+	ama := &atomic.Pointer[allowMaps]{}
 	ama.Store(am)
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))

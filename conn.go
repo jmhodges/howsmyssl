@@ -70,14 +70,15 @@ func (l *listener) Accept() (net.Conn, error) {
 		return nil, errTLSConnConv
 	}
 	return &conn{
-		Conn:           tlsConn,
-		handshakeStats: l.handshakeStats,
+		Conn:             tlsConn,
+		handshakeCounted: new(atomic.Bool),
+		handshakeStats:   l.handshakeStats,
 	}, nil
 }
 
 type conn struct {
 	*tls.Conn
-	handshakeCounted int32
+	handshakeCounted *atomic.Bool
 	*handshakeStats
 }
 
@@ -97,10 +98,8 @@ func (c *conn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 
-// This, unfortunately, means we take two uncontended locks on every read and
-// write: the c.handshakeMutex here and the one in tls.Conn.
 func (c *conn) handshake() error {
-	alreadyCounted := !atomic.CompareAndSwapInt32(&c.handshakeCounted, 0, 1)
+	alreadyCounted := !c.handshakeCounted.CompareAndSwap(false, true)
 	if alreadyCounted {
 		return nil
 	}

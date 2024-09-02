@@ -4,6 +4,7 @@ import (
 	"expvar"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"testing"
 )
 
@@ -21,7 +22,7 @@ func TestOriginAllowerWithLocalhost(t *testing.T) {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    map[string]bool{"localhost": true, "example.com": true},
 	}
-	ama := &allowMapsAtomic{}
+	ama := &atomic.Pointer[allowMaps]{}
 	ama.Store(am)
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 
@@ -97,7 +98,7 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 		AllowSubdomainsOn: make(map[string]bool),
 		BlockedDomains:    map[string]bool{"example.com": true},
 	}
-	ama := &allowMapsAtomic{}
+	ama := &atomic.Pointer[allowMaps]{}
 	ama.Store(am)
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 
