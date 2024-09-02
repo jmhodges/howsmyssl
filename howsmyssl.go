@@ -27,7 +27,6 @@ import (
 	tls "github.com/jmhodges/howsmyssl/tls110"
 	"golang.org/x/exp/slog"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -138,19 +137,28 @@ func main() {
 
 	var gclog logClient
 	if *googAcctConf != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		googConf := loadGoogleServiceAccount(*googAcctConf)
 		client, err := logging.NewClient(ctx,
 			googConf.ProjectID,
 			option.WithCredentialsFile(*googAcctConf),
-			option.WithGRPCDialOption(grpc.WithBlock()),
 		)
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
 		}
 		client.OnError = func(err error) {
 			log.Printf("goog logging error: %s", err)
+		}
+		err = client.Ping(ctx)
+		if err != nil {
+			// Requiring a working connection to Google Cloud Logging at boot
+			// assumes that the uptime of Cloud Logging is better than our
+			// uptime of configuration for this service. We're choosing to
+			// believe we'll screw up our configuration more than that service
+			// will be down. We may be wrong, but our deploys are fast when we
+			// are.
+			log.Fatalf("unable to ping Google Cloud Logging at boot time: %s", err)
 		}
 		gclog = client.Logger(*allowLogName)
 	} else {
