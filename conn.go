@@ -85,17 +85,23 @@ type conn struct {
 func (c *conn) Read(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
+		c.errorToStats(err)
 		return 0, err
 	}
-	return c.Conn.Read(b)
+	size, err := c.Conn.Read(b)
+	c.errorToStats(err)
+	return size, err
 }
 
 func (c *conn) Write(b []byte) (int, error) {
 	err := c.handshake()
 	if err != nil {
+		c.errorToStats(err)
 		return 0, err
 	}
-	return c.Conn.Write(b)
+	size, err := c.Conn.Write(b)
+	c.errorToStats(err)
+	return size, err
 }
 
 func (c *conn) handshake() error {
@@ -106,6 +112,7 @@ func (c *conn) handshake() error {
 
 	err := c.Conn.Handshake()
 	if err != nil {
+		c.errorToStats(err)
 		return err
 	}
 	if !alreadyCounted {
