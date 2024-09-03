@@ -9,10 +9,11 @@ import (
 	"log"
 	"net"
 	"os"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 
 	tls "github.com/jmhodges/howsmyssl/tls110"
 )
@@ -178,7 +179,7 @@ func TestSweet32(t *testing.T) {
 					}
 					t.Errorf("#%d, num cipher suites given: want %d, got %d (%v, %v)", i, len(st.suites), len(ci.GivenCipherSuites), suites, ci.GivenCipherSuites)
 				}
-				if !reflect.DeepEqual(st.expected, ci.InsecureCipherSuites) {
+				if !cmp.Equal(st.expected, ci.InsecureCipherSuites) {
 					t.Errorf("#%d, insecure cipher suites found: want %s, got %s", i, st.expected, ci.InsecureCipherSuites)
 				}
 			},
