@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 15
+    groups:
+      otel:
+        applies-to: version-updates
+        patterns:
+          - "go.opentelemetry.io/otel*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
