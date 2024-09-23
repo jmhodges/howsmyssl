@@ -24,7 +24,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m')"
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v7.0.3
+        uses: peter-evans/create-pull-request@v7.0.5
         with:
           commit-message: "four month update of dev env certificates"
           title: "four month update of dev environment certificates (for ${{ steps.date.outputs.date }})"
