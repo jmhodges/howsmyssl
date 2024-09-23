@@ -1,7 +1,7 @@
 # cloud.google.com/go v0.115.1
 ## explicit; go 1.20
 cloud.google.com/go
-# cloud.google.com/go/auth v0.9.3
+# cloud.google.com/go/auth v0.9.4
 ## explicit; go 1.21
 cloud.google.com/go/auth
 cloud.google.com/go/auth/credentials
@@ -20,8 +20,8 @@ cloud.google.com/go/auth/internal/transport/cert
 # cloud.google.com/go/auth/oauth2adapt v0.2.4
 ## explicit; go 1.20
 cloud.google.com/go/auth/oauth2adapt
-# cloud.google.com/go/compute/metadata v0.5.0
-## explicit; go 1.20
+# cloud.google.com/go/compute/metadata v0.5.1
+## explicit; go 1.21
 cloud.google.com/go/compute/metadata
 # cloud.google.com/go/logging v1.11.0
 ## explicit; go 1.20
@@ -203,7 +203,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.6.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# google.golang.org/api v0.197.0
+# google.golang.org/api v0.198.0
 ## explicit; go 1.21
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -234,7 +234,7 @@ google.golang.org/genproto/googleapis/api/monitoredres
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.66.1
+# google.golang.org/grpc v1.66.2
 ## explicit; go 1.21
 google.golang.org/grpc
 google.golang.org/grpc/attributes
