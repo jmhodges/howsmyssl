@@ -10,6 +10,7 @@ updates:
         applies-to: version-updates
         patterns:
           - "go.opentelemetry.io/otel*"
+          - "go.opentelemetry.io/contrib*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
