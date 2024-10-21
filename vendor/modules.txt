@@ -1,5 +1,5 @@
-# cloud.google.com/go v0.115.1
-## explicit; go 1.20
+# cloud.google.com/go v0.116.0
+## explicit; go 1.21
 cloud.google.com/go
 # cloud.google.com/go/auth v0.9.8
 ## explicit; go 1.21
@@ -204,7 +204,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.7.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# google.golang.org/api v0.200.0
+# google.golang.org/api v0.201.0
 ## explicit; go 1.21
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
