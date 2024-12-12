@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/logging v1.12.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	github.com/google/go-cmp v0.6.0
-	golang.org/x/crypto v0.30.0
+	golang.org/x/crypto v0.31.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.32.0
 	golang.org/x/oauth2 v0.24.0
