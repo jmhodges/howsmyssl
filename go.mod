@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	cloud.google.com/go/logging v1.13.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
-	github.com/google/go-cmp v0.6.0
+	github.com/google/go-cmp v0.7.0
 	golang.org/x/crypto v0.34.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.35.0
