@@ -241,7 +241,7 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		ch <- connRes{recv: b, conn: tc}
 	}()
 	var c *tls.Conn
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		d := &net.Dialer{
 			Timeout: 500 * time.Millisecond,
 		}

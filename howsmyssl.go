@@ -78,10 +78,10 @@ func main() {
 	t := time.Now()
 	expvar.NewInt("start_time_epoch_secs").Set(t.Unix())
 	expvar.NewString("start_time_timestamp").Set(t.Format(time.RFC3339))
-	expvar.Publish("uptime_secs", expvar.Func(func() interface{} {
+	expvar.Publish("uptime_secs", expvar.Func(func() any {
 		return int64(time.Since(t) / time.Second)
 	}))
-	expvar.Publish("uptime_dur", expvar.Func(func() interface{} {
+	expvar.Publish("uptime_dur", expvar.Func(func() any {
 		return time.Since(t).String()
 	}))
 
@@ -370,7 +370,7 @@ func disallowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, strin
 	sanitizedCallback := nonAlphaNumeric.ReplaceAll([]byte(callback), []byte(""))
 
 	if len(sanitizedCallback) != 0 {
-		body := []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, disallowedOriginBody))
+		body := fmt.Appendf(nil, "%s(%s);", sanitizedCallback, disallowedOriginBody)
 		// Browsers won't run this code unless the status is OK.
 		return body, http.StatusOK, "application/javascript", nil
 
@@ -387,7 +387,7 @@ func allowedRenderJSON(r *http.Request, data *clientInfo) ([]byte, int, string, 
 		return nil, 0, htmlContentType, err
 	}
 	if len(sanitizedCallback) > 0 {
-		return []byte(fmt.Sprintf("%s(%s);", sanitizedCallback, marshalled)), http.StatusOK, "application/javascript", nil
+		return fmt.Appendf(nil, "%s(%s);", sanitizedCallback, marshalled), http.StatusOK, "application/javascript", nil
 	}
 
 	return marshalled, http.StatusOK, "application/json", nil
