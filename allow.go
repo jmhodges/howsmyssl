@@ -49,12 +49,12 @@ func newOriginAllower(ama *atomic.Pointer[allowMaps], hostname string, gclog log
 	topKOfflistDomains := topk.New(100)
 	lifetime := new(expvar.Map).Init()
 	ns.Set("lifetime", lifetime)
-	lifetime.Set("top_all_domains", expvar.Func(func() interface{} {
+	lifetime.Set("top_all_domains", expvar.Func(func() any {
 		metricsMu.RLock()
 		defer metricsMu.RUnlock()
 		return topKAllDomains.Keys()
 	}))
-	lifetime.Set("top_offlist_domains", expvar.Func(func() interface{} {
+	lifetime.Set("top_offlist_domains", expvar.Func(func() any {
 		metricsMu.RLock()
 		defer metricsMu.RUnlock()
 		return topKOfflistDomains.Keys()
