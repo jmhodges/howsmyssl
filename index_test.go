@@ -28,7 +28,7 @@ type testWriter struct {
 }
 
 func (tl testWriter) Write(b []byte) (int, error) {
-	tl.t.Logf(string(b))
+	tl.t.Log(string(b))
 	return len(b), nil
 }
 
