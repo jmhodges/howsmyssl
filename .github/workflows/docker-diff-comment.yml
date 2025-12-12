@@ -1,0 +1,187 @@
+name: Docker Image Diff Comment
+
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile'
+    types: [opened, synchronize]
+
+jobs:
+  docker-diff:
+    # Only run on Dependabot PRs
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          # Get the base branch to compare against
+          git fetch origin ${{ github.base_ref }}
+
+          # Extract old and new FROM lines from Dockerfile
+          OLD_FROM=$(git show origin/${{ github.base_ref }}:Dockerfile | grep "^FROM" | head -1)
+          NEW_FROM=$(git show ${{ github.sha }}:Dockerfile | grep "^FROM" | head -1)
+
+          # Extract image references
+          OLD_IMAGE=$(echo "$OLD_FROM" | sed 's/FROM //')
+          NEW_IMAGE=$(echo "$NEW_FROM" | sed 's/FROM //')
+
+          echo "old_image=$OLD_IMAGE" >> $GITHUB_OUTPUT
+          echo "new_image=$NEW_IMAGE" >> $GITHUB_OUTPUT
+
+          echo "Old image: $OLD_IMAGE"
+          echo "New image: $NEW_IMAGE"
+
+      - name: Install container-diff
+        run: |
+          curl -LO https://storage.googleapis.com/container-diff/latest/container-diff-linux-amd64
+          chmod +x container-diff-linux-amd64
+          sudo mv container-diff-linux-amd64 /usr/local/bin/container-diff
+          container-diff version
+
+      - name: Pull Docker images
+        run: |
+          echo "Pulling old image: ${{ steps.changed-files.outputs.old_image }}"
+          docker pull ${{ steps.changed-files.outputs.old_image }}
+
+          echo "Pulling new image: ${{ steps.changed-files.outputs.new_image }}"
+          docker pull ${{ steps.changed-files.outputs.new_image }}
+
+      - name: Compare images
+        id: compare
+        run: |
+          # Run container-diff to compare file changes
+          echo "Comparing images..."
+          container-diff diff \
+            daemon://${{ steps.changed-files.outputs.old_image }} \
+            daemon://${{ steps.changed-files.outputs.new_image }} \
+            --type=file \
+            --type=size \
+            --json > diff-output.json
+
+          # Also get human-readable output
+          container-diff diff \
+            daemon://${{ steps.changed-files.outputs.old_image }} \
+            daemon://${{ steps.changed-files.outputs.new_image }} \
+            --type=file \
+            --type=size > diff-output.txt
+
+          echo "Diff complete"
+
+      - name: Format and post comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read the diff output
+            const diffText = fs.readFileSync('diff-output.txt', 'utf8');
+            const diffJson = JSON.parse(fs.readFileSync('diff-output.json', 'utf8'));
+
+            const oldImage = '${{ steps.changed-files.outputs.old_image }}';
+            const newImage = '${{ steps.changed-files.outputs.new_image }}';
+
+            // Parse file differences
+            let addedFiles = [];
+            let removedFiles = [];
+            let modifiedFiles = [];
+
+            const fileDiff = diffJson.find(d => d.DiffType === 'File');
+            if (fileDiff && fileDiff.Diff) {
+              addedFiles = fileDiff.Diff.Adds || [];
+              removedFiles = fileDiff.Diff.Dels || [];
+              // Modified files are in both lists
+            }
+
+            // Parse size difference
+            let sizeInfo = '';
+            const sizeDiff = diffJson.find(d => d.DiffType === 'Size');
+            if (sizeDiff && sizeDiff.Diff) {
+              const size1 = sizeDiff.Diff.Image1 || 0;
+              const size2 = sizeDiff.Diff.Image2 || 0;
+              const diffBytes = size2 - size1;
+              const diffMB = (diffBytes / 1024 / 1024).toFixed(2);
+              const size1MB = (size1 / 1024 / 1024).toFixed(2);
+              const size2MB = (size2 / 1024 / 1024).toFixed(2);
+              sizeInfo = `\n**Size**: ${size1MB} MB → ${size2MB} MB (${diffMB > 0 ? '+' : ''}${diffMB} MB)`;
+            }
+
+            // Format the comment
+            let commentBody = `## 🐳 Docker Image Comparison\n\n`;
+            commentBody += `**Old Image**: \`${oldImage}\`\n`;
+            commentBody += `**New Image**: \`${newImage}\`${sizeInfo}\n\n`;
+
+            commentBody += `### File Changes\n\n`;
+            commentBody += `- **Added**: ${addedFiles.length} files\n`;
+            commentBody += `- **Removed**: ${removedFiles.length} files\n\n`;
+
+            // Truncate if too many files
+            const maxFilesToShow = 50;
+
+            if (addedFiles.length > 0) {
+              commentBody += `<details>\n<summary>Added Files (${addedFiles.length})</summary>\n\n\`\`\`\n`;
+              const filesToShow = addedFiles.slice(0, maxFilesToShow);
+              commentBody += filesToShow.map(f => f.Name).join('\n');
+              if (addedFiles.length > maxFilesToShow) {
+                commentBody += `\n... and ${addedFiles.length - maxFilesToShow} more`;
+              }
+              commentBody += `\n\`\`\`\n</details>\n\n`;
+            }
+
+            if (removedFiles.length > 0) {
+              commentBody += `<details>\n<summary>Removed Files (${removedFiles.length})</summary>\n\n\`\`\`\n`;
+              const filesToShow = removedFiles.slice(0, maxFilesToShow);
+              commentBody += filesToShow.map(f => f.Name).join('\n');
+              if (removedFiles.length > maxFilesToShow) {
+                commentBody += `\n... and ${removedFiles.length - maxFilesToShow} more`;
+              }
+              commentBody += `\n\`\`\`\n</details>\n\n`;
+            }
+
+            if (addedFiles.length === 0 && removedFiles.length === 0) {
+              commentBody += `No file changes detected between images.\n\n`;
+            }
+
+            commentBody += `---\n`;
+            commentBody += `*Full diff output available in [workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})*\n`;
+            commentBody += `<!-- docker-diff-bot-comment -->`;
+
+            // Check if we already commented
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.body.includes('<!-- docker-diff-bot-comment -->')
+            );
+
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody
+              });
+              console.log('Created new comment');
+            }
