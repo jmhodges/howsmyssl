@@ -1,8 +1,6 @@
 module github.com/jmhodges/howsmyssl
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.25.0
 
 require (
 	cloud.google.com/go/logging v1.13.2
@@ -10,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	golang.org/x/crypto v0.48.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	golang.org/x/oauth2 v0.35.0
 	google.golang.org/api v0.267.0
 )
