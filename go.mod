@@ -8,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	golang.org/x/crypto v0.49.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
-	golang.org/x/net v0.51.0
+	golang.org/x/net v0.52.0
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.269.0
 )
