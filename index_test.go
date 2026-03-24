@@ -104,7 +104,12 @@ func TestACMERedirect(t *testing.T) {
 			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge",
 			acmeRedirectURL: "http://example.com",
 			expected:        "/.well-known/acme-challenge/",
-			code:            http.StatusMovedPermanently,
+			// As of Go 1.26, http.ServeMux will redirect requests that are
+			// missing a trailing "/" to the same path with a trailing "/" using
+			// 307 Temporary Redirect instead of 301 Moved Permanently. See
+			// https://github.com/golang/go/issues/50243 and
+			// https://go.dev/doc/go1.26#nethttppkgnethttp
+			code: http.StatusTemporaryRedirect,
 		},
 		{
 			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/",
