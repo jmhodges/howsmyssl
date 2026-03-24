@@ -9,6 +9,10 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write # passed through to deploy.yml for Google OIDC
+  contents: read
+
 jobs:
   build:
     name: Build

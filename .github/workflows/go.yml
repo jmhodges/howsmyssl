@@ -2,6 +2,9 @@ name: Go
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build
