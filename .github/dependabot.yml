@@ -11,6 +11,10 @@ updates:
         patterns:
           - "go.opentelemetry.io/otel*"
           - "go.opentelemetry.io/contrib*"
+      k8s:
+        applies-to: version-updates
+        patterns:
+          - "k8s.io/*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
