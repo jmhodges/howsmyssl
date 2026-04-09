@@ -1403,6 +1403,8 @@ func (c *Conn) ConnectionState() ConnectionState {
 		state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected
 		state.SessionTicketsSupported = c.clientHello.ticketSupported
 		state.SupportedVersions = c.clientHello.supportedVersions
+		state.SupportedCurves = make([]CurveID, len(c.clientHello.supportedCurves))
+		copy(state.SupportedCurves, c.clientHello.supportedCurves)
 	}
 
 	return state

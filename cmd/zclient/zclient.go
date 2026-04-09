@@ -140,6 +140,8 @@ func loadRootCACertPool(caCertPath string) *zx509.CertPool {
 
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
+	GivenNamedGroups               []string            `json:"given_named_groups"`
+	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`           // neutral (temporarily)
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
 	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
 	TLSCompressionSupported        bool                `json:"tls_compression_supported"`            // bad if true

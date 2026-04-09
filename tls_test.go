@@ -187,6 +187,52 @@ func TestSweet32(t *testing.T) {
 	}
 }
 
+func TestPostQuantumDetection(t *testing.T) {
+	t.Run("WithMLKEM", func(t *testing.T) {
+		clientConf := &tls.Config{
+			CurvePreferences: []tls.CurveID{tls.X25519, 0x11ec},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		if !ci.PostQuantumKeyAgreement {
+			t.Errorf("PostQuantumKeyAgreement: want true, got false")
+		}
+		if len(ci.GivenNamedGroups) != 2 {
+			t.Errorf("GivenNamedGroups length: want 2, got %d (%v)", len(ci.GivenNamedGroups), ci.GivenNamedGroups)
+		}
+		if ci.GivenNamedGroups[0] != "x25519" {
+			t.Errorf("GivenNamedGroups[0]: want x25519, got %s", ci.GivenNamedGroups[0])
+		}
+		if ci.GivenNamedGroups[1] != "X25519MLKEM768" {
+			t.Errorf("GivenNamedGroups[1]: want X25519MLKEM768, got %s", ci.GivenNamedGroups[1])
+		}
+	})
+
+	t.Run("WithoutMLKEM", func(t *testing.T) {
+		clientConf := &tls.Config{
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		if ci.PostQuantumKeyAgreement {
+			t.Errorf("PostQuantumKeyAgreement: want false, got true")
+		}
+		if len(ci.GivenNamedGroups) != 2 {
+			t.Errorf("GivenNamedGroups length: want 2, got %d (%v)", len(ci.GivenNamedGroups), ci.GivenNamedGroups)
+		}
+		if ci.GivenNamedGroups[0] != "x25519" {
+			t.Errorf("GivenNamedGroups[0]: want x25519, got %s", ci.GivenNamedGroups[0])
+		}
+		if ci.GivenNamedGroups[1] != "secp256r1" {
+			t.Errorf("GivenNamedGroups[1]: want secp256r1, got %s", ci.GivenNamedGroups[1])
+		}
+	})
+}
+
 var serverConf *tls.Config
 var rootCA *x509.Certificate
 

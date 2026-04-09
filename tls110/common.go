@@ -181,6 +181,7 @@ type ConnectionState struct {
 	AbleToDetectNMinusOneSplitting   bool
 	SessionTicketsSupported          bool
 	SupportedVersions                []uint16
+	SupportedCurves                  []CurveID
 }
 
 // ClientAuthType declares the policy the server will follow for
