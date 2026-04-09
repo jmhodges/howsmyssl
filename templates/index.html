@@ -262,6 +262,37 @@
             </div>
           </div>
           <div class="row">
+            <div class="col-sm-4">
+              <h2>Post-Quantum Key Agreement</h2>
+              {{if .PostQuantumKeyAgreement}}
+              <p><span class="label okay">Good</span> Your client supports
+                post-quantum key agreement via an
+                <a href="https://en.wikipedia.org/wiki/ML-KEM">ML-KEM</a>
+                hybrid. This protects your connections against future
+                quantum computer attacks by combining a post-quantum
+                algorithm with classical key exchange.</p>
+              {{else}}
+              <p><span class="label improvable">Improvable</span>
+                Your client does not support post-quantum key agreement.
+                Without an ML-KEM hybrid key exchange, your traffic could
+                be stored by adversaries today and decrypted once
+                sufficiently powerful quantum computers become available
+                (a "harvest now, decrypt later" attack).</p>
+              {{end}}
+            </div>
+            <div class="col-sm-4">
+              <h2>Given Named Groups</h2>
+              <p>The named groups (elliptic curves and key agreement methods)
+                your client said it supports, in the order it sent them,
+                are:</p>
+              <ul>
+                {{range .GivenNamedGroups}}
+                <li>{{.}}</li>
+                {{end}}
+              </ul>
+            </div>
+          </div>
+          <div class="row">
             {{if .UnknownCipherSuiteSupported}}
             <div class="col-sm-4">
               <h2>Unknown Cipher Suites Supported</h2>

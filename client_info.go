@@ -24,6 +24,8 @@ type clientInfo struct {
 	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
 	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
+	GivenNamedGroups               []string            `json:"given_named_groups"`
+	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
 }
@@ -118,6 +120,18 @@ func pullClientInfo(c *conn) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
+	for _, gid := range st.SupportedCurves {
+		id := uint16(gid)
+		name, found := allNamedGroups[id]
+		if !found {
+			name = fmt.Sprintf("Unknown named group: %#04x", id)
+		}
+		if postQuantumGroups[id] {
+			d.PostQuantumKeyAgreement = true
+		}
+		d.GivenNamedGroups = append(d.GivenNamedGroups, name)
+	}
+
 	d.SessionTicketsSupported = st.SessionTicketsSupported
 
 	for _, cm := range st.CompressionMethods {
