@@ -142,7 +142,7 @@ func main() {
 		googConf := loadGoogleServiceAccount(*googAcctConf)
 		client, err := logging.NewClient(ctx,
 			googConf.ProjectID,
-			option.WithCredentialsFile(*googAcctConf),
+			option.WithAuthCredentialsFile(option.ServiceAccount, *googAcctConf),
 		)
 		if err != nil {
 			log.Fatalf("unable to make Google Cloud Logging client: %s", err)
