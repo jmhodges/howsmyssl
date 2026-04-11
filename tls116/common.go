@@ -17,7 +17,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"internal/cpu"
+	"golang.org/x/sys/cpu"
 	"io"
 	"net"
 	"runtime"
