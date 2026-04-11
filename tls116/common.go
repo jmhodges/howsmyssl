@@ -276,6 +276,14 @@ type ConnectionState struct {
 	// RFC 7627, and https://mitls.org/pages/attacks/3SHAKE#channelbindings.
 	TLSUnique []byte
 
+	// Added for howsmyssl's use
+	ClientCipherSuites               []uint16
+	CompressionMethods               []uint8
+	NMinusOneRecordSplittingDetected bool
+	AbleToDetectNMinusOneSplitting   bool
+	SessionTicketsSupported          bool
+	SupportedVersions                []uint16
+
 	// ekm is a closure exposed via ExportKeyingMaterial.
 	ekm func(label string, context []byte, length int) ([]byte, error)
 }

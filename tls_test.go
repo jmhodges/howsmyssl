@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls110 "github.com/jmhodges/howsmyssl/tls110"
+	tls116 "github.com/jmhodges/howsmyssl/tls116"
 	ztls "github.com/zmap/zcrypto/tls"
 )
 
@@ -28,7 +28,7 @@ func TestBEASTVuln(t *testing.T) {
 	t.Run("TLS10OnlyCBC", func(t *testing.T) {
 		clientConf := &ztls.Config{
 			MaxVersion:   ztls.VersionTLS10,
-			CipherSuites: []uint16{tls110.TLS_RSA_WITH_AES_128_CBC_SHA},
+			CipherSuites: []uint16{tls116.TLS_RSA_WITH_AES_128_CBC_SHA},
 		}
 
 		c := connect(t, clientConf)
@@ -53,7 +53,7 @@ func TestBEASTVuln(t *testing.T) {
 	t.Run("TLS10NoCBC", func(t *testing.T) {
 		clientConf := &ztls.Config{
 			MaxVersion:   ztls.VersionTLS10,
-			CipherSuites: []uint16{tls110.TLS_RSA_WITH_RC4_128_SHA},
+			CipherSuites: []uint16{tls116.TLS_RSA_WITH_RC4_128_SHA},
 		}
 		c := connect(t, clientConf)
 		st := c.ConnectionState()
@@ -71,7 +71,7 @@ func TestBEASTVuln(t *testing.T) {
 
 	t.Run("TLS12NoCBC", func(t *testing.T) {
 		clientConf := &ztls.Config{
-			CipherSuites: []uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305},
+			CipherSuites: []uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305},
 		}
 
 		c := connect(t, clientConf)
@@ -127,7 +127,7 @@ func TestSweet32(t *testing.T) {
 	// client is vulnerable to Sweet32 if the Sweet32 vulnerable ciphersuites
 	// are last or would be last except for some known meta ciphersuites like
 	// GREASE, etc. In order to support testing this behavior, we had to
-	// hardcode into tls110/handshake_client.go the meta ciphersuites we support
+	// hardcode into tls116/handshake_client.go the meta ciphersuites we support
 	// here to pass them to the server without dropping them like the client
 	// usually would. The GREASE and renegotiation test cases (3 and 4) use
 	// connectGoTLS because zcrypto strips those values from the ClientHello.
@@ -136,7 +136,7 @@ func TestSweet32(t *testing.T) {
 	tests := []sweetTest{
 		{
 			bad,
-			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+			[]uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls116.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls116.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": {sweet32Reason},
 				"TLS_RSA_WITH_3DES_EDE_CBC_SHA":       {sweet32Reason},
@@ -144,24 +144,24 @@ func TestSweet32(t *testing.T) {
 		},
 		{
 			bad,
-			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
+			[]uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls116.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls116.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
 			map[string][]string{
 				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": {sweet32Reason},
 			},
 		},
 		{
 			okay,
-			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
+			[]uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls116.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls116.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls116.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
 			map[string][]string{},
 		},
 		{
 			okay,
-			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS},
+			[]uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls116.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls116.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls116.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS},
 			map[string][]string{},
 		},
 		{
 			okay,
-			[]uint16{tls110.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls110.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls110.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls110.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls110.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS},
+			[]uint16{tls116.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tls116.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, tls116.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256, tls116.TLS_RSA_WITH_3DES_EDE_CBC_SHA, tls116.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS},
 			map[string][]string{},
 		},
 	}
@@ -196,7 +196,7 @@ func TestSweet32(t *testing.T) {
 	}
 }
 
-var serverConf *tls110.Config
+var serverConf *tls116.Config
 var rootCA *x509.Certificate
 
 func init() {
@@ -237,7 +237,7 @@ func connect(t *testing.T, clientConf *ztls.Config) *conn {
 		t.Fatalf("configureZTLSConfig: %s", err)
 	}
 
-	tl, err := tls110.Listen("tcp", "localhost:0", serverConf)
+	tl, err := tls116.Listen("tcp", "localhost:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
@@ -322,7 +322,7 @@ func connectGoTLS(t *testing.T, clientConf *gotls.Config) *conn {
 	clientConf.RootCAs = x509.NewCertPool()
 	clientConf.RootCAs.AddCert(rootCA)
 
-	tl, err := tls110.Listen("tcp", "localhost:0", serverConf)
+	tl, err := tls116.Listen("tcp", "localhost:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}

@@ -18,7 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls110 "github.com/jmhodges/howsmyssl/tls110"
+	tls116 "github.com/jmhodges/howsmyssl/tls116"
 	ztls "github.com/zmap/zcrypto/tls"
 )
 
@@ -235,7 +235,7 @@ func TestJSONAPI(t *testing.T) {
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))
 
-	tl, err := tls110.Listen("tcp", "127.0.0.1:0", serverConf)
+	tl, err := tls116.Listen("tcp", "127.0.0.1:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
