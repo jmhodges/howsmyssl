@@ -221,6 +221,10 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		t.Fatalf("NewListener: %s", err)
 	}
 	li := newListener(tl, new(expvar.Map).Init())
+	// bytesLen is picked to be large enough to trigger the BEAST vuln detection
+	// if the client is vulnerable but small enough to not cause too much time
+	// spent in the tests.
+	bytesLen := 256
 	type connRes struct {
 		recv []byte
 		conn *conn
@@ -233,7 +237,7 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 			errCh <- err
 			return
 		}
-		b := make([]byte, 1)
+		b := make([]byte, bytesLen)
 		io.ReadFull(c, b)
 		c.Close()
 		li.Close()
@@ -258,7 +262,7 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 		t.Fatalf("Dial: %s", err)
 	}
 	defer c.Close()
-	sent := []byte("a")
+	sent := bytes.Repeat([]byte("a"), bytesLen)
 	_, err = c.Write(sent)
 	if err != nil {
 		logErrFromServer(t, errCh)
