@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io"
@@ -12,13 +13,18 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 
 	ztls "github.com/zmap/zcrypto/tls"
+	zx509 "github.com/zmap/zcrypto/x509"
 )
 
 var (
 	hostPort = flag.String("h", "localhost:10443", "host:port to connect to")
 	rawTLS   = flag.Bool("raw", false, "connect only over TLS version, no HTTP")
+	// as of this writing, zcrypto doesn't support system CA roots on macOS. See
+	// https://github.com/zmap/zcrypto/issues/484
+	caCert = flag.String("ca-cert", "", "path to CA cert (in PEM format) to trust. If connecting to localhost, this will default to the development CA cert included in the repo.")
 )
 
 func main() {
@@ -35,15 +41,6 @@ func main() {
 	}
 
 	conf := &ztls.Config{
-		// InsecureSkipVerify is required to connect to the local host version
-		// of the server, which we typically are. We could do something
-		// intereting with VerifyPeerCertificate and embedding the current dev
-		// cert in this file, but as of writing, the layout of the repo means we
-		// can't because embed can't go up parent directories and the top-level
-		// directory is a binary.
-		// #nosec G402
-		InsecureSkipVerify: true,
-
 		// TLS 1.0 with CBC suite
 		// MinVersion:         ztls.VersionTLS10,
 		// MaxVersion:         ztls.VersionTLS10,
@@ -54,8 +51,16 @@ func main() {
 		// MaxVersion:         ztls.VersionTLS13,
 		// CipherSuites:       []uint16{ztls.TLS_CHACHA20_POLY1305_SHA256},
 		// CurvePreferences:   []ztls.CurveID{ztls.X25519MLKEM768},
-
 	}
+	if *caCert != "" {
+		pool := loadRootCACertPool(*caCert)
+		conf.RootCAs = pool
+	} else if *caCert == "" && host == "localhost" {
+		// If connecting to localhost and no CA cert was provided, default to the development CA cert included in the repo.
+		pool := loadRootCACertPool("config/development_cert.pem")
+		conf.RootCAs = pool
+	}
+
 	if *rawTLS {
 		conn, err := ztls.Dial("tcp", net.JoinHostPort(host, port), conf)
 		if err != nil {
@@ -98,6 +103,23 @@ func main() {
 		log.Fatalf("unable to marshal client info: %v", err)
 	}
 	fmt.Println(string(out))
+}
+
+func loadRootCACertPool(caCertPath string) *zx509.CertPool {
+	certBytes, err := os.ReadFile(caCertPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cblock, _ := pem.Decode(certBytes)
+
+	certs, err := zx509.ParseCertificates(cblock.Bytes)
+	if err != nil {
+		log.Fatalf("zx509.ParseCertificates: %s", err)
+	}
+	rootCA := certs[0]
+	pool := zx509.NewCertPool()
+	pool.AddCert(rootCA)
+	return pool
 }
 
 type clientInfo struct {
