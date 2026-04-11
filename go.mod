@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/logging v1.14.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	github.com/google/go-cmp v0.7.0
+	github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
 	golang.org/x/crypto v0.49.0
 	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.52.0
@@ -27,6 +28,7 @@ require (
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.21.0 // indirect
+	github.com/weppos/publicsuffix-go v0.50.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.67.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect

@@ -102,6 +102,27 @@ github.com/googleapis/gax-go/v2/internallog
 github.com/googleapis/gax-go/v2/internallog/grpclog
 github.com/googleapis/gax-go/v2/internallog/internal
 github.com/googleapis/gax-go/v2/iterator
+# github.com/weppos/publicsuffix-go v0.50.3
+## explicit; go 1.24.0
+github.com/weppos/publicsuffix-go/publicsuffix
+# github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
+## explicit; go 1.25.0
+github.com/zmap/zcrypto/cryptobyte
+github.com/zmap/zcrypto/cryptobyte/asn1
+github.com/zmap/zcrypto/ct
+github.com/zmap/zcrypto/ct/asn1
+github.com/zmap/zcrypto/ct/x509
+github.com/zmap/zcrypto/ct/x509/pkix
+github.com/zmap/zcrypto/dsa
+github.com/zmap/zcrypto/encoding/asn1
+github.com/zmap/zcrypto/internal/cpu
+github.com/zmap/zcrypto/internal/randutil
+github.com/zmap/zcrypto/json
+github.com/zmap/zcrypto/tls
+github.com/zmap/zcrypto/util
+github.com/zmap/zcrypto/x509
+github.com/zmap/zcrypto/x509/ct
+github.com/zmap/zcrypto/x509/pkix
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
@@ -149,6 +170,7 @@ golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/cryptobyte
 golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
