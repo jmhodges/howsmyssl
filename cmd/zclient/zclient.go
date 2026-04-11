@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	ztls "github.com/zmap/zcrypto/tls"
 	zx509 "github.com/zmap/zcrypto/x509"
@@ -28,8 +30,10 @@ var (
 )
 
 func main() {
-	flag.Parse()
+	ctx, cancel := context.WithTimeoutCause(context.Background(), 5*time.Second, errors.New("total request time exceeded"))
+	defer cancel()
 
+	flag.Parse()
 	if *hostPort == "" {
 		log.Fatal("-h host:port is required")
 	}
@@ -52,6 +56,7 @@ func main() {
 		// CipherSuites:       []uint16{ztls.TLS_CHACHA20_POLY1305_SHA256},
 		// CurvePreferences:   []ztls.CurveID{ztls.X25519MLKEM768},
 	}
+
 	if *caCert != "" {
 		pool := loadRootCACertPool(*caCert)
 		conf.RootCAs = pool
@@ -61,12 +66,19 @@ func main() {
 		conf.RootCAs = pool
 	}
 
+	zDialer := &ztls.Dialer{
+		Config: conf,
+	}
 	if *rawTLS {
-		conn, err := ztls.Dial("tcp", net.JoinHostPort(host, port), conf)
+		netConn, err := zDialer.DialContext(ctx, "tcp", net.JoinHostPort(host, port))
 		if err != nil {
 			log.Fatalf("unable to connect as just TLS: %v", err)
 		}
-		defer conn.Close()
+		defer netConn.Close()
+		conn, ok := netConn.(*ztls.Conn)
+		if !ok {
+			log.Fatalf("unable to convert net.Conn to ztls.Conn")
+		}
 		state := conn.ConnectionState()
 		fmt.Printf("version: %04x\n", state.Version)
 		fmt.Printf("cipher:  %04x\n", state.CipherSuite)
@@ -76,9 +88,7 @@ func main() {
 
 	client := http.Client{
 		Transport: &http.Transport{
-			DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return ztls.Dial(network, addr, conf)
-			},
+			DialTLSContext: zDialer.DialContext,
 		},
 	}
 	apiURLRaw := &url.URL{
@@ -87,7 +97,11 @@ func main() {
 		Path:   "/a/check",
 	}
 	apiURL := apiURLRaw.String()
-	resp, err := client.Get(apiURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
+	if err != nil {
+		log.Fatalf("unable to create HTTP request: %v", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("unable to perform HTTP GET /a/check: %v", err)
 	}
