@@ -275,19 +275,23 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, map[CurveID]tls13KeyShare, er
 	possibleCipherSuites := config.cipherSuites()
 	hello.cipherSuites = make([]uint16, 0, len(possibleCipherSuites))
 
-	for _, suiteId := range possibleCipherSuites {
-		for _, suite := range cipherSuites {
-			if suite.id != suiteId {
-				continue
-			}
-			// Don't advertise TLS 1.2-only cipher suites unless
-			// we're attempting TLS 1.2.
-			if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+	if !config.ForceSuites {
+		for _, suiteId := range possibleCipherSuites {
+			for _, suite := range cipherSuites {
+				if suite.id != suiteId {
+					continue
+				}
+				// Don't advertise TLS 1.2-only cipher suites unless
+				// we're attempting TLS 1.2.
+				if hello.vers < VersionTLS12 && suite.flags&suiteTLS12 != 0 {
+					break
+				}
+				hello.cipherSuites = append(hello.cipherSuites, suiteId)
 				break
 			}
-			hello.cipherSuites = append(hello.cipherSuites, suiteId)
-			break
 		}
+	} else {
+		hello.cipherSuites = append(hello.cipherSuites, possibleCipherSuites...)
 	}
 
 	_, err := io.ReadFull(config.rand(), hello.random)
