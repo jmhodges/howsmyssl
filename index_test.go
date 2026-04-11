@@ -9,6 +9,7 @@ import (
 	"expvar"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	tls110 "github.com/jmhodges/howsmyssl/tls110"
-	"golang.org/x/exp/slog"
 )
 
 type testWriter struct {

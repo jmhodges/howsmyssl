@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -25,7 +26,6 @@ import (
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
 	tls "github.com/jmhodges/howsmyssl/tls110"
-	"golang.org/x/exp/slog"
 	"google.golang.org/api/option"
 )
 
