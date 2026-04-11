@@ -6,6 +6,7 @@ import (
 	"expvar"
 	"fmt"
 	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,7 +19,6 @@ import (
 	"cloud.google.com/go/logging"
 
 	topk "github.com/dgryski/go-topk"
-	"golang.org/x/exp/slog"
 	"golang.org/x/net/publicsuffix"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
