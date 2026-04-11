@@ -533,7 +533,6 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 			tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
 		},
 	}
-	tlsConf.BuildNameToCertificate()
 	return tlsConf
 }
 

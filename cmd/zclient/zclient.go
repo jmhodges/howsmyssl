@@ -47,7 +47,7 @@ func main() {
 	conf := &ztls.Config{
 		// TLS 1.0 with CBC suite
 		// MinVersion:         ztls.VersionTLS10,
-		// MaxVersion:         ztls.VersionTLS10,
+		MaxVersion: ztls.VersionTLS10,
 		// CipherSuites:       []uint16{ztls.TLS_RSA_WITH_AES_128_CBC_SHA},
 
 		// TLS 1.3 post-quantum
