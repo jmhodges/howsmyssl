@@ -3,14 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"expvar"
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	tls110 "github.com/jmhodges/howsmyssl/tls110"
+	ztls "github.com/zmap/zcrypto/tls"
 )
 
 type testWriter struct {
@@ -250,21 +249,22 @@ func TestJSONAPI(t *testing.T) {
 	defer srv.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
+
+	tlsConf := &ztls.Config{
+		MaxVersion: ztls.VersionTLS12,
+	}
+	err = configureZTLSConfig(tlsConf)
+	if err != nil {
+		t.Fatalf("configureZTLSConfig: %s", err)
+	}
 	c := &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
+			DialTLSContext: (&ztls.Dialer{
+				Config: tlsConf,
 			}).DialContext,
 			MaxIdleConns:          100,
 			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return errors.New("no redirects should be seen")
@@ -343,5 +343,5 @@ func TestJSONAPI(t *testing.T) {
 }
 
 const (
-	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_AES_128_GCM_SHA256","TLS_AES_256_GCM_SHA384","TLS_CHACHA20_POLY1305_SHA256"],"ephemeral_keys_supported":true,"session_ticket_supported":false,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.3","rating":"Probably Okay"}`
+	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_RSA_WITH_AES_128_GCM_SHA256","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_CBC_SHA","TLS_RSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA","TLS_RSA_WITH_3DES_EDE_CBC_SHA"],"ephemeral_keys_supported":true,"session_ticket_supported":true,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.2","rating":"Probably Okay"}`
 )

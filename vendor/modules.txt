@@ -105,7 +105,7 @@ github.com/googleapis/gax-go/v2/iterator
 # github.com/weppos/publicsuffix-go v0.50.3
 ## explicit; go 1.24.0
 github.com/weppos/publicsuffix-go/publicsuffix
-# github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
+# github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82 => github.com/jmhodges/zcrypto v0.0.0-20260411041029-ed21bbbb6030
 ## explicit; go 1.25.0
 github.com/zmap/zcrypto/cryptobyte
 github.com/zmap/zcrypto/cryptobyte/asn1
@@ -174,8 +174,6 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-# golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
-## explicit; go 1.20
 # golang.org/x/net v0.52.0
 ## explicit; go 1.25.0
 golang.org/x/net/http/httpguts
@@ -366,3 +364,4 @@ google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
+# github.com/zmap/zcrypto => github.com/jmhodges/zcrypto v0.0.0-20260411041029-ed21bbbb6030

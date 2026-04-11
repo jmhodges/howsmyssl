@@ -8,7 +8,6 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
 	golang.org/x/crypto v0.49.0
-	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 	golang.org/x/net v0.52.0
 	golang.org/x/oauth2 v0.36.0
 	google.golang.org/api v0.275.0
@@ -45,3 +44,5 @@ require (
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/zmap/zcrypto => github.com/jmhodges/zcrypto v0.0.0-20260411041029-ed21bbbb6030
