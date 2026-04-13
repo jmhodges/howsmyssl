@@ -100,25 +100,3 @@ var postQuantumGroups = map[uint16]bool{
 	0x11ec: true, // X25519MLKEM768
 	0x11ed: true, // SecP384r1MLKEM1024
 }
-
-// greaseGroups are the GREASE named group values. They are not real named
-// groups but are used to test server tolerance of unknown values.
-// See https://www.rfc-editor.org/rfc/rfc8701
-var greaseGroups = map[uint16]bool{
-	0x0A0A: true,
-	0x1A1A: true,
-	0x2A2A: true,
-	0x3A3A: true,
-	0x4A4A: true,
-	0x5A5A: true,
-	0x6A6A: true,
-	0x7A7A: true,
-	0x8A8A: true,
-	0x9A9A: true,
-	0xAAAA: true,
-	0xBABA: true,
-	0xCACA: true,
-	0xDADA: true,
-	0xEAEA: true,
-	0xFAFA: true,
-}
