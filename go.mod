@@ -3,7 +3,7 @@ module github.com/jmhodges/howsmyssl
 go 1.26.1
 
 require (
-	cloud.google.com/go/logging v1.14.0
+	cloud.google.com/go/logging v1.16.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	github.com/google/go-cmp v0.7.0
 	github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
@@ -18,7 +18,7 @@ require (
 	cloud.google.com/go/auth v0.20.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	cloud.google.com/go/longrunning v0.8.0 // indirect
+	cloud.google.com/go/longrunning v0.9.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -39,7 +39,7 @@ require (
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260401001100-f93e5f3e9f0f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
