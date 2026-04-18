@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/logging v1.16.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
 	github.com/google/go-cmp v0.7.0
-	github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82
+	github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16
 	golang.org/x/crypto v0.50.0
 	golang.org/x/net v0.53.0
 	golang.org/x/oauth2 v0.36.0

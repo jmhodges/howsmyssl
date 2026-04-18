@@ -64,6 +64,8 @@ github.com/weppos/publicsuffix-go v0.50.3 h1:eT5dcjHQcVDNc0igpFEsGHKIip30feuB2zu
 github.com/weppos/publicsuffix-go v0.50.3/go.mod h1:/rOa781xBykZhHK/I3QeHo92qdDKVmKZKF7s8qAEM/4=
 github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82 h1:6P5C5HIjCclJBqgiBgzszcsNZ+t57ZvB8bHNj+QOsDs=
 github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82/go.mod h1:9y/jn+HVkT5tGgFebbi2bb8OHyU8q1TX4OGj0M8bsHg=
+github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16 h1:hxpQ57/tgLRAziHn6G9DFEYY9uenJ7PlsNtUqYgW+so=
+github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16/go.mod h1:9y/jn+HVkT5tGgFebbi2bb8OHyU8q1TX4OGj0M8bsHg=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
