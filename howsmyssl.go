@@ -427,7 +427,7 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		renderJSON = disallowedRenderJSON
 	}
 
-	ah.allowLogger.InfoContext(r.Context(), "API allowance decision", "detectedDomain", detectedDomain, "allowed", ok, "originHeader", r.Header.Get("Origin"), "referrerHeader", r.Header.Get("Referer"), "isJSONP", r.FormValue("callback") != "")
+	ah.allowLogger.InfoContext(r.Context(), "API allowance decision", "detectedDomain", detectedDomain, "allowed", ok, "originHeader", r.Header.Get("Origin"), "referrerHeader", r.Header.Get("Referer"))
 	handleTLSClientInfo(w, r, apiStatuses, renderJSON)
 }
 
