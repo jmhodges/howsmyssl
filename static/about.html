@@ -306,26 +306,30 @@
             also supports it. Of course, some of these suites don't require the
             server to prove that they can serve the traffic for the site they
             claim to, making them easy to man-in-the-middle.</p>
-          <p> The first among these reasons is if the size of the keys created
+          <p>The first among these reasons is if the size of the keys created
             by the cipher suite are too small. Small keys are easier to guess
             (or "brute force"), and there are many cipher suites that have been
             defined with far, far too small keys.</p>
-          <p>A cipher suite supported by the client will be put here if it
-            does not ensure that the server you connected to was actually for
-            the website you wanted. Cipher suites are to do so by inspecting the
-            certificate the server sends and verifying it trusts the other
-            entities (called "certificate authorities") that have "signed" the
-            certificate. This is called the "certificate authority trust model",
-            and if this sounds crazy to you on many levels, you are not
-            alone. It's currently the best security we have,
-            however. <a href="https://tack.io/index.html">TACK</a> is one good
-            attempt to, in a backwards compatible way, replace it.</p>
+          <p>Another reason a cipher suite supported by the client will be
+          marked insecure if it does not ensure that the server you connected to
+          is actually the server the client intended to connect to. Cipher
+          suites can specify what algorithms are used to inspect the certificate
+          the server sends and verify that the client should trust other
+          entities (called "certificate authorities") that have "signed" the
+          certificate to prove the server's identity. This is called the
+          "certificate authority trust model". These insecure cipher suites
+          include algorithms that do nothing to verify the server's identity,
+          mooting their purpose.</p>
           <p>A cipher suite may also be added if it's a "null cipher suite"
             which is a funny way of saying the cipher does not encrypt the data
             at all. In a truly bizarre set of decisions these were put in the
             SSL/TLS specifications even though offer no privacy or security for
             the user or the web service. These are giant, glowing "rob me" signs
             on the web.</p>
+          <p>Cipher suites can also be added here if they're known to have
+          vulnerabilities that make it possible for an attacker to spoof data to
+          the other side or decrypt any data they've observed from connections
+          using that cipher suite.</p>
           <p>Finally, a cipher suite can be added here if it is known to be
             obsolete in some way. Currently, some NSS clients (like Firefox)
             will allow for the use of under-specified or broken cipher suites
@@ -345,31 +349,29 @@
             vast, vast majority of unvetted security systems are entirely
             insecure. Clients supporting unknown cipher suites will be marked
             as <span class="label bad">Bad</span>.</p>
-          
+
           <h4 class="fragpadded" id="given-cipher-suites">Given Cipher Suites</h4>
           <p>This section is one of the most often needed by developers and was
-            the original reason this webapp was made. It simply prints out the
-            standard names of the cipher suites that the client says it supports
-            in the same order the client gave them to the server. This ordering
-            is sometimes used to determine which cipher suite a client prefers,
-            but TLS servers tend to choose their own preference of those cipher
-            suits. No rating will be given in this section.</p>
+          the original reason this webapp was made. It simply prints out the
+          standard names of the cipher suites that the client says it supports
+          in the same order the client gave them to the server. This ordering is
+          sometimes used to determine which cipher suite a client prefers, but
+          TLS servers tend to choose their own preference of those cipher
+          suites. No rating will be given in this section.</p>
 
           <hr />
           <h3 class="fragpadded" id="tls-vs-ssl">TLS vs SSL</h3>
-          <p>Okay, last thing. The jargon around is a little funny, so
-            let's be a little more explicit. The 'S' in "HTTPS" is the
-            TLS protocol. When folks refer to the
-            "<a href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
-            they are referring to the most common of modern protocols
-            of encrypting data across the
-            internet. "<a href="https://en.wikipedia.org/wiki/SSL">SSL</a>",
-            when used by experts, refers to the older versions of these
-            protocols. In general, people use "SSL" and "TLS"
-            interchangeably, but that's changing towards everyone
-            saying "TLS". "TLS" is what everyone will call it in the
-            future, while "SSL" is the phrase everyone knows right
-            now.</p>
+          <p>Okay, last thing. The jargon around this is a little funny, so
+          let's be more explicit. The 'S' in "HTTPS" is the TLS protocol. When
+          folks refer to the "<a
+          href="https://en.wikipedia.org/wiki/Transport_Layer_Security">TLS</a>"
+          they are referring to the most common of modern protocols of
+          encrypting data across the internet. "<a
+          href="https://en.wikipedia.org/wiki/SSL">SSL</a>", when used by
+          experts, refers to the older versions of these protocols. In general,
+          people use "SSL" and "TLS" interchangeably, but that's changing
+          towards everyone saying "TLS". "TLS" is what everyone will call it in
+          the future, while "SSL" is the phrase everyone knows right now.</p>
 
           <p>(Heck, at some point, this site will redirect
             to <a href="https://howsmytls.com">howsmytls.com</a> instead
@@ -383,7 +385,7 @@
             mailing list</a>. Notice a
             bug? <a href="https://github.com/jmhodges/howsmyssl/issues">Create
             an issue</a> on
-            the <a href="https://github.com/jmhodges/howsmyssl">Github
+            the <a href="https://github.com/jmhodges/howsmyssl">GitHub
             repository</a>.</p>
 
           <p>Feedback is very welcome.</p>
