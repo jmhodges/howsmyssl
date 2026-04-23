@@ -68,7 +68,7 @@ var allNamedGroups = map[uint16]string{
 	0x0103: "ffdhe6144",
 	0x0104: "ffdhe8192",
 
-	// ML-KEM hybrid post-quantum key agreement groups (RFC 9180)
+	// ML-KEM hybrid post-quantum key agreement groups (draft-ietf-tls-ecdhe-mlkem-04)
 	0x11eb: "SecP256r1MLKEM768",
 	0x11ec: "X25519MLKEM768",
 	0x11ed: "SecP384r1MLKEM1024",
