@@ -45,6 +45,8 @@ func main() {
 	}
 
 	conf := &ztls.Config{
+		ForceSuites: true, // Required to test the server-side detection of cipher suites the client doesn't actually support.
+
 		// TLS 1.0 with CBC suite
 		// MinVersion:         ztls.VersionTLS10,
 		MaxVersion: ztls.VersionTLS10,
