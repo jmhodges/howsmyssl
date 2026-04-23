@@ -131,6 +131,28 @@
               <p><a href="/s/about.html/#version">Learn More</a></p>
             </div>
             <div class="col-sm-4">
+              <h2>Post-Quantum Key Agreement</h2>
+              {{if .PostQuantumKeyAgreement}}
+              <p><span class="label okay">Good</span> Your client supports
+              post-quantum key agreement. This protects your connections against
+              attacks by future cryptographically-relevant quantum
+              computers.</p>
+              {{else}}
+              <p><span class="label improvable">Improvable</span>
+                Your client does not support post-quantum key agreement. Without
+                that support, your traffic could be stored by adversaries today
+                and decrypted once sufficiently powerful quantum computers
+                become available. The expected timeline for
+                cryptographically-relevant quantum computers has shifted
+                earlier, and support for post-quantum cryptography is necessary
+                to defend against <a
+                href="https://en.wikipedia.org/wiki/Harvest_now,_decrypt_later">"harvest
+                now, decrypt later"</a> attacks.
+              </p>
+              {{end}}
+              <p><a href="/s/about.html/#post-quantum-key-agreement">Learn More</a></p>
+            </div>
+            <div class="col-sm-4">
               <h2>Ephemeral Key Support</h2>
               {{if .EphemeralKeysSupported}}
               <p><span class="label okay">Good</span> Ephemeral keys are
@@ -153,6 +175,8 @@
                 faster. This is actually happening.</p>  {{end}}
               <p><a href="/s/about.html/#ephemeral-key-support">Learn More</a></p>
             </div>
+          </div>
+          <div class="row">
             <div class="col-sm-4">
               <h2>Session Ticket Support</h2>
               {{if .SessionTicketsSupported}}
@@ -167,8 +191,6 @@
               {{end}}
               <p><a href="/s/about.html/#session-ticket-support">Learn More</a></p>
             </div>
-          </div>
-          <div class="row">
             <div class="col-sm-4">
               <h2>TLS Compression</h2>
               {{if .TLSCompressionSupported}}
@@ -187,64 +209,6 @@
               <p><a href="/s/about.html/#tls-compression">Learn More</a></p>
             </div>
             <div class="col-sm-4">
-              <h2>BEAST Vulnerability</h2>
-              {{if .BEASTVuln}}
-              <p><span class="label bad">Bad</span>
-                {{ if .AbleToDetectNMinusOneSplitting }}
-                
-                Your client is open to
-                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-                attack</a>. It's using TLS 1.0 or earlier while also
-                supporting a cipher suite that
-                uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-                Chaining</a> and doesn't implement the 1/n-1 record
-                splitting mitigation. That combination will leak
-                information.
-                
-                {{ else }}
-                
-                Your client is probably open to
-                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-                attack</a> because it's using TLS 1.0 or earlier while
-                also supporting a cipher suite that
-                uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-                Chaining</a>. However, the CBC cipher suites your client
-                supports is not one How's My SSL is able to use, so it
-                was unable to determine if your client implements the
-                1/n-1 record splitting mitigation. Clients with that
-                uncommon of cipher suite selection rarely implement it,
-                however, so it's best to assume the worst.
-                
-                {{ end }}
-              </p>
-              {{else}}
-              <p><span class="label okay">Good</span>
-                
-                {{ if .AbleToDetectNMinusOneSplitting }}
-                
-                Your client is not vulnerable to
-                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-                attack</a>. While it's using TLS 1.0 in conjunction
-                with <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-                Chaining</a> cipher suites, it has implemented the 1/n-1
-                record splitting mitigation.
-                
-                {{ else }}
-                
-                Your client is not vulnerable to
-                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
-                attack</a> because it's using a TLS protocol newer than
-                TLS 1.0. The BEAST attack is only possible against clients
-                using TLS 1.0 or earlier
-                using <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
-                Chaining</a> cipher suites that do not implement the
-                1/n-1 record splitting mitigation.
-                
-                {{ end }}
-                {{end}}
-                <p><a href="/s/about.html/#beast-vulnerability">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
               <h2>Insecure Cipher Suites</h2>
               {{if len .InsecureCipherSuites}}
               <p><span class="label bad">Bad</span> Your client supports cipher
@@ -259,6 +223,66 @@
                 cipher suites that are known to be insecure.</p>
               {{end}}
               <p><a href="/s/about.html/#insecure-cipher-suites">Learn More</a></p>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-sm-4">
+              <h2>BEAST Vulnerability</h2>
+              {{if .BEASTVuln}}
+              <p><span class="label bad">Bad</span>
+                {{ if .AbleToDetectNMinusOneSplitting }}
+
+                Your client is open to
+                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+                attack</a>. It's using TLS 1.0 or earlier while also
+                supporting a cipher suite that
+                uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+                Chaining</a> and doesn't implement the 1/n-1 record
+                splitting mitigation. That combination will leak
+                information.
+
+                {{ else }}
+
+                Your client is probably open to
+                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+                attack</a> because it's using TLS 1.0 or earlier while
+                also supporting a cipher suite that
+                uses <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+                Chaining</a>. However, the CBC cipher suites your client
+                supports is not one How's My SSL is able to use, so it
+                was unable to determine if your client implements the
+                1/n-1 record splitting mitigation. Clients with that
+                uncommon of cipher suite selection rarely implement it,
+                however, so it's best to assume the worst.
+
+                {{ end }}
+              </p>
+              {{else}}
+              <p><span class="label okay">Good</span>
+
+                {{ if .AbleToDetectNMinusOneSplitting }}
+
+                Your client is not vulnerable to
+                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+                attack</a>. While it's using TLS 1.0 in conjunction
+                with <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+                Chaining</a> cipher suites, it has implemented the 1/n-1
+                record splitting mitigation.
+
+                {{ else }}
+
+                Your client is not vulnerable to
+                the <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
+                attack</a> because it's using a TLS protocol newer than
+                TLS 1.0. The BEAST attack is only possible against clients
+                using TLS 1.0 or earlier
+                using <a href="https://en.wikipedia.org/wiki/Cipher_block_chaining#Cipher-block_chaining_.28CBC.29">Cipher-Block
+                Chaining</a> cipher suites that do not implement the
+                1/n-1 record splitting mitigation.
+
+                {{ end }}
+                {{end}}
+                <p><a href="/s/about.html/#beast-vulnerability">Learn More</a></p>
             </div>
           </div>
           <div class="row">
@@ -281,6 +305,17 @@
                 {{end}}
               </ul>
               <p><a href="/s/about.html/#given-cipher-suites">Learn More</a></p>
+            </div>
+            <div class="col-sm-4">
+              <h2>Given Named Groups</h2>
+              <p>The named groups your client said it supports, in the order it
+              sent them, are:</p>
+              <ul>
+                {{range .GivenNamedGroups}}
+                <li>{{.}}</li>
+                {{end}}
+              </ul>
+              <p><a href="/s/about.html/#given-named-groups">Learn More</a></p>
             </div>
           </div>
         </div>

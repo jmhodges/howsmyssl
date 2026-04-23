@@ -85,7 +85,7 @@
           <p></p><pre>    GET https://www.howsmyssl.com/a/check HTTP/1.1
 
     {
-      given_cipher_suites: [
+      "given_cipher_suites": [
         "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
         "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
         "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
@@ -96,30 +96,41 @@
         "TLS_RSA_WITH_AES_256_CBC_SHA",
         "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
         "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-        "TLS_ECDHE_RSA_WITH_RC4_128_SHA",
         "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
         "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
         "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
-        "TLS_RSA_WITH_RC4_128_SHA",
-        "TLS_RSA_WITH_RC4_128_MD5",
         "TLS_RSA_WITH_AES_128_CBC_SHA",
         "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
         "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
       ],
-      ephemeral_keys_supported: true,
-      session_ticket_supported: true,
-      tls_compression_supported: false,
-      unknown_cipher_suite_supported: false,
-      beast_vuln: false,
-      able_to_detect_n_minus_one_splitting: false,
-      insecure_cipher_suites: {
+      "given_named_groups": [
+        "x25519",
+        "secp256r1",
+        "secp384r1",
+        "secp521r1"
+      ],
+      "post_quantum_key_agreement": false,
+      "ephemeral_keys_supported": true,
+      "session_ticket_supported": false,
+      "tls_compression_supported": false,
+      "unknown_cipher_suite_supported": false,
+      "beast_vuln": false,
+      "able_to_detect_n_minus_one_splitting": false,
+      "insecure_cipher_suites": {
         "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": [
           "uses keys smaller than 128 bits in its encryption"
+        ],
+        "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA": [
+          "uses RC4 which has insecure biases in its output"
+        ],
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA": [
+          "uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"
         ]
       },
-      tls_version: "TLS 1.2",
-      rating: "Bad"
+      "tls_version": "TLS 1.2",
+      "rating": "Bad"
     }
+
           </pre><p></p>
           <p>The returned JSON hash will have at least these keys, but
             may include more as howsmyssl evolves. Each of these keys
