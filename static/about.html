@@ -195,34 +195,46 @@
             be marked as <span class="label bad">Bad</span>.</p>
 
           <h4 class="fragpadded" id="post-quantum-key-agreement">Post-Quantum Key Agreement</h4>
-          <p>The Post-Quantum Key Agreement section says if your client supports
-          a key agreement that will keep this connection's data secret even
-          against an attacker with a powerful, future quantum computer. What
-          we're working to prevent are <a
+          <p>The Post-Quantum Key Agreement section states whether your client
+          supports a post-quantum key agreement algorithm that protects shared
+          secrets against an attacker with a powerful, future quantum computer.
+          Post-quantum key agreement is part of a larger set of tools being
+          developed to defend against quantum <a
           href="https://en.wikipedia.org/wiki/Harvest_now,_decrypt_later">"harvest
-          now, decrypt later"</a> attacks. "Harvest now, decrypt later" attacks
-          involve attackers scooping up encrypted data today and storing it
-          until they have the capability to decrypt it. The quantum version of
-          those attacks is more relevant because the expected timeline for
-          cryptographically-relevant quantum computers <a
+          now, decrypt later"</a> attacks.</p>
+          <p>"Harvest now, decrypt later" attacks involve attackers scooping up
+          encrypted data today and storing it until they have the capability to
+          decrypt it. The quantum version of those attacks has become more
+          pressing as the expected timeline for cryptographically-relevant
+          quantum computers <a
           href="https://www.eff.org/deeplinks/2026/04/yikes-encryptions-y2k-moment-coming-years-early">has
           shifted sooner than expected</a>.</p>
-          <p>Fortunately, we're standardizing many of the tools we'll need to
-          defend against them. Among them are the post-quantum key agreement
-          algorithms that are being added to TLS 1.3. Key agreement algorithms
-          in TLS allow the client and server to agree on a shared secret that
-          encrypts all further traffic without exposing that secret to attackers
-          listening in. The post-quantum key agreement algorithms in TLS 1.3
-          ensure that an attacker listening in on that back-and-forth couldn't
-          store that data later and decrypt it with a cryptographically-relevant
-          quantum computer by using very cool math we won't explain here
-          (Sorry).</p>
+          <p>Fortunately, most mature web clients and web servers support the
+          key agreement algorithms we'll need to defend against those quantum
+          computers. Key agreement algorithms in TLS allow the client and server
+          to agree on a shared secret that encrypts all further traffic without
+          exposing that secret to attackers listening in. The
+          <a
+          href="https://datatracker.ietf.org/doc/draft-ietf-tls-mlkem/">ML-KEM</a>
+          post-quantum key agreement algorithms, now supported by web clients
+          and servers, ensure that an attacker listening to that exchange can't
+          uncover the shared secret with a cryptographically-relevant quantum
+          computer. Those algorithms do that with very cool math we won't
+          explain here (sorry).</p>
+          <p>Key agreement algorithms aren't the end of the story for
+          post-quantum security in the TLS stack. Web clients and servers are
+          now also moving to support <a
+          href="https://www.rfc-editor.org/rfc/rfc9881.html">ML-DSA</a>
+          signatures for certificates. These signatures ensure the authenticity
+          and integrity of the certificates used in the TLS handshake in a world
+          with cryptographically-relevant quantum computers.</p>
           <p>Clients that support post-quantum key agreement will be defaulted
           to <span class="label okay">Probably Okay</span>. In the near future,
           clients that do not support post-quantum key agreement will be marked
-          as <span class="label improvable">Improvable</span>.</p> In the less
-          near future, clients that do not support post-quantum key agreement
-          will be marked as <span class="label bad">Bad</span>.</p>
+          as <span class="label improvable">Improvable</span>.</p>
+          <p>In the less near future, clients that do not support post-quantum
+          key agreement will be marked as <span class="label
+          bad">Bad</span>.</p>
 
           <h4 class="fragpadded" id="ephemeral-key-support">Ephemeral Key Support</h4>
           <p>The Ephemeral Key Support section says if your client tells
