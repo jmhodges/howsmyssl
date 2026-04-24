@@ -241,11 +241,12 @@
           explain here (sorry).</p>
           <p>Key agreement algorithms aren't the end of the story for
           post-quantum security in the TLS stack. Web clients and servers are
-          now also moving to support <a
-          href="https://www.rfc-editor.org/rfc/rfc9881.html">ML-DSA</a>
-          signatures for certificates. These signatures ensure the authenticity
-          and integrity of the certificates used in the TLS handshake in a world
-          with cryptographically-relevant quantum computers.</p>
+          now also moving to support ML-DSA signatures for certificates (well,
+          <a href="https://datatracker.ietf.org/group/plants/about/">the
+          Merkle-tree certificate architecture</a> for them). These signatures
+          ensure the authenticity and integrity of the certificates used in the
+          TLS handshake in a world with cryptographically-relevant quantum
+          computers.</p>
           <p>Clients that support post-quantum key agreement will be defaulted
           to <span class="label okay">Probably Okay</span>. In the near future,
           clients that do not support post-quantum key agreement will be marked
