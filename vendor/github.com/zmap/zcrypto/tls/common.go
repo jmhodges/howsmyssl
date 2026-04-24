@@ -903,6 +903,18 @@ type Config struct {
 	// Client-side Only
 	ForceSuites bool
 
+	// DisableTLS10BEASTMitigation, when true, suppresses the 1/(n-1) record
+	// split applied to TLS 1.0 application_data records written over a CBC
+	// cipher. The split randomizes the implicit IV and mitigates the BEAST
+	// chosen-plaintext attack described at
+	// https://www.openssl.org/~bodo/tls-cbc.txt and
+	// https://www.imperialviolet.org/2012/01/15/beastfollowup.html.
+	//
+	// The mitigation is on by default. Set this to true only when
+	// interoperating with a TLS 1.0 peer that mishandles the resulting
+	// 1-byte record (the reason upstream crypto/tls dropped the behavior).
+	DisableTLS10BEASTMitigation bool
+
 	// Export RSA Key
 	ExportRSAKey *rsa.PrivateKey
 
@@ -1054,6 +1066,7 @@ func (c *Config) Clone() *Config {
 		ExplicitCurvePreferences:       c.ExplicitCurvePreferences,
 		SignatureAndHashes:             c.SignatureAndHashes,
 		ForceSuites:                    c.ForceSuites,
+		DisableTLS10BEASTMitigation:    c.DisableTLS10BEASTMitigation,
 		ExportRSAKey:                   c.ExportRSAKey,
 		HeartbeatEnabled:               c.HeartbeatEnabled,
 		ClientDSAEnabled:               c.ClientDSAEnabled,

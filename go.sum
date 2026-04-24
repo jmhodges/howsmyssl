@@ -48,6 +48,8 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.14 h1:yh8ncqsbUY4shRD5dA
 github.com/googleapis/enterprise-certificate-proxy v0.3.14/go.mod h1:vqVt9yG9480NtzREnTlmGSBmFrA+bzb0yl0TxoBQXOg=
 github.com/googleapis/gax-go/v2 v2.21.0 h1:h45NjjzEO3faG9Lg/cFrBh2PgegVVgzqKzuZl/wMbiI=
 github.com/googleapis/gax-go/v2 v2.21.0/go.mod h1:But/NJU6TnZsrLai/xBAQLLz+Hc7fHZJt/hsCz3Fih4=
+github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b h1:+UihW4kXQGsW5u6wAlvTZ97lg3KDROAd8cAQ45ZRfJw=
+github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b/go.mod h1:9y/jn+HVkT5tGgFebbi2bb8OHyU8q1TX4OGj0M8bsHg=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
@@ -62,10 +64,6 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/weppos/publicsuffix-go v0.50.3 h1:eT5dcjHQcVDNc0igpFEsGHKIip30feuB2zuuI9eJxiE=
 github.com/weppos/publicsuffix-go v0.50.3/go.mod h1:/rOa781xBykZhHK/I3QeHo92qdDKVmKZKF7s8qAEM/4=
-github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82 h1:6P5C5HIjCclJBqgiBgzszcsNZ+t57ZvB8bHNj+QOsDs=
-github.com/zmap/zcrypto v0.0.0-20260410020656-f1177f7dea82/go.mod h1:9y/jn+HVkT5tGgFebbi2bb8OHyU8q1TX4OGj0M8bsHg=
-github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16 h1:hxpQ57/tgLRAziHn6G9DFEYY9uenJ7PlsNtUqYgW+so=
-github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16/go.mod h1:9y/jn+HVkT5tGgFebbi2bb8OHyU8q1TX4OGj0M8bsHg=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
