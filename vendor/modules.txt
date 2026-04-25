@@ -106,7 +106,7 @@ github.com/googleapis/gax-go/v2/iterator
 # github.com/weppos/publicsuffix-go v0.50.3
 ## explicit; go 1.24.0
 github.com/weppos/publicsuffix-go/publicsuffix
-# github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16
+# github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16 => github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b
 ## explicit; go 1.25.0
 github.com/zmap/zcrypto/cryptobyte
 github.com/zmap/zcrypto/cryptobyte/asn1
@@ -365,3 +365,4 @@ google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
+# github.com/zmap/zcrypto => github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b
