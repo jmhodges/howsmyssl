@@ -31,21 +31,20 @@ type clientInfo struct {
 }
 
 const (
-	versionTLS13        uint16 = 0x0304
-	versionTLS13Draft18        = 0x7f00 | 18
-	versionTLS13Draft21        = 0x7f00 | 21
-	versionTLS13Draft22        = 0x7f00 | 22
-	versionTLS13Draft23        = 0x7f00 | 23
-	versionTLS13Draft24        = 0x7f00 | 24
-	versionTLS13Draft25        = 0x7f00 | 25
-	versionTLS13Draft26        = 0x7f00 | 26
-	versionTLS13Draft27        = 0x7f00 | 27
-	versionTLS13Draft28        = 0x7f00 | 28
-	versionTLS13Draft29        = 0x7f00 | 29
-	versionTLS13Draft30        = 0x7f00 | 30
-	versionTLS13Draft31        = 0x7f00 | 31
-	versionTLS13Draft32        = 0x7f00 | 32
-	versionTLS13Draft33        = 0x7f00 | 33
+	versionTLS13Draft18 = 0x7f00 | 18
+	versionTLS13Draft21 = 0x7f00 | 21
+	versionTLS13Draft22 = 0x7f00 | 22
+	versionTLS13Draft23 = 0x7f00 | 23
+	versionTLS13Draft24 = 0x7f00 | 24
+	versionTLS13Draft25 = 0x7f00 | 25
+	versionTLS13Draft26 = 0x7f00 | 26
+	versionTLS13Draft27 = 0x7f00 | 27
+	versionTLS13Draft28 = 0x7f00 | 28
+	versionTLS13Draft29 = 0x7f00 | 29
+	versionTLS13Draft30 = 0x7f00 | 30
+	versionTLS13Draft31 = 0x7f00 | 31
+	versionTLS13Draft32 = 0x7f00 | 32
+	versionTLS13Draft33 = 0x7f00 | 33
 )
 
 var actualSupportedVersions = map[uint16]string{
@@ -53,7 +52,7 @@ var actualSupportedVersions = map[uint16]string{
 	tls.VersionTLS10:    "TLS 1.0",
 	tls.VersionTLS11:    "TLS 1.1",
 	tls.VersionTLS12:    "TLS 1.2",
-	versionTLS13:        "TLS 1.3", // TODO(#119): use crypto/tls's constant when it has it
+	tls.VersionTLS13:    "TLS 1.3",
 	versionTLS13Draft18: "TLS 1.3",
 	versionTLS13Draft21: "TLS 1.3",
 	versionTLS13Draft22: "TLS 1.3",
