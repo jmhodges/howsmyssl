@@ -312,6 +312,15 @@ type ConnectionState struct {
 	// resumed connections that don't support Extended Master Secret (RFC 7627).
 	TLSUnique []byte
 
+	// Added for howsmyssl's use
+	ClientCipherSuites               []uint16
+	CompressionMethods               []uint8
+	NMinusOneRecordSplittingDetected bool
+	AbleToDetectNMinusOneSplitting   bool
+	SessionTicketsSupported          bool
+	SupportedVersions                []uint16
+	SupportedCurves                  []CurveID
+
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the
 	// client side.
