@@ -42,6 +42,7 @@ func (c *Conn) serverHandshake() error {
 	if err != nil {
 		return err
 	}
+	c.clientHello = clientHello
 
 	if c.vers == VersionTLS13 {
 		hs := serverHandshakeStateTLS13{
@@ -67,7 +68,10 @@ func (hs *serverHandshakeState) handshake() error {
 
 	// For an overview of TLS handshaking, see RFC 5246, Section 7.3.
 	c.buffering = true
-	if hs.checkForResumption() {
+	// Disallow resumption when client is at TLS 1.0 or below so that
+	// we can be sure the checks for HasBeastVulnSuites is set
+	// correctly. A latency and CPU hit, but tolerable for accuracy.
+	if c.vers > VersionTLS10 && hs.checkForResumption() {
 		// The client has included a session ticket and so we do an abbreviated handshake.
 		c.didResume = true
 		if err := hs.doResumeHandshake(); err != nil {
@@ -294,6 +298,24 @@ func supportsECDHE(c *Config, supportedCurves []CurveID, supportedPoints []uint8
 
 func (hs *serverHandshakeState) pickCipherSuite() error {
 	c := hs.c
+
+	// For TLS 1.0 clients, try to select a CBC cipher for BEAST detection.
+	if c.vers <= VersionTLS10 {
+		beastSuites := []uint16{TLS_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA256}
+		for _, cs := range hs.clientHello.cipherSuites {
+			for _, bs := range beastSuites {
+				if cs == bs {
+					candidate := selectCipherSuite([]uint16{cs}, c.config.cipherSuites(), hs.cipherSuiteOk)
+					if candidate != nil {
+						hs.suite = candidate
+						c.cipherSuite = candidate.id
+						c.ableToDetectNMinusOneSplitting = true
+						return nil
+					}
+				}
+			}
+		}
+	}
 
 	var preferenceList, supportedList []uint16
 	if c.config.PreferServerCipherSuites {

@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls "github.com/jmhodges/howsmyssl/tls110"
+	tls "github.com/jmhodges/howsmyssl/tls116"
 	ztls "github.com/zmap/zcrypto/tls"
 	zx509 "github.com/zmap/zcrypto/x509"
 )
