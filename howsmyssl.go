@@ -462,7 +462,7 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	w.Write(bs)
 }
 
-func defaultResponseHeaders(h http.Header, r *http.Request, contentType string) {
+func defaultResponseHeaders(h http.Header, _r *http.Request, contentType string) {
 	h.Set("Content-Type", contentType)
 	// Allow CORS requests from any domain, for easy API access
 	h.Set("Access-Control-Allow-Origin", "*")
