@@ -505,7 +505,6 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	go reloadKeypairForever(kpr, time.NewTicker(1*time.Hour))
 	tlsConf := &tls.Config{
 		GetCertificate:           kpr.GetCertificate,
-		NextProtos:               []string{"https"},
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionSSL30,
 		CipherSuites: []uint16{
