@@ -23,6 +23,7 @@ import (
 func TestBEASTVuln(t *testing.T) {
 	t.Run("TLS10OnlyCBC", func(t *testing.T) {
 		clientConf := &tls.Config{
+			MinVersion:   tls.VersionTLS10,
 			MaxVersion:   tls.VersionTLS10,
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
 		}
@@ -48,6 +49,7 @@ func TestBEASTVuln(t *testing.T) {
 	// and we're talking over TLS 1.0.
 	t.Run("TLS10NoCBC", func(t *testing.T) {
 		clientConf := &tls.Config{
+			MinVersion:   tls.VersionTLS10,
 			MaxVersion:   tls.VersionTLS10,
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
 		}
@@ -192,10 +194,14 @@ func TestSweet32(t *testing.T) {
 
 func TestPostQuantumDetection(t *testing.T) {
 	t.Run("WithMLKEM", func(t *testing.T) {
-		clientConf := &tls.Config{
-			CurvePreferences: []tls.CurveID{tls.X25519, 0x11ec},
+		// We've had to reorder the CurvePreferences because crypto/tls (which
+		// our tls library is a fork of) reorders them or drops them if it
+		// doesn't recognize them.
+		clientConf := &ztls.Config{
+			// X25519MLKEM768 is 0x11ec, and not in the stdlib, yet.
+			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
 		}
-		c := connect(t, clientConf)
+		c := connectZtls(t, clientConf)
 		ci := pullClientInfo(c)
 		t.Logf("%#v", ci)
 
@@ -205,11 +211,11 @@ func TestPostQuantumDetection(t *testing.T) {
 		if len(ci.GivenNamedGroups) != 2 {
 			t.Errorf("GivenNamedGroups length: want 2, got %d (%v)", len(ci.GivenNamedGroups), ci.GivenNamedGroups)
 		}
-		if ci.GivenNamedGroups[0] != "x25519" {
-			t.Errorf("GivenNamedGroups[0]: want x25519, got %s", ci.GivenNamedGroups[0])
+		if ci.GivenNamedGroups[0] != "X25519MLKEM768" {
+			t.Errorf("GivenNamedGroups[0]: want X25519MLKEM768, got %s", ci.GivenNamedGroups[0])
 		}
-		if ci.GivenNamedGroups[1] != "X25519MLKEM768" {
-			t.Errorf("GivenNamedGroups[1]: want X25519MLKEM768, got %s", ci.GivenNamedGroups[1])
+		if ci.GivenNamedGroups[1] != "x25519" {
+			t.Errorf("GivenNamedGroups[1]: want x25519, got %s", ci.GivenNamedGroups[1])
 		}
 	})
 
