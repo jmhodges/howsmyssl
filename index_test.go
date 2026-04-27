@@ -3,14 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
-	origtls "crypto/tls"
 	"encoding/json"
 	"errors"
 	"expvar"
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,7 +18,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls1262 "github.com/jmhodges/howsmyssl/tls1262"
+	howhttptest "github.com/jmhodges/howsmyssl/howhttp/httptest"
 )
 
 type testWriter struct {
@@ -352,40 +350,8 @@ func TestJSONAPI(t *testing.T) {
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))
 
-	tl, err := tls1262.Listen("tcp", "127.0.0.1:0", serverConf)
-	if err != nil {
-		t.Fatalf("NewListener: %s", err)
-	}
-	li := newListener(tl, new(expvar.Map).Init())
-
-	srv := httptest.NewUnstartedServer(tm)
-	configureHTTPSServer(srv.Config)
-	srv.Listener = li
-	// Intentionally not using StartTLS to avoid stomping on our special listener.
-	srv.Start()
+	srv := howhttptest.NewServer(tm)
 	defer srv.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	c := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &origtls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return errors.New("no redirects should be seen")
-		},
-	}
 
 	type apiTest struct {
 		path        string
@@ -422,39 +388,121 @@ func TestJSONAPI(t *testing.T) {
 			body:        "foobarParse(" + string(disallowedOriginBody) + ");",
 		},
 	}
-	u := strings.Replace(srv.URL, "http://", "https://", -1)
-	for i, at := range tests {
-		t.Run(fmt.Sprintf("%d-%s", i, at.path), func(t *testing.T) {
-			r, err := http.NewRequest("GET", u+at.path, nil)
-			if err != nil {
-				t.Fatalf("NewRequest: %s", err)
-			}
-			r = r.WithContext(ctx)
-			r.Header.Set("Origin", at.origin)
-			resp, err := c.Do(r)
-			if err != nil {
-				t.Fatalf("Get: %s", err)
-			}
-			b, err := io.ReadAll(resp.Body)
-			defer resp.Body.Close()
-			if err != nil {
-				t.Fatalf("ReadAll: %s", err)
-			}
-			if resp.StatusCode != at.status {
-				t.Errorf("status code, want: %d, got: %d", at.status, resp.StatusCode)
-			}
-			if string(b) != at.body {
-				t.Errorf("body, diff: %s", cmp.Diff(at.body, string(b)))
-				t.Errorf("body, want:\n%#v\ngot:%#v\n", at.body, string(b))
-			}
-			ct := resp.Header.Get("Content-Type")
-			if ct != at.contentType {
-				t.Errorf("Content-Type, want %s, got %s", at.contentType, ct)
-			}
-			if !resp.Close {
-				t.Errorf("want connection to be closed after each request, but was left open")
-			}
-		})
+	run := func(t *testing.T, c *http.Client, wantProtoMajor int, wantConnClose bool) {
+		for i, at := range tests {
+			t.Run(fmt.Sprintf("%d-%s", i, at.path), func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+				defer cancel()
+
+				r, err := http.NewRequestWithContext(ctx, "GET", srv.URL+at.path, nil)
+				if err != nil {
+					t.Fatalf("NewRequest: %s", err)
+				}
+
+				r.Header.Set("Origin", at.origin)
+				resp, err := c.Do(r)
+				if err != nil {
+					t.Fatalf("Get: %s", err)
+				}
+				b, err := io.ReadAll(resp.Body)
+				defer resp.Body.Close()
+				if err != nil {
+					t.Fatalf("ReadAll: %s", err)
+				}
+				if resp.ProtoMajor != wantProtoMajor {
+					t.Errorf("ProtoMajor, want: %d, got: %d (%s)", wantProtoMajor, resp.ProtoMajor, resp.Proto)
+				}
+				if resp.StatusCode != at.status {
+					t.Errorf("status code, want: %d, got: %d", at.status, resp.StatusCode)
+				}
+				if string(b) != at.body {
+					t.Errorf("body, diff: %s", cmp.Diff(at.body, string(b)))
+					t.Errorf("body, want:\n%#v\ngot:%#v\n", at.body, string(b))
+				}
+				ct := resp.Header.Get("Content-Type")
+				if ct != at.contentType {
+					t.Errorf("Content-Type, want %s, got %s", at.contentType, ct)
+				}
+				if wantConnClose && !resp.Close {
+					t.Errorf("want connection to be closed after each request, but was left open")
+				}
+			})
+		}
+	}
+
+	noRedirects := func(req *http.Request, via []*http.Request) error {
+		return errors.New("no redirects should be seen")
+	}
+
+	t.Run("http1.1", func(t *testing.T) {
+		// The per-request Connection: close assertion is only meaningful for
+		// HTTP/1.1; force the ALPN choice so the transport can't pick h2.
+		tlsConf := srv.ClientTLSConfig()
+		tlsConf.NextProtos = []string{"http/1.1"}
+		c := &http.Client{
+			Transport:     &http.Transport{TLSClientConfig: tlsConf},
+			CheckRedirect: noRedirects,
+		}
+		run(t, c, 1, true)
+	})
+
+	t.Run("http2", func(t *testing.T) {
+		tlsConf := srv.ClientTLSConfig()
+		tlsConf.NextProtos = []string{"h2"}
+		c := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig:   tlsConf,
+				ForceAttemptHTTP2: true,
+			},
+			CheckRedirect: noRedirects,
+		}
+		run(t, c, 2, false)
+	})
+}
+
+func TestIndexGoldenPath(t *testing.T) {
+	index = loadIndex()
+
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    make(map[string]bool),
+	}
+	ama := &atomic.Pointer[allowMaps]{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
+	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, handleWeb, oa, newTestLogger(t), newTestLogger(t))
+
+	srv := howhttptest.NewServer(tm)
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	r, err := http.NewRequestWithContext(ctx, "GET", srv.URL+"/", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %s", err)
+	}
+	resp, err := srv.Client().Do(r)
+	if err != nil {
+		t.Fatalf("Get: %s", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("status code, want: %d, got: %d", http.StatusOK, resp.StatusCode)
+	}
+	ct := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("Content-Type, want prefix %q, got %q", "text/html", ct)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("ReadAll: %s", err)
+	}
+	if len(b) == 0 {
+		t.Error("response body was empty")
 	}
 }
 
