@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls116 "github.com/jmhodges/howsmyssl/tls116"
+	tls116 "github.com/jmhodges/howsmyssl/tls1262"
 )
 
 type testWriter struct {
