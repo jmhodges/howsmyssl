@@ -63,6 +63,16 @@
          font-size: 1em;
      }
 
+     /* With a grid or flexbox set up, we may not need to reflow the text in the
+     list items, but given Bootstrap v3's creaky grid, this is the best way to
+     prevent the "Given Cipher Suites" section from overlapping the "Given Named
+     Groups" section when the cipher suite names are long. */
+     .col-sm-4 ul li {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+     }
+
+
      footer {
          margin-bottom: 500px;
      }
