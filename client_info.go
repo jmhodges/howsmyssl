@@ -72,7 +72,7 @@ var actualSupportedVersions = map[uint16]string{
 func pullClientInfo(c *conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
-	st := c.ConnectionState()
+	st := c.Conn.ConnectionState()
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")
 	}

@@ -29,13 +29,6 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if !st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.0, CBC suite, Conn: AbleToDetectNMinusOneSplitting was false")
-		}
-		if !st.NMinusOneRecordSplittingDetected {
-			t.Errorf("TLS 1.0, CBC suite, Conn: NMinusOneRecordSplittingDetected was false")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, CBC suite, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
@@ -54,10 +47,6 @@ func TestBEASTVuln(t *testing.T) {
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
 		}
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.0, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
@@ -73,10 +62,6 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.2+, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
