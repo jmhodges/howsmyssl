@@ -241,10 +241,10 @@ func TestJSONRedirectContentType(t *testing.T) {
 			wantVaryHdr: true,
 		},
 		{
-			name:        "Wildcard Accept: */*",
+			name:        "Wildcard Accept: */* falls through to HTML (browsers send this)",
 			path:        "https://www.howsmytls.com/a/check",
 			acceptHdrs:  []string{"*/*"},
-			wantCT:      "application/json",
+			wantCT:      "text/html; charset=utf-8",
 			wantVaryHdr: true,
 		},
 		{
@@ -306,10 +306,22 @@ func TestJSONRedirectContentType(t *testing.T) {
 			}
 
 			// Check for Vary: Accept header to prevent cache poisoning
-			varyHdr := w.Header().Get("Vary")
-			hasVary := strings.Contains(varyHdr, "Accept")
-			if tt.wantVaryHdr && !hasVary {
-				t.Errorf("want Vary: Accept header, got %q", varyHdr)
+			// Use Vary header values list to avoid substring matches (e.g., "Accept-Encoding")
+			varyHdrs := w.Header().Values("Vary")
+			hasVaryAccept := false
+			for _, v := range varyHdrs {
+				for _, part := range strings.Split(v, ",") {
+					if strings.TrimSpace(part) == "Accept" {
+						hasVaryAccept = true
+						break
+					}
+				}
+			}
+			if tt.wantVaryHdr && !hasVaryAccept {
+				t.Errorf("want Vary: Accept header, got %v", varyHdrs)
+			}
+			if !tt.wantVaryHdr && hasVaryAccept {
+				t.Errorf("want no Vary: Accept header, got %v", varyHdrs)
 			}
 		})
 	}
