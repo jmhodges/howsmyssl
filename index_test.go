@@ -220,28 +220,67 @@ func TestJSONRedirectContentType(t *testing.T) {
 	tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
 
 	tests := []struct {
-		name        string
-		path        string
-		acceptHdr   string
-		wantCT      string
+		name         string
+		path         string
+		acceptHdrs   []string // Support multiple Accept headers
+		wantCT       string
+		wantVaryHdr  bool
 	}{
 		{
-			name:      "JSON API redirect with Accept: application/json",
-			path:      "https://www.howsmytls.com/a/check",
-			acceptHdr: "application/json",
-			wantCT:    "application/json",
+			name:        "JSON API redirect with Accept: application/json",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
 		},
 		{
-			name:      "HTML redirect with Accept: text/html",
-			path:      "https://www.howsmytls.com/",
-			acceptHdr: "text/html",
-			wantCT:    "text/html; charset=utf-8",
+			name:        "JSON with case variation Application/JSON",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"Application/JSON"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
 		},
 		{
-			name:      "HTML redirect with no Accept header",
-			path:      "https://www.howsmytls.com/",
-			acceptHdr: "",
-			wantCT:    "text/html; charset=utf-8",
+			name:        "Wildcard Accept: */*",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"*/*"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "Multiple Accept headers (JSON in second)",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"text/plain", "application/json"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "JSON with q-values",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json;q=0.9, text/html;q=0.8"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "JSON variant should not match (application/json-patch+json)",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json-patch+json"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "HTML redirect with Accept: text/html",
+			path:        "https://www.howsmytls.com/",
+			acceptHdrs:  []string{"text/html"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "HTML redirect with no Accept header",
+			path:        "https://www.howsmytls.com/",
+			acceptHdrs:  nil,
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: false, // No Vary when no Accept header
 		},
 	}
 
@@ -251,8 +290,8 @@ func TestJSONRedirectContentType(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewRequest: %s", err)
 			}
-			if tt.acceptHdr != "" {
-				r.Header.Set("Accept", tt.acceptHdr)
+			for _, hdr := range tt.acceptHdrs {
+				r.Header.Add("Accept", hdr)
 			}
 			w := httptest.NewRecorder()
 			tm.ServeHTTP(w, r)
@@ -264,6 +303,13 @@ func TestJSONRedirectContentType(t *testing.T) {
 			ct := w.Header().Get("Content-Type")
 			if ct != tt.wantCT {
 				t.Errorf("want Content-Type %q, got %q", tt.wantCT, ct)
+			}
+
+			// Check for Vary: Accept header to prevent cache poisoning
+			varyHdr := w.Header().Get("Vary")
+			hasVary := strings.Contains(varyHdr, "Accept")
+			if tt.wantVaryHdr && !hasVary {
+				t.Errorf("want Vary: Accept header, got %q", varyHdr)
 			}
 		})
 	}

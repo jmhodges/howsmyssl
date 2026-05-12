@@ -488,9 +488,31 @@ func commonRedirect(redirectHost string) http.Handler {
 		u.Host = redirectHost
 		targetURL := u.String()
 
-		// Respect Accept header for API clients requesting JSON
-		accept := r.Header.Get("Accept")
-		if strings.Contains(accept, "application/json") {
+		// Prevent cache poisoning by varying on Accept
+		w.Header().Add("Vary", "Accept")
+
+		// Handle multiple Accept headers and case-insensitivity
+		// Join all Accept headers (HTTP allows multiple) and normalize case
+		acceptHeaders := r.Header["Accept"]
+		if len(acceptHeaders) == 0 {
+			http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
+			return
+		}
+		accept := strings.ToLower(strings.Join(acceptHeaders, ","))
+
+		// Check for JSON request with proper MIME type parsing
+		// Avoids false positives from substring matching (e.g., "application/json-patch+json")
+		// Also handles */* for generic API clients like curl
+		wantsJSON := false
+		for _, part := range strings.Split(accept, ",") {
+			mime := strings.TrimSpace(strings.Split(part, ";")[0])
+			if mime == "application/json" || mime == "*/*" {
+				wantsJSON = true
+				break
+			}
+		}
+
+		if wantsJSON {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Location", targetURL)
 			w.WriteHeader(http.StatusMovedPermanently)
