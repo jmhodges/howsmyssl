@@ -211,6 +211,64 @@ func TestVHostCalculation(t *testing.T) {
 	}
 }
 
+func TestJSONRedirectContentType(t *testing.T) {
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
+	webHandleFunc := http.NotFound
+
+	// Test that redirects from howsmytls.com to howsmyssl.com respect Accept header
+	tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
+
+	tests := []struct {
+		name        string
+		path        string
+		acceptHdr   string
+		wantCT      string
+	}{
+		{
+			name:      "JSON API redirect with Accept: application/json",
+			path:      "https://www.howsmytls.com/a/check",
+			acceptHdr: "application/json",
+			wantCT:    "application/json",
+		},
+		{
+			name:      "HTML redirect with Accept: text/html",
+			path:      "https://www.howsmytls.com/",
+			acceptHdr: "text/html",
+			wantCT:    "text/html; charset=utf-8",
+		},
+		{
+			name:      "HTML redirect with no Accept header",
+			path:      "https://www.howsmytls.com/",
+			acceptHdr: "",
+			wantCT:    "text/html; charset=utf-8",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := http.NewRequest("GET", tt.path, nil)
+			if err != nil {
+				t.Fatalf("NewRequest: %s", err)
+			}
+			if tt.acceptHdr != "" {
+				r.Header.Set("Accept", tt.acceptHdr)
+			}
+			w := httptest.NewRecorder()
+			tm.ServeHTTP(w, r)
+
+			if w.Code != http.StatusMovedPermanently {
+				t.Errorf("want status %d, got %d", http.StatusMovedPermanently, w.Code)
+			}
+
+			ct := w.Header().Get("Content-Type")
+			if ct != tt.wantCT {
+				t.Errorf("want Content-Type %q, got %q", tt.wantCT, ct)
+			}
+		})
+	}
+}
+
 func TestDisallowedBodyParses(t *testing.T) {
 	e := &struct {
 		Error      string `json:"error"`
