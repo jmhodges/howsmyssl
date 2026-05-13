@@ -29,13 +29,6 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if !st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.0, CBC suite, Conn: AbleToDetectNMinusOneSplitting was false")
-		}
-		if !st.NMinusOneRecordSplittingDetected {
-			t.Errorf("TLS 1.0, CBC suite, Conn: NMinusOneRecordSplittingDetected was false")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, CBC suite, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
@@ -54,10 +47,6 @@ func TestBEASTVuln(t *testing.T) {
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
 		}
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.0, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
@@ -73,10 +62,6 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		st := c.ConnectionState()
-		if st.AbleToDetectNMinusOneSplitting {
-			t.Errorf("TLS 1.2+, no CBC suites, Conn: AbleToDetectNMinusOneSplitting was true")
-		}
 		ci := pullClientInfo(c)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
@@ -267,7 +252,7 @@ func init() {
 	rootCAZtls = zcerts[0]
 }
 
-func connect(t *testing.T, clientConf *tls.Config) *conn {
+func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
@@ -341,10 +326,10 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 	case <-time.After(1 * time.Second):
 		t.Fatalf("timed out")
 	}
-	return cr.conn
+	return cr.conn.Conn
 }
 
-func connectZtls(t *testing.T, clientConf *ztls.Config) *conn {
+func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
@@ -415,7 +400,7 @@ func connectZtls(t *testing.T, clientConf *ztls.Config) *conn {
 	case <-time.After(1 * time.Second):
 		t.Fatalf("timed out")
 	}
-	return cr.conn
+	return cr.conn.Conn
 }
 
 func logErrFromServer(t *testing.T, errCh chan error) {

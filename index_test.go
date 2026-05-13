@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
+	origtls "crypto/tls"
 	"encoding/json"
 	"errors"
 	"expvar"
@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls116 "github.com/jmhodges/howsmyssl/tls1262"
+	tls1262 "github.com/jmhodges/howsmyssl/tls1262"
 )
 
 type testWriter struct {
@@ -352,7 +352,7 @@ func TestJSONAPI(t *testing.T) {
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))
 
-	tl, err := tls116.Listen("tcp", "127.0.0.1:0", serverConf)
+	tl, err := tls1262.Listen("tcp", "127.0.0.1:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
@@ -378,7 +378,7 @@ func TestJSONAPI(t *testing.T) {
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
+			TLSClientConfig: &origtls.Config{
 				InsecureSkipVerify: true,
 			},
 		},

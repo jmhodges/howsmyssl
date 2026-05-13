@@ -8,6 +8,8 @@ import (
 	"net"
 	"sync/atomic"
 
+	origtls "crypto/tls"
+
 	tls "github.com/jmhodges/howsmyssl/tls1262"
 )
 
@@ -77,7 +79,7 @@ func (l *listener) Accept() (net.Conn, error) {
 }
 
 type conn struct {
-	*tls.Conn
+	*tls.Conn        // Conn is embedded for net/http to see conn as CloseWriter, HandshakeContext, etc.
 	handshakeCounted *atomic.Bool
 	*handshakeStats
 }
@@ -102,6 +104,34 @@ func (c *conn) Write(b []byte) (int, error) {
 	size, err := c.Conn.Write(b)
 	c.errorToStats(err)
 	return size, err
+}
+
+// ConnectionState is here for the net/http library to set the `Request.TLS`
+// field correctly (its connectionStater interface check). It's not to be called
+// to get the client info. Use pullClientInfo, instead (which looks at the
+// forked version of the ConnectionState with more info).
+//
+// Also, the returned struct's unexported ekm closure is unset, so calling
+// ExportKeyingMaterial on it will panic.
+func (c *conn) ConnectionState() origtls.ConnectionState {
+	cs := c.Conn.ConnectionState()
+	return origtls.ConnectionState{
+		Version:                     cs.Version,
+		HandshakeComplete:           cs.HandshakeComplete,
+		DidResume:                   cs.DidResume,
+		CipherSuite:                 cs.CipherSuite,
+		CurveID:                     origtls.CurveID(cs.CurveID),
+		NegotiatedProtocol:          cs.NegotiatedProtocol,
+		NegotiatedProtocolIsMutual:  cs.NegotiatedProtocolIsMutual,
+		ServerName:                  cs.ServerName,
+		PeerCertificates:            cs.PeerCertificates,
+		VerifiedChains:              cs.VerifiedChains,
+		SignedCertificateTimestamps: cs.SignedCertificateTimestamps,
+		OCSPResponse:                cs.OCSPResponse,
+		TLSUnique:                   cs.TLSUnique,
+		ECHAccepted:                 cs.ECHAccepted,
+		HelloRetryRequest:           cs.HelloRetryRequest,
+	}
 }
 
 func (c *conn) handshake() error {

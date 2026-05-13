@@ -69,7 +69,7 @@ var actualSupportedVersions = map[uint16]string{
 	versionTLS13Draft33: "TLS 1.3",
 }
 
-func pullClientInfo(c *conn) *clientInfo {
+func pullClientInfo(c *tls.Conn) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
 	st := c.ConnectionState()

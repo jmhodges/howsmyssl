@@ -262,7 +262,7 @@ func configureHTTPSServer(srv *http.Server) {
 		// be performed, and I don't want to lock here waiting for the handshake
 		// to finish. It might be fine, but I've not verified there's nothing
 		// that would be delayed by doing so.
-		ctx = context.WithValue(ctx, smuggledConnKey, tc)
+		ctx = context.WithValue(ctx, smuggledConnKey, tc.Conn)
 		return ctx
 	}
 }
@@ -439,9 +439,9 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	// formatting ourselves.
 	w = &statWriter{w: w, stats: statuses}
 	c := r.Context().Value(smuggledConnKey)
-	tc, ok := c.(*conn)
+	tc, ok := c.(*tls.Conn)
 	if !ok {
-		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *conn: %#v", c)
+		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *tls.Conn: %#v", c)
 		response500(w, r)
 		return
 	}
@@ -540,7 +540,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	tlsConf := &tls.Config{
 		GetCertificate:           kpr.GetCertificate,
 		PreferServerCipherSuites: true,
-		MinVersion:               tls.VersionSSL30,
+		MinVersion:               tls.VersionTLS10,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
@@ -628,7 +628,7 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	tlsConn, ok := r.Context().Value(smuggledConnKey).(*conn)
+	tlsConn, ok := r.Context().Value(smuggledConnKey).(*tls.Conn)
 	tlsVersion := "none"
 	if ok && tlsConn != nil {
 		version := tlsConn.ConnectionState().Version
