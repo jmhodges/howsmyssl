@@ -486,7 +486,41 @@ func commonRedirect(redirectHost string) http.Handler {
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
 		u.Host = redirectHost
-		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+		targetURL := u.String()
+
+		// Handle multiple Accept headers and case-insensitivity
+		// Join all Accept headers (HTTP allows multiple) and normalize case
+		acceptHeaders := r.Header["Accept"]
+		if len(acceptHeaders) == 0 {
+			http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
+			return
+		}
+
+		// Prevent cache poisoning by varying on Accept (only when Accept is present)
+		w.Header().Add("Vary", "Accept")
+		accept := strings.ToLower(strings.Join(acceptHeaders, ","))
+
+		// Check for JSON request with proper MIME type parsing
+		// Avoids false positives from substring matching (e.g., "application/json-patch+json")
+		wantsJSON := false
+		for _, part := range strings.Split(accept, ",") {
+			mime := strings.TrimSpace(strings.Split(part, ";")[0])
+			if mime == "application/json" {
+				wantsJSON = true
+				break
+			}
+		}
+
+		if wantsJSON {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Location", targetURL)
+			w.WriteHeader(http.StatusMovedPermanently)
+			// Return an empty JSON object for the redirect body
+			w.Write([]byte("{}"))
+			return
+		}
+
+		http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
 }
