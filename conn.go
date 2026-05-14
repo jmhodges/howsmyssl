@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
-	"sync/atomic"
+	"sync"
 
 	origtls "crypto/tls"
 
@@ -72,22 +72,26 @@ func (l *listener) Accept() (net.Conn, error) {
 		return nil, errTLSConnConv
 	}
 	return &conn{
-		Conn:             tlsConn,
-		handshakeCounted: new(atomic.Bool),
-		handshakeStats:   l.handshakeStats,
+		Conn:           tlsConn,
+		handshakeStats: l.handshakeStats,
 	}, nil
 }
 
 type conn struct {
-	*tls.Conn        // Conn is embedded for net/http to see conn as CloseWriter, HandshakeContext, etc.
-	handshakeCounted *atomic.Bool
+	*tls.Conn // Conn is embedded for net/http to see conn as CloseWriter, HandshakeContext, etc.
+
+	// handshakeOnce drives the wrapper handshake() exactly once; the
+	// outcome is cached in handshakeErr so repeat callers (every Read/Write
+	// after the first) observe the same result without re-counting stats
+	// or short-circuiting around a failed handshake.
+	handshakeOnce sync.Once
+	handshakeErr  error
+
 	*handshakeStats
 }
 
 func (c *conn) Read(b []byte) (int, error) {
-	err := c.handshake()
-	if err != nil {
-		c.errorToStats(err)
+	if err := c.handshake(); err != nil {
 		return 0, err
 	}
 	size, err := c.Conn.Read(b)
@@ -96,9 +100,7 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 func (c *conn) Write(b []byte) (int, error) {
-	err := c.handshake()
-	if err != nil {
-		c.errorToStats(err)
+	if err := c.handshake(); err != nil {
 		return 0, err
 	}
 	size, err := c.Conn.Write(b)
@@ -134,21 +136,21 @@ func (c *conn) ConnectionState() origtls.ConnectionState {
 	}
 }
 
+// handshake drives the underlying TLS handshake at most once and caches the
+// outcome. Stats are updated exactly once: a success bumps Successes; a
+// failure bumps the error counters via errorToStats. Subsequent callers see
+// the same cached error (or nil) without re-counting.
 func (c *conn) handshake() error {
-	alreadyCounted := !c.handshakeCounted.CompareAndSwap(false, true)
-	if alreadyCounted {
-		return nil
-	}
-
-	err := c.Conn.Handshake()
-	if err != nil {
-		c.errorToStats(err)
-		return err
-	}
-	if !alreadyCounted {
+	c.handshakeOnce.Do(func() {
+		err := c.Conn.Handshake()
+		if err != nil {
+			c.handshakeErr = err
+			c.errorToStats(err)
+			return
+		}
 		c.Successes.Add(1)
-	}
-	return nil
+	})
+	return c.handshakeErr
 }
 
 func (c *conn) errorToStats(err error) {
