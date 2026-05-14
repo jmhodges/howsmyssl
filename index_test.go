@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
+	origtls "crypto/tls"
 	"encoding/json"
 	"errors"
 	"expvar"
@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	tls116 "github.com/jmhodges/howsmyssl/tls1262"
+	tls1262 "github.com/jmhodges/howsmyssl/tls1262"
 )
 
 type testWriter struct {
@@ -211,6 +211,122 @@ func TestVHostCalculation(t *testing.T) {
 	}
 }
 
+func TestJSONRedirectContentType(t *testing.T) {
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
+	webHandleFunc := http.NotFound
+
+	// Test that redirects from howsmytls.com to howsmyssl.com respect Accept header
+	tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
+
+	tests := []struct {
+		name         string
+		path         string
+		acceptHdrs   []string // Support multiple Accept headers
+		wantCT       string
+		wantVaryHdr  bool
+	}{
+		{
+			name:        "JSON API redirect with Accept: application/json",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "JSON with case variation Application/JSON",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"Application/JSON"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "Wildcard Accept: */* falls through to HTML (browsers send this)",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"*/*"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "Multiple Accept headers (JSON in second)",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"text/plain", "application/json"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "JSON with q-values",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json;q=0.9, text/html;q=0.8"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "JSON variant should not match (application/json-patch+json)",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json-patch+json"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "HTML redirect with Accept: text/html",
+			path:        "https://www.howsmytls.com/",
+			acceptHdrs:  []string{"text/html"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "HTML redirect with no Accept header",
+			path:        "https://www.howsmytls.com/",
+			acceptHdrs:  nil,
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: false, // No Vary when no Accept header
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, err := http.NewRequest("GET", tt.path, nil)
+			if err != nil {
+				t.Fatalf("NewRequest: %s", err)
+			}
+			for _, hdr := range tt.acceptHdrs {
+				r.Header.Add("Accept", hdr)
+			}
+			w := httptest.NewRecorder()
+			tm.ServeHTTP(w, r)
+
+			if w.Code != http.StatusMovedPermanently {
+				t.Errorf("want status %d, got %d", http.StatusMovedPermanently, w.Code)
+			}
+
+			ct := w.Header().Get("Content-Type")
+			if ct != tt.wantCT {
+				t.Errorf("want Content-Type %q, got %q", tt.wantCT, ct)
+			}
+
+			// Check for Vary: Accept header to prevent cache poisoning
+			// Use Vary header values list to avoid substring matches (e.g., "Accept-Encoding")
+			varyHdrs := w.Header().Values("Vary")
+			hasVaryAccept := false
+			for _, v := range varyHdrs {
+				for _, part := range strings.Split(v, ",") {
+					if strings.TrimSpace(part) == "Accept" {
+						hasVaryAccept = true
+						break
+					}
+				}
+			}
+			if tt.wantVaryHdr && !hasVaryAccept {
+				t.Errorf("want Vary: Accept header, got %v", varyHdrs)
+			}
+			if !tt.wantVaryHdr && hasVaryAccept {
+				t.Errorf("want no Vary: Accept header, got %v", varyHdrs)
+			}
+		})
+	}
+}
+
 func TestDisallowedBodyParses(t *testing.T) {
 	e := &struct {
 		Error      string `json:"error"`
@@ -236,7 +352,7 @@ func TestJSONAPI(t *testing.T) {
 	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
 	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, webHandleFunc, oa, newTestLogger(t), newTestLogger(t))
 
-	tl, err := tls116.Listen("tcp", "127.0.0.1:0", serverConf)
+	tl, err := tls1262.Listen("tcp", "127.0.0.1:0", serverConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
@@ -262,7 +378,7 @@ func TestJSONAPI(t *testing.T) {
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
+			TLSClientConfig: &origtls.Config{
 				InsecureSkipVerify: true,
 			},
 		},

@@ -262,7 +262,7 @@ func configureHTTPSServer(srv *http.Server) {
 		// be performed, and I don't want to lock here waiting for the handshake
 		// to finish. It might be fine, but I've not verified there's nothing
 		// that would be delayed by doing so.
-		ctx = context.WithValue(ctx, smuggledConnKey, tc)
+		ctx = context.WithValue(ctx, smuggledConnKey, tc.Conn)
 		return ctx
 	}
 }
@@ -439,9 +439,9 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	// formatting ourselves.
 	w = &statWriter{w: w, stats: statuses}
 	c := r.Context().Value(smuggledConnKey)
-	tc, ok := c.(*conn)
+	tc, ok := c.(*tls.Conn)
 	if !ok {
-		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *conn: %#v", c)
+		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *tls.Conn: %#v", c)
 		response500(w, r)
 		return
 	}
@@ -486,7 +486,41 @@ func commonRedirect(redirectHost string) http.Handler {
 		// Never set by the Go HTTP library.
 		u.Scheme = "https"
 		u.Host = redirectHost
-		http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+		targetURL := u.String()
+
+		// Handle multiple Accept headers and case-insensitivity
+		// Join all Accept headers (HTTP allows multiple) and normalize case
+		acceptHeaders := r.Header["Accept"]
+		if len(acceptHeaders) == 0 {
+			http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
+			return
+		}
+
+		// Prevent cache poisoning by varying on Accept (only when Accept is present)
+		w.Header().Add("Vary", "Accept")
+		accept := strings.ToLower(strings.Join(acceptHeaders, ","))
+
+		// Check for JSON request with proper MIME type parsing
+		// Avoids false positives from substring matching (e.g., "application/json-patch+json")
+		wantsJSON := false
+		for _, part := range strings.Split(accept, ",") {
+			mime := strings.TrimSpace(strings.Split(part, ";")[0])
+			if mime == "application/json" {
+				wantsJSON = true
+				break
+			}
+		}
+
+		if wantsJSON {
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Location", targetURL)
+			w.WriteHeader(http.StatusMovedPermanently)
+			// Return an empty JSON object for the redirect body
+			w.Write([]byte("{}"))
+			return
+		}
+
+		http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
 }
@@ -594,7 +628,7 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	tlsConn, ok := r.Context().Value(smuggledConnKey).(*conn)
+	tlsConn, ok := r.Context().Value(smuggledConnKey).(*tls.Conn)
 	tlsVersion := "none"
 	if ok && tlsConn != nil {
 		version := tlsConn.ConnectionState().Version

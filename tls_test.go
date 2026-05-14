@@ -252,7 +252,7 @@ func init() {
 	rootCAZtls = zcerts[0]
 }
 
-func connect(t *testing.T, clientConf *tls.Config) *conn {
+func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
@@ -326,10 +326,10 @@ func connect(t *testing.T, clientConf *tls.Config) *conn {
 	case <-time.After(1 * time.Second):
 		t.Fatalf("timed out")
 	}
-	return cr.conn
+	return cr.conn.Conn
 }
 
-func connectZtls(t *testing.T, clientConf *ztls.Config) *conn {
+func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
@@ -400,7 +400,7 @@ func connectZtls(t *testing.T, clientConf *ztls.Config) *conn {
 	case <-time.After(1 * time.Second):
 		t.Fatalf("timed out")
 	}
-	return cr.conn
+	return cr.conn.Conn
 }
 
 func logErrFromServer(t *testing.T, errCh chan error) {
