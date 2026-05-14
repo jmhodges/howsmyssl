@@ -1,0 +1,17 @@
+/* Override Bootstrap 3 navbar-default text colors so all navbar text
+   meets WCAG AAA (7:1) contrast against the navbar background. */
+.navbar-default .navbar-brand,
+.navbar-default .navbar-nav > li > a {
+    color: #595959; /* 7.04:1 on #f8f8f8 */
+}
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus,
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus {
+    color: #333; /* 12.63:1 on #f8f8f8 */
+}
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+    color: #333; /* 10.36:1 on the #e7e7e7 active background */
+}
