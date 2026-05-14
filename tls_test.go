@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"github.com/jmhodges/howsmyssl/howhttp"
 	tls "github.com/jmhodges/howsmyssl/tls1262"
 	ztls "github.com/zmap/zcrypto/tls"
 	zx509 "github.com/zmap/zcrypto/x509"
@@ -267,14 +268,14 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
-	li := newListener(tl, new(expvar.Map).Init())
+	li := howhttp.NewListener(tl, new(expvar.Map).Init())
 	// bytesLen is picked to be large enough to trigger the BEAST vuln detection
 	// if the client is vulnerable but small enough to not cause too much time
 	// spent in the tests.
 	bytesLen := 256
 	type connRes struct {
 		recv []byte
-		conn *conn
+		conn *howhttp.Conn
 	}
 	ch := make(chan connRes)
 	errCh := make(chan error)
@@ -288,7 +289,7 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 		io.ReadFull(c, b)
 		c.Close()
 		li.Close()
-		tc := c.(*conn)
+		tc := c.(*howhttp.Conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
 	var c *tls.Conn
@@ -344,11 +345,11 @@ func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
-	li := newListener(tl, new(expvar.Map).Init())
+	li := howhttp.NewListener(tl, new(expvar.Map).Init())
 	bytesLen := 256
 	type connRes struct {
 		recv []byte
-		conn *conn
+		conn *howhttp.Conn
 	}
 	ch := make(chan connRes)
 	errCh := make(chan error)
@@ -362,7 +363,7 @@ func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {
 		io.ReadFull(c, b)
 		c.Close()
 		li.Close()
-		tc := c.(*conn)
+		tc := c.(*howhttp.Conn)
 		ch <- connRes{recv: b, conn: tc}
 	}()
 	var c *ztls.Conn

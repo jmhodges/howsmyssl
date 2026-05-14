@@ -25,6 +25,7 @@ import (
 
 	"cloud.google.com/go/logging"
 	"github.com/jmhodges/howsmyssl/gzip"
+	"github.com/jmhodges/howsmyssl/howhttp"
 	tls "github.com/jmhodges/howsmyssl/tls1262"
 	"google.golang.org/api/option"
 )
@@ -65,14 +66,6 @@ var (
 	index *template.Template
 )
 
-type contextKey struct{ name string }
-
-func (k *contextKey) String() string { return "howsmyssl context value " + k.name }
-
-// smuggledConnKey is for smuggling our wrapping *conn to the apiHandler that
-// needs its conn.Conn.ConnectionState to investigate the client's TLS settings.
-var smuggledConnKey = &contextKey{"smuggledConn"}
-
 func main() {
 	flag.Parse()
 	t := time.Now()
@@ -102,7 +95,7 @@ func main() {
 		log.Fatalf("unable to listen for the HTTP server on %s: %s", *httpAddr, err)
 	}
 	ns := expvar.NewMap("tls")
-	l := newListener(tlsListener, ns)
+	l := howhttp.NewListener(tlsListener, ns)
 
 	if *acmeURL != "" {
 		if !strings.HasPrefix(*acmeURL, "/") &&
@@ -196,8 +189,10 @@ func main() {
 		}
 	}()
 
-	httpsSrv := &http.Server{Handler: m}
-	configureHTTPSServer(httpsSrv)
+	httpsSrv, err := howhttp.NewServer(l, m)
+	if err != nil {
+		log.Fatalf("unable to create custom TLS HTTPS server: %s", err)
+	}
 
 	httpSrv := &http.Server{
 		Handler:      plaintextMux(redirectHost, requestLogger),
@@ -209,7 +204,7 @@ func main() {
 
 	log.Printf("Booting HTTPS on %s and HTTP on %s", *httpsAddr, *httpAddr)
 	go func() {
-		err := httpsSrv.Serve(l)
+		err := httpsSrv.Serve()
 		if err != nil && err != http.ErrServerClosed {
 			log.Fatalf("https server error: %s", err)
 		}
@@ -242,29 +237,6 @@ func main() {
 	wg.Wait()
 	cancel()
 	gclog.Flush()
-}
-
-func configureHTTPSServer(srv *http.Server) {
-	// If you add HTTP/2 or HTTP/3 support here, be sure that the Connection:
-	// close header is being set properly elsewhere
-	srv.ReadTimeout = 10 * time.Second
-	srv.WriteTimeout = 15 * time.Second
-	srv.ConnContext = func(ctx context.Context, c net.Conn) context.Context {
-		tc, ok := c.(*conn)
-		if !ok {
-			log.Printf("Server.ConnContext: unable to convert net.Conn to *conn: %#v\n", c)
-			return ctx
-		}
-		// We do this smuggling instead of using http.Hijcker.Hijack to avoid
-		// needing to do a bunch of connection management and HTTP response
-		// formatting ourselves. We smuggle the whole *conn into the context
-		// instead of just its ConnectionState because the handshake may not yet
-		// be performed, and I don't want to lock here waiting for the handshake
-		// to finish. It might be fine, but I've not verified there's nothing
-		// that would be delayed by doing so.
-		ctx = context.WithValue(ctx, smuggledConnKey, tc.Conn)
-		return ctx
-	}
 }
 
 // Returns routeHost, redirectHost
@@ -333,15 +305,16 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	})
 	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
-		if r.ProtoMajor == 1 && r.ProtoMinor == 1 {
-			// We always disconnect folks after their request is done to ensure
-			// we don't keep our tls.Conn fork with it's extra large memory
-			// needs (including the `clientHelloMsg`) around for too long. This
-			// also helps prevent any TLS resumptions from happening and
-			// breaking our vuln detection. We do this on all requests to avoid
-			// races.
-			w.Header().Set("Connection", "close")
-		}
+
+		// We always disconnect folks after their request is done to ensure
+		// we don't keep our tls.Conn fork with it's extra large memory
+		// needs (including the `clientHelloMsg`) around for too long. This
+		// also helps prevent any TLS resumptions from happening and
+		// breaking our vuln detection. We do this on all requests to avoid
+		// races. This works on even HTTP/2 because the Go HTTP server will
+		// send a GOAWAY frame if it sees this header in the response.
+		w.Header().Set("Connection", "close")
+
 		gzippedM.ServeHTTP(w, r)
 	})
 	return protoHandler{logHandler{wrapper, requestLogger}, "https"}
@@ -438,10 +411,9 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	// avoid needing to do a bunch of connection management and HTTP response
 	// formatting ourselves.
 	w = &statWriter{w: w, stats: statuses}
-	c := r.Context().Value(smuggledConnKey)
-	tc, ok := c.(*tls.Conn)
+	tc, ok := howhttp.SmuggledConn(r.Context())
 	if !ok {
-		log.Printf("handleTLSClientInfo: unable to convert smuggledConnKey to *tls.Conn: %#v", c)
+		log.Printf("handleTLSClientInfo: unable to retrieve smuggled *tls.Conn from request context")
 		response500(w, r)
 		return
 	}
@@ -539,6 +511,7 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	go reloadKeypairForever(kpr, time.NewTicker(1*time.Hour))
 	tlsConf := &tls.Config{
 		GetCertificate:           kpr.GetCertificate,
+		NextProtos:               []string{"h2", "http/1.1"},
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionTLS10,
 		CipherSuites: []uint16{
@@ -628,13 +601,13 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if userAgent == "" {
 		userAgent = "nouseragent"
 	}
-	tlsConn, ok := r.Context().Value(smuggledConnKey).(*tls.Conn)
+	tlsConn, ok := howhttp.SmuggledConn(r.Context())
 	tlsVersion := "none"
 	if ok && tlsConn != nil {
 		version := tlsConn.ConnectionState().Version
 		tlsVersion = actualSupportedVersions[version]
 	}
-	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion)
+	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto)
 	h.inner.ServeHTTP(w, r)
 }
 
