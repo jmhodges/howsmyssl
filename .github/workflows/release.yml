@@ -1,31 +1,20 @@
-name: Build and deploy
+name: Release
+
 on:
   push:
-    branches:
-      - main
-      - "test_*"
-      - "test-*"
-  pull_request:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 permissions:
-  id-token: write # passed through to deploy.yml for Google OIDC
   contents: read
 
 jobs:
   build:
     name: Build
     uses: ./.github/workflows/go.yml
-  deploy:
-    needs: build
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
-    name: Deploy
-    concurrency: production
-    uses: ./.github/workflows/deploy.yml
+
   push_to_dockerhub:
     needs: build
-    if: github.ref == 'refs/heads/main'
     name: Push to Docker Hub
     runs-on: ubuntu-latest
     steps:
@@ -47,8 +36,10 @@ jobs:
         with:
           images: jmhodges/howsmyssl
           tags: |
-            type=raw,value=main
-            type=sha,prefix=main-,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ !contains(github.ref, '-') }}
 
       - name: Build and push to Docker Hub
         uses: docker/build-push-action@v6
