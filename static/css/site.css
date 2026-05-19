@@ -234,8 +234,13 @@ small { font-size: 0.875rem; color: var(--color-muted); }
 }
 
 /* 8. label (status pill)
-   ----------------------------------------------------------------------------- */
-.label {
+   -----------------------------------------------------------------------------
+   The three rating words are the entire vocabulary, so they double as their
+   own classes: <span class="okay">Good</span>. The grouped selector applies
+   the pill styling; the per-color rules supply the background. */
+.okay,
+.improvable,
+.bad {
     display: inline-block;
     padding: 0.2em 0.6em 0.3em;
     font-size: 0.75em;
@@ -246,9 +251,9 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     border-radius: 0.25em;
     white-space: nowrap;
 }
-.label--okay        { background-color: var(--color-okay); }
-.label--improvable  { background-color: var(--color-improvable); }
-.label--bad         { background-color: var(--color-bad); }
+.okay       { background-color: var(--color-okay); }
+.improvable { background-color: var(--color-improvable); }
+.bad        { background-color: var(--color-bad); }
 
 /* 9. fragpadded heading + anchor-link
    ----------------------------------------------------------------------------- */
