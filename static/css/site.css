@@ -1,17 +1,286 @@
-/* Override Bootstrap 3 navbar-default text colors so all navbar text
-   meets WCAG AAA (7:1) contrast against the navbar background. */
-.navbar-default .navbar-brand,
-.navbar-default .navbar-nav > li > a {
-    color: #595959; /* 7.04:1 on #f8f8f8 */
+/* =============================================================================
+   how's my ssl — site.css
+   -----------------------------------------------------------------------------
+   Organized by component, top to bottom:
+     1.  tokens (CSS custom properties)
+     2.  reset / base elements
+     3.  layout: .page, .stack, .prose, .grid-cards
+     4.  site-nav
+     5.  hero
+     6.  page-header, lead
+     7.  card
+     8.  label (status pill)
+     9.  fragpadded heading + anchor-link
+     10. site-footer
+   ============================================================================= */
+
+/* 1. tokens
+   ----------------------------------------------------------------------------- */
+:root {
+    --color-okay: #1B9E77;
+    --color-improvable: #7570B3;
+    --color-bad: #D95F02;
+
+    --color-bg: #fff;
+    --color-fg: #333;
+    --color-muted: #595959;
+    --color-rule: #e7e7e7;
+    --color-nav-bg: #f8f8f8;
+    --color-hero-bg: #eee;
+    --color-code-bg: #f5f5f5;
+    --color-link: #337ab7;
+    --color-link-hover: #23527c;
+
+    --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-7: 3rem;
+
+    --radius: 0.25rem;
+    --radius-lg: 0.5rem;
+
+    --measure: 64rem;
+    --measure-prose: 44rem;
+    --nav-height: 3.5rem;
 }
-.navbar-default .navbar-brand:hover,
-.navbar-default .navbar-brand:focus,
-.navbar-default .navbar-nav > li > a:hover,
-.navbar-default .navbar-nav > li > a:focus {
-    color: #333; /* 12.63:1 on #f8f8f8 */
+
+/* 2. reset / base
+   ----------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+    -webkit-text-size-adjust: 100%;
 }
-.navbar-default .navbar-nav > .active > a,
-.navbar-default .navbar-nav > .active > a:hover,
-.navbar-default .navbar-nav > .active > a:focus {
-    color: #333; /* 10.36:1 on the #e7e7e7 active background */
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-fg);
+    background: var(--color-bg);
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    line-height: 1.2;
+    margin: 0;
+}
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+
+p { margin: 0; }
+
+a { color: var(--color-link); text-decoration: none; }
+a:hover, a:focus { color: var(--color-link-hover); text-decoration: underline; }
+
+ul { padding-left: 1.5rem; margin: 0; }
+li { margin: 0; }
+li + li { margin-top: var(--space-1); }
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--color-rule);
+    margin: var(--space-6) 0;
+}
+
+pre {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.45;
+    background: var(--color-code-bg);
+    padding: var(--space-4);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+small { font-size: 0.875rem; color: var(--color-muted); }
+
+/* 3. layout
+   ----------------------------------------------------------------------------- */
+.page {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4);
+}
+
+/* vertical rhythm — every direct child after the first gets a top margin */
+.stack > * + * { margin-top: var(--space-5); }
+.stack-loose > * + * { margin-top: var(--space-6); }
+.stack-tight > * + * { margin-top: var(--space-2); }
+
+.prose {
+    max-width: var(--measure-prose);
+}
+.prose > * + * { margin-top: var(--space-4); }
+.prose ul { margin-top: var(--space-2); }
+.prose li + li { margin-top: var(--space-2); }
+
+/* fluid 3-up grid: each card needs at least 18rem; otherwise it collapses to
+   2-up or 1-up automatically. No breakpoints needed. */
+.grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: var(--space-6) var(--space-5);
+}
+
+/* 4. site-nav
+   ----------------------------------------------------------------------------- */
+.site-nav {
+    background: var(--color-nav-bg);
+    border-bottom: 1px solid var(--color-rule);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+.site-nav__inner {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3) var(--space-5);
+    min-height: var(--nav-height);
+    flex-wrap: wrap;
+}
+.site-nav__brand {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: var(--color-muted); /* 7.04:1 on #f8f8f8 — WCAG AAA */
+    text-decoration: none;
+    padding: var(--space-2) 0;
+}
+.site-nav__brand:hover,
+.site-nav__brand:focus {
+    color: var(--color-fg);
+    text-decoration: none;
+}
+.site-nav__links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.site-nav__links li { margin: 0; }
+.site-nav__links a {
+    color: var(--color-muted);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    display: inline-block;
+}
+.site-nav__links a:hover,
+.site-nav__links a:focus {
+    color: var(--color-fg);
+    background: var(--color-rule);
+    text-decoration: none;
+}
+.site-nav__links li[aria-current="page"] a {
+    color: var(--color-fg);
+    background: var(--color-rule);
+}
+
+/* 5. hero
+   ----------------------------------------------------------------------------- */
+.hero {
+    background: var(--color-hero-bg);
+    padding: var(--space-7) var(--space-5);
+    border-radius: var(--radius-lg);
+}
+.hero > * + * { margin-top: var(--space-4); }
+.hero h1 { font-size: clamp(2rem, 4vw + 1rem, 3.25rem); }
+.hero p { font-size: 1.125rem; }
+
+.hero__rating--okay { color: var(--color-okay); }
+.hero__rating--improvable { color: var(--color-improvable); }
+.hero__rating--bad { color: var(--color-bad); }
+
+/* 6. page-header / lead
+   ----------------------------------------------------------------------------- */
+.page-header {
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-rule);
+}
+
+.lead {
+    font-size: 1.125rem;
+    line-height: 1.5;
+}
+
+/* 7. card
+   ----------------------------------------------------------------------------- */
+.card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0; /* let long cipher suite names wrap inside grid tracks */
+}
+.card h2 { font-size: 1.375rem; }
+.card p,
+.card li {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* 8. label (status pill)
+   ----------------------------------------------------------------------------- */
+.label {
+    display: inline-block;
+    padding: 0.2em 0.6em 0.3em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    vertical-align: baseline;
+    border-radius: 0.25em;
+    white-space: nowrap;
+}
+.label--okay        { background-color: var(--color-okay); }
+.label--improvable  { background-color: var(--color-improvable); }
+.label--bad         { background-color: var(--color-bad); }
+
+/* 9. fragpadded heading + anchor-link
+   ----------------------------------------------------------------------------- */
+.fragpadded {
+    scroll-margin-top: calc(var(--nav-height) + var(--space-3));
+    position: relative;
+}
+.anchor-link {
+    position: absolute;
+    right: 100%;
+    padding-right: var(--space-1);
+    color: var(--color-muted);
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+@media (hover: hover) {
+    .fragpadded:hover .anchor-link,
+    .fragpadded .anchor-link:focus { opacity: 1; }
+}
+
+/* 10. site-footer
+   ----------------------------------------------------------------------------- */
+.site-footer {
+    border-top: 1px solid var(--color-rule);
+    margin-top: var(--space-7);
+    padding: var(--space-5) var(--space-4);
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    text-align: left;
+}
+.site-footer__inner {
+    max-width: var(--measure);
+    margin: 0 auto;
 }

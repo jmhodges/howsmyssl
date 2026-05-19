@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <title>API &middot; How's My SSL?</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    
+
     <script>
      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
          (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
@@ -14,151 +13,105 @@
 
      ga('create', 'UA-46659537-1', 'howsmyssl.com');
      ga('send', 'pageview');
-
     </script>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-    <script
-        src="https://code.jquery.com/jquery-2.2.4.min.js"
-        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-        crossorigin="anonymous"></script>
-    
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
     <link rel="stylesheet" href="/s/css/site.css">
-
-    <style type="text/css">
-     body {
-         padding-top: 60px;
-         padding-bottom: 40px;
-     }
-
-     .main {
-         font-size: 15px;
-     }
-
-     footer {
-         margin-bottom: 500px;
-     }
-
-     .container-fluid .credit {
-         margin: 20px 0;
-     }
-    </style>
   </head>
   <body>
-    <div class="navbar navbar-default navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">How's My SSL?</a>
-        </div>
-
-        <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li><a href="/">Home</a></li>
-            <li><a href="/s/about.html">About</a></li>
-            <li class="active"><a href="/s/api.html">API</a></li>
-            <li><a href="https://blog.howsmyssl.com">Blog</a></li>
-          </ul>
-        </div>
+    <header class="site-nav">
+      <div class="site-nav__inner">
+        <a class="site-nav__brand" href="/">How's My SSL?</a>
+        <ul class="site-nav__links">
+          <li><a href="/">Home</a></li>
+          <li><a href="/s/about.html">About</a></li>
+          <li aria-current="page"><a href="/s/api.html">API</a></li>
+          <li><a href="https://blog.howsmyssl.com">Blog</a></li>
+        </ul>
       </div>
-    </div>
+    </header>
 
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-offset-1 col-sm-9">
-          <div class="page-header">
-            <h1>API</h1>
-          </div>
+    <main class="page">
+      <article class="prose">
+        <header class="page-header">
+          <h1>API</h1>
+        </header>
 
-          <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
-            want to test clients without a browser
-            experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p>
-          
-          <p>The API is free to use to test clients under your control. If you would like to use the API to test your users' browsers on your site, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)</p>
+        <p class="lead">How's My SSL? provides a simple HTTP JSON API for developers that
+          want to test clients without a browser
+          experience: <a href="https://www.howsmyssl.com/a/check">https://www.howsmyssl.com/a/check</a>.</p>
 
-          <p>An example response from the API:</p>
-          <p></p><pre>    GET https://www.howsmyssl.com/a/check HTTP/1.1
+        <p>The API is free to use to test clients under your control. If you would like to use the API to test your users' browsers on your site, subscribe the domain your code will be making requests from at <a href="https://subscriptions.howsmyssl.com">subscriptions.howsmyssl.com</a>. (Non-profit and student programs are available.)</p>
 
-    {
-      "given_cipher_suites": [
-        "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-        "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_RSA_WITH_AES_128_GCM_SHA256",
-        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
-        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
-        "TLS_RSA_WITH_AES_256_CBC_SHA",
-        "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
-        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
-        "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
-        "TLS_RSA_WITH_AES_128_CBC_SHA",
-        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
-      ],
-      "given_named_groups": [
-        "x25519",
-        "secp256r1",
-        "secp384r1",
-        "secp521r1"
-      ],
-      "post_quantum_key_agreement": false,
-      "ephemeral_keys_supported": true,
-      "session_ticket_supported": false,
-      "tls_compression_supported": false,
-      "unknown_cipher_suite_supported": false,
-      "beast_vuln": false,
-      "able_to_detect_n_minus_one_splitting": false,
-      "insecure_cipher_suites": {
-        "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": [
-          "uses keys smaller than 128 bits in its encryption"
-        ],
-        "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA": [
-          "uses RC4 which has insecure biases in its output"
-        ],
-        "TLS_RSA_WITH_3DES_EDE_CBC_SHA": [
-          "uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"
-        ]
-      },
-      "tls_version": "TLS 1.2",
-      "rating": "Bad"
-    }
+        <p>An example response from the API:</p>
+        <pre>GET https://www.howsmyssl.com/a/check HTTP/1.1
 
-          </pre><p></p>
-          <p>The returned JSON hash will have at least these keys, but
-            may include more as howsmyssl evolves. Each of these keys
-            map fairly obviously to the HTML version and it can be
-            helpful to <a href="/s/about.html#what-it-means">understand
-            their meaning</a>. The source code
-            that <a href="https://github.com/jmhodges/howsmyssl/blob/main/client_info.go">gathers
-            the client info</a> may also be helpful. All strings
-            returned may contain HTML escaped text.
+{
+  "given_cipher_suites": [
+    "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+    "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+    "TLS_RSA_WITH_AES_128_GCM_SHA256",
+    "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+    "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+    "TLS_RSA_WITH_AES_256_CBC_SHA",
+    "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
+    "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+    "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+    "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+    "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+    "TLS_RSA_WITH_AES_128_CBC_SHA",
+    "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+    "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
+  ],
+  "given_named_groups": [
+    "x25519",
+    "secp256r1",
+    "secp384r1",
+    "secp521r1"
+  ],
+  "post_quantum_key_agreement": false,
+  "ephemeral_keys_supported": true,
+  "session_ticket_supported": false,
+  "tls_compression_supported": false,
+  "unknown_cipher_suite_supported": false,
+  "beast_vuln": false,
+  "able_to_detect_n_minus_one_splitting": false,
+  "insecure_cipher_suites": {
+    "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA": [
+      "uses keys smaller than 128 bits in its encryption"
+    ],
+    "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA": [
+      "uses RC4 which has insecure biases in its output"
+    ],
+    "TLS_RSA_WITH_3DES_EDE_CBC_SHA": [
+      "uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"
+    ]
+  },
+  "tls_version": "TLS 1.2",
+  "rating": "Bad"
+}</pre>
+        <p>The returned JSON hash will have at least these keys, but
+          may include more as howsmyssl evolves. Each of these keys
+          map fairly obviously to the HTML version and it can be
+          helpful to <a href="/s/about.html#what-it-means">understand
+          their meaning</a>. The source code
+          that <a href="https://github.com/jmhodges/howsmyssl/blob/main/client_info.go">gathers
+          the client info</a> may also be helpful. All strings
+          returned may contain HTML escaped text.</p>
 
-          </p><p>Let me be a little more explicit. How's My SSL is Open Source
-            software and can
-            be <a href="https://github.com/jmhodges/howsmyssl">found on
-            GitHub</a>. There's a
-            <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
-          </p>
-        </div>
+        <p>Let me be a little more explicit. How's My SSL is Open Source
+          software and can
+          be <a href="https://github.com/jmhodges/howsmyssl">found on
+          GitHub</a>. There's a
+          <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.</p>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
       </div>
-
-      <hr />
-      <div class="row">
-        <div class="col-sm-offset-1 col-sm-12">
-          Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
-        </div>
-      </div>
-    </div>
+    </footer>
   </body>
 </html>
