@@ -3,7 +3,7 @@
    -----------------------------------------------------------------------------
    Organized by component, top to bottom:
      1.  tokens (CSS custom properties)
-     2.  reset / base elements
+     2.  base (small: reset + body + link defaults)
      3.  layout: .page, .stack, .prose, .grid-cards
      4.  site-nav
      5.  hero
@@ -34,6 +34,18 @@
     --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
+    /* font-size / line-height pairs (matches Tailwind v2's scale) */
+    --size-xs:   0.75rem;   --line-height-xs:   1rem;
+    --size-sm:   0.875rem;  --line-height-sm:   1.25rem;
+    --size-base: 1rem;      --line-height-base: 1.5rem;
+    --size-lg:   1.125rem;  --line-height-lg:   1.75rem;
+    --size-xl:   1.25rem;   --line-height-xl:   1.75rem;
+    --size-2xl:  1.5rem;    --line-height-2xl:  2rem;
+    --size-3xl:  1.875rem;  --line-height-3xl:  2.25rem;
+    --size-4xl:  2.25rem;   --line-height-4xl:  2.5rem;
+    --size-5xl:  3rem;
+    --line-height-tight: 1.2;
+
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -50,60 +62,36 @@
     --nav-height: 3.5rem;
 }
 
-/* 2. reset / base
-   ----------------------------------------------------------------------------- */
+/* 2. base
+   -----------------------------------------------------------------------------
+   Kept deliberately small: a reset, body defaults, link defaults. Per-element
+   sizing (h1–h4, pre, hr, small, li-spacing) lives on the component that owns
+   the context where the element actually appears. */
 *, *::before, *::after { box-sizing: border-box; }
 
-html {
-    -webkit-text-size-adjust: 100%;
-}
+html { -webkit-text-size-adjust: 100%; }
 
 body {
     margin: 0;
     font-family: var(--font-sans);
-    font-size: 1rem;
-    line-height: 1.5;
+    font-size: var(--size-base);
+    line-height: var(--line-height-base);
     color: var(--color-fg);
     background: var(--color-bg);
 }
 
+h1, h2, h3, h4, p { margin: 0; }
 h1, h2, h3, h4 {
-    font-family: var(--font-sans);
     font-weight: 500;
-    line-height: 1.2;
-    margin: 0;
+    line-height: var(--line-height-tight);
 }
-h1 { font-size: 2.25rem; }
-h2 { font-size: 1.5rem; }
-h3 { font-size: 1.25rem; }
-h4 { font-size: 1.125rem; }
-
-p { margin: 0; }
-
-a { color: var(--color-link); text-decoration: none; }
-a:hover, a:focus { color: var(--color-link-hover); text-decoration: underline; }
 
 ul { padding-left: 1.5rem; margin: 0; }
 li { margin: 0; }
-li + li { margin-top: var(--space-1); }
 
-hr {
-    border: 0;
-    border-top: 1px solid var(--color-rule);
-    margin: var(--space-6) 0;
-}
-
-pre {
-    font-family: var(--font-mono);
-    font-size: 0.875rem;
-    line-height: 1.45;
-    background: var(--color-code-bg);
-    padding: var(--space-4);
-    border-radius: var(--radius);
-    overflow-x: auto;
-}
-
-small { font-size: 0.875rem; color: var(--color-muted); }
+a { color: var(--color-link); text-decoration: none; }
+a:hover,
+a:focus { color: var(--color-link-hover); text-decoration: underline; }
 
 /* 3. layout
    ----------------------------------------------------------------------------- */
@@ -122,8 +110,30 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     max-width: var(--measure-prose);
 }
 .prose > * + * { margin-top: var(--space-4); }
+.prose h3 {
+    font-size: var(--size-xl);
+    line-height: var(--line-height-xl);
+}
+.prose h4 {
+    font-size: var(--size-lg);
+    line-height: var(--line-height-lg);
+}
 .prose ul { margin-top: var(--space-2); }
 .prose li + li { margin-top: var(--space-2); }
+.prose hr {
+    border: 0;
+    border-top: 1px solid var(--color-rule);
+    margin: var(--space-6) 0;
+}
+.prose pre {
+    font-family: var(--font-mono);
+    font-size: var(--size-sm);
+    line-height: var(--line-height-sm);
+    background: var(--color-code-bg);
+    padding: var(--space-4);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
 
 /* fluid 3-up grid: each card needs at least 18rem; otherwise it collapses to
    2-up or 1-up automatically. No breakpoints needed. */
@@ -153,7 +163,8 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     flex-wrap: wrap;
 }
 .site-nav__brand {
-    font-size: 1.125rem;
+    font-size: var(--size-lg);
+    line-height: var(--line-height-lg);
     font-weight: 500;
     color: var(--color-muted); /* 7.04:1 on #f8f8f8 — WCAG AAA */
     text-decoration: none;
@@ -199,12 +210,17 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     border-radius: var(--radius-lg);
 }
 .hero > * + * { margin-top: var(--space-4); }
-.hero h1 { font-size: clamp(2rem, 4vw + 1rem, 3.25rem); }
-.hero p { font-size: 1.125rem; }
-
-.hero__rating--okay { color: var(--color-okay); }
-.hero__rating--improvable { color: var(--color-improvable); }
-.hero__rating--bad { color: var(--color-bad); }
+.hero h1 {
+    font-size: clamp(var(--size-3xl), 4vw + 1rem, var(--size-5xl));
+}
+.hero p {
+    font-size: var(--size-lg);
+    line-height: var(--line-height-lg);
+}
+.hero small {
+    font-size: var(--size-sm);
+    color: var(--color-muted);
+}
 
 /* 6. page-header / lead
    ----------------------------------------------------------------------------- */
@@ -212,10 +228,14 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     padding-bottom: var(--space-3);
     border-bottom: 1px solid var(--color-rule);
 }
+.page-header h1 {
+    font-size: var(--size-4xl);
+    line-height: var(--line-height-4xl);
+}
 
 .lead {
-    font-size: 1.125rem;
-    line-height: 1.5;
+    font-size: var(--size-lg);
+    line-height: var(--line-height-lg);
 }
 
 /* 7. card
@@ -226,12 +246,16 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     gap: var(--space-3);
     min-width: 0; /* let long cipher suite names wrap inside grid tracks */
 }
-.card h2 { font-size: 1.375rem; }
+.card h2 {
+    font-size: var(--size-xl);
+    line-height: var(--line-height-xl);
+}
 .card p,
 .card li {
     overflow-wrap: anywhere;
     word-break: break-word;
 }
+.card li + li { margin-top: var(--space-1); }
 
 /* 8. label (status pill)
    -----------------------------------------------------------------------------
@@ -282,7 +306,8 @@ small { font-size: 0.875rem; color: var(--color-muted); }
     margin-top: var(--space-7);
     padding: var(--space-5) var(--space-4);
     color: var(--color-muted);
-    font-size: 0.875rem;
+    font-size: var(--size-sm);
+    line-height: var(--line-height-sm);
     text-align: left;
 }
 .site-footer__inner {
