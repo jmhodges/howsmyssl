@@ -204,11 +204,17 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		d.TLSVersionRating = bad
 	case vers == tls.VersionTLS11:
 		d.TLSVersionRating = improvable
-	case vers == tls.VersionTLS12:
-		if !now.Before(tls12BadCutover) {
-			d.TLSVersionRating = bad
-		} else if !now.Before(tls12ImprovableCutover) {
-			d.TLSVersionRating = improvable
+	}
+	// On the cutover dates, clients whose highest supported TLS version
+	// is TLS 1.2 or earlier are downgraded. TLS 1.0 is already bad and
+	// TLS 1.1 is already improvable, so this only escalates TLS 1.1 to
+	// bad and pushes TLS 1.2 through both states.
+	if vers <= tls.VersionTLS12 {
+		switch {
+		case !now.Before(tls12BadCutover):
+			d.TLSVersionRating = worse(d.TLSVersionRating, bad)
+		case !now.Before(tls12ImprovableCutover):
+			d.TLSVersionRating = worse(d.TLSVersionRating, improvable)
 		}
 	}
 

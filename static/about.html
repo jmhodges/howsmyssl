@@ -181,7 +181,7 @@
               <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
                 attack</a>.</li>
             <li>On or after December 14th, 2026 at 10 AM Pacific time, its
-              highest supported TLS version is TLS 1.2.</li>
+              highest supported TLS version is TLS 1.2 or earlier.</li>
             <li>On or after December 14th, 2026 at 10 AM Pacific time, it does
               not support post-quantum key agreement.</li>
           </ul>
@@ -222,7 +222,9 @@
             TLS 1.1 is a good improvement. However, the modern security
             environment has pushed us to TLS 1.3. Clients using TLS 1.1 will be
             marked down to at least
-            <span class="label improvable">Improvable</span>.</p>
+            <span class="label improvable">Improvable</span>, and to
+            <span class="label bad">Bad</span> on December 14th, 2026 at 10 AM
+            Pacific time alongside TLS 1.2.</p>
           <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
             and requires workarounds in both the client and server to work
             securely for all cipher suites. TLS 1.0 is also unable to use modern

@@ -413,6 +413,34 @@ func TestRatingCutovers(t *testing.T) {
 		}
 	})
 
+	t.Run("TLS11Max", func(t *testing.T) {
+		// TLS 1.1 max client. Already Improvable today; goes Bad at
+		// the December cutover alongside TLS 1.2.
+		clientConf := &tls.Config{
+			MinVersion:   tls.VersionTLS11,
+			MaxVersion:   tls.VersionTLS11,
+			CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+		}
+		c := connect(t, clientConf)
+
+		for _, tc := range []struct {
+			name        string
+			now         time.Time
+			wantVersion rating
+		}{
+			{"BeforeImprovable", beforeImprovable, improvable},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.TLSVersionRating != tc.wantVersion {
+					t.Errorf("TLSVersionRating: want %s, got %s", tc.wantVersion, ci.TLSVersionRating)
+				}
+			})
+		}
+	})
+
 	t.Run("TLS12MaxWithPQ", func(t *testing.T) {
 		// TLS 1.2 max client that also advertises an ML-KEM group. The
 		// version cutover still bites but the PQ rating stays okay.

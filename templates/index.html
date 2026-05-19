@@ -140,10 +140,13 @@
                 agreement algorithms.</p>
 
               {{else if eq .TLSVersion "TLS 1.1"}}
-              <p><span class="label improvable">Improvable</span> Your client is using
-                TLS 1.1. It would be better to be TLS 1.2, but at least it isn't
-                susceptible to the BEAST attack. But, it also doesn't have the
-                AES-GCM cipher suite available.</p>  {{else}}
+              <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
+                TLS 1.1. It is not susceptible to the BEAST attack, but it
+                doesn't have AES-GCM available and is well behind the modern
+                versions of the protocol. TLS 1.1 is downgraded to Bad
+                alongside TLS 1.2 on December 14th, 2026 at 10 AM Pacific
+                time. Upgrading to TLS 1.3 protects against downgrade attacks
+                and is required for modern post-quantum key agreement.</p>  {{else}}
               <p><span class="label bad">Bad</span> Your client is using
                 {{.TLSVersion}}, which is very old, possibly susceptible
                 to the BEAST attack, and doesn't have the best cipher
