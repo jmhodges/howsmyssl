@@ -44,15 +44,19 @@ type clientInfo struct {
 	PostQuantumRating              rating              `json:"-"`
 }
 
-// worse returns the more severe of two ratings (okay < improvable < bad).
-func worse(a, b rating) rating {
-	if a == bad || b == bad {
-		return bad
+// worse returns the most severe of the given ratings
+// (okay < improvable < bad). With no arguments it returns okay.
+func worse(ratings ...rating) rating {
+	out := okay
+	for _, r := range ratings {
+		switch r {
+		case bad:
+			return bad
+		case improvable:
+			out = improvable
+		}
 	}
-	if a == improvable || b == improvable {
-		return improvable
-	}
-	return okay
+	return out
 }
 
 const (
@@ -227,7 +231,7 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		}
 	}
 
-	d.Rating = worse(d.Rating, worse(d.TLSVersionRating, d.PostQuantumRating))
+	d.Rating = worse(d.Rating, d.TLSVersionRating, d.PostQuantumRating)
 
 	return d
 }
