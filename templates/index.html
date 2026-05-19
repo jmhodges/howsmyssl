@@ -122,13 +122,23 @@
           <div class="row">
             <div class="col-sm-4">
               <h2>Version</h2>
-              {{if eq .TLSVersion "TLS 1.2" "TLS 1.3"}}
-              
+              {{if eq .TLSVersion "TLS 1.3"}}
+
               <p><span class="label okay">Good</span> Your client is using
                 {{ .TLSVersion }}, the most modern version of the encryption
                 protocol. It gives you access to the fastest, most secure
                 encryption possible on the web.</p>
-              
+
+              {{else if eq .TLSVersion "TLS 1.2"}}
+              <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
+                TLS 1.2. TLS 1.2 is being phased out: on June 14th, 2026 at
+                10 AM Pacific time TLS 1.2 clients are downgraded to
+                Improvable, and on December 14th, 2026 at 10 AM Pacific time
+                they are downgraded to Bad. Upgrading to TLS 1.3 protects
+                against downgrade attacks, gives lower-latency handshakes,
+                and is required for the modern post-quantum key
+                agreement algorithms.</p>
+
               {{else if eq .TLSVersion "TLS 1.1"}}
               <p><span class="label improvable">Improvable</span> Your client is using
                 TLS 1.1. It would be better to be TLS 1.2, but at least it isn't
@@ -151,7 +161,7 @@
               attacks by future cryptographically-relevant quantum
               computers.</p>
               {{else}}
-              <p><span class="label improvable">Improvable</span>
+              <p><span class="label {{ratingSpan .PostQuantumRating}}">{{ratingShort .PostQuantumRating}}</span>
                 Your client does not support post-quantum key agreement. Without
                 that support, your traffic could be stored by adversaries today
                 and decrypted once sufficiently powerful quantum computers
@@ -160,7 +170,10 @@
                 earlier, and support for post-quantum cryptography is necessary
                 to defend against <a
                 href="https://en.wikipedia.org/wiki/Harvest_now,_decrypt_later">"harvest
-                now, decrypt later"</a> attacks.
+                now, decrypt later"</a> attacks. Clients without post-quantum
+                key agreement are downgraded to Improvable on June 14th, 2026
+                at 10 AM Pacific time and to Bad on December 14th, 2026 at 10 AM
+                Pacific time.
               </p>
               {{end}}
               <p><a href="/s/about.html/#post-quantum-key-agreement">Learn More</a></p>

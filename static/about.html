@@ -152,10 +152,17 @@
           <p>Clients are rated as <span class="label okay">Probably Okay</span> if no security problems could
             be detected.</p>
 
-          <p>Clients are downgraded
-            to <span class="label improvable">Improvable</span> if they do not support
-            ephemeral key cipher suites, do not support session tickets, or are
-            using TLS 1.1.</p>
+          <p>Clients are downgraded to <span class="label improvable">Improvable</span>
+            if any of the following are true:</p>
+          <ul>
+            <li>They do not support ephemeral key cipher suites.</li>
+            <li>They do not support session tickets.</li>
+            <li>They are using TLS 1.1.</li>
+            <li>On or after June 14th, 2026 at 10 AM Pacific time, their
+              highest supported TLS version is TLS 1.2.</li>
+            <li>On or after June 14th, 2026 at 10 AM Pacific time, they do not
+              support post-quantum key agreement.</li>
+          </ul>
           <p>Clients are downgraded to <span class="label bad">Bad</span> if any of
             the following are true:</p>
           <ul>
@@ -173,6 +180,10 @@
             <li>It is susceptible to the
               <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
                 attack</a>.</li>
+            <li>On or after December 14th, 2026 at 10 AM Pacific time, its
+              highest supported TLS version is TLS 1.2.</li>
+            <li>On or after December 14th, 2026 at 10 AM Pacific time, it does
+              not support post-quantum key agreement.</li>
           </ul>
           <p>How's My SSL? always selects the worst rating the client could
             receive.  That is, clients rated as "Bad" may also have problems
@@ -194,10 +205,16 @@
             to implement. They're the new normal for highly secure websites. TLS
             1.2 provides access to advanced cipher suites that support
             elliptical curve cryptography (large efficiency wins) and AEAD block
-            cipher modes (like the very nice GCM cipher suites). TLS 1.3 adds those 
-            features plus downgrade attack prevention, improved latency, support for more modern elliptical curves, 
+            cipher modes (like the very nice GCM cipher suites). TLS 1.3 adds those
+            features plus downgrade attack prevention, improved latency, support for more modern elliptical curves,
             and all of TLS 1.3 connections are forward secret.
-            Clients using TLS 1.3 and 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
+            Clients using TLS 1.3 may be set to <span class="label okay">Probably Okay</span>.
+            Clients whose highest supported TLS version is TLS 1.2 are downgraded
+            to <span class="label improvable">Improvable</span> on June 14th, 2026
+            at 10 AM Pacific time, and to <span class="label bad">Bad</span> on
+            December 14th, 2026 at 10 AM Pacific time. TLS 1.3 is required for
+            modern post-quantum key agreement and for protection against downgrade
+            attacks.</p>
           <p>TLS 1.1 is the third most recent version of TLS. It fixes some
             security problems in TLS 1.0, removing the need for many of the
             workarounds built into clients and servers. Many deployed clients
@@ -251,11 +268,11 @@
           handshake in a world with cryptographically-relevant quantum
           computers.</p>
           <p>Clients that support post-quantum key agreement will be defaulted
-          to <span class="label okay">Probably Okay</span>. In the near future,
-          clients that do not support post-quantum key agreement will be marked
-          as <span class="label improvable">Improvable</span>.</p>
-          <p>In the less near future, clients that do not support post-quantum
-          key agreement will be marked as <span class="label
+          to <span class="label okay">Probably Okay</span>. On June 14th, 2026
+          at 10 AM Pacific time, clients that do not support post-quantum key
+          agreement are downgraded to <span class="label improvable">Improvable</span>.</p>
+          <p>On December 14th, 2026 at 10 AM Pacific time, clients that do not
+          support post-quantum key agreement are downgraded to <span class="label
           bad">Bad</span>.</p>
 
           <h4 class="fragpadded" id="ephemeral-key-support"><a class="anchor-link" href="#ephemeral-key-support" aria-label="Link to Ephemeral Key Support">#</a>Ephemeral Key Support</h4>
