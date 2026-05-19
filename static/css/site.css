@@ -234,8 +234,9 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 }
 
 .lead {
-    font-size: var(--size-lg);
-    line-height: var(--line-height-lg);
+    font-size: var(--size-xl);
+    line-height: var(--line-height-xl);
+    font-weight: 500;
 }
 
 /* 7. card
