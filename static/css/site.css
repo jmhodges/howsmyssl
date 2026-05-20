@@ -235,8 +235,8 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 
 .lead {
     font-size: var(--size-xl);
-    line-height: var(--line-height-xl);
-    font-weight: 300;
+    line-height: var(--line-height-2xl);
+    color: var(--color-muted);
 }
 
 /* 7. card
