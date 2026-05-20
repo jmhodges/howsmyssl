@@ -234,8 +234,8 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 }
 
 .lead {
-    font-size: var(--size-2xl);
-    line-height: var(--line-height-2xl);
+    font-size: var(--size-xl);
+    line-height: var(--line-height-xl);
     font-weight: 300;
 }
 
