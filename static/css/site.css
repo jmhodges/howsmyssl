@@ -257,6 +257,14 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
     word-break: break-word;
 }
 .card li + li { margin-top: var(--space-1); }
+/* Card-leading pills sit at the head of each paragraph and act as a
+   summary marker, so they match the paragraph text size. In-paragraph
+   pills on the about page keep the smaller default set in section 8. */
+.card .okay,
+.card .improvable,
+.card .bad {
+    font-size: 1em;
+}
 
 /* 8. label (status pill)
    -----------------------------------------------------------------------------
