@@ -71,6 +71,7 @@
     --measure-hero: 48rem;
     --measure-prose: 44rem;
     --nav-height: 3.5rem;
+    --card-min: 15rem; /* (--measure-hero - 2 column gaps) / 3, so 3-up fits inside the hero's width */
 }
 
 /* 2. base
@@ -145,11 +146,13 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
     overflow-x: auto;
 }
 
-/* fluid 3-up grid: each card needs at least 18rem; otherwise it collapses to
-   2-up or 1-up automatically. No breakpoints needed. */
+/* fluid 3-up grid bounded to the hero's width so the cards line up under it.
+   Collapses to 2-up or 1-up automatically as the viewport narrows. */
 .grid-cards {
+    max-width: var(--measure-hero);
+    margin-inline: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(var(--card-min), 1fr));
     gap: var(--space-6) var(--space-5);
 }
 
