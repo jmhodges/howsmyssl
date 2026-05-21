@@ -101,7 +101,6 @@ li { margin: 0; }
 a { color: var(--color-link); text-decoration: none; }
 a:hover,
 a:focus { color: var(--color-link-hover); text-decoration: underline; }
-
 /* 3. layout
    ----------------------------------------------------------------------------- */
 .page {
@@ -245,7 +244,12 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 .lead {
     font-size: var(--size-xl);
     line-height: var(--line-height-2xl);
-    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.lead-second {
+    font-size: var(--size-xl);
+    line-height: var(--line-height-2xl);
 }
 
 /* 7. card
