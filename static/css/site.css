@@ -62,6 +62,7 @@
     --space-5: 1.5rem;
     --space-6: 2rem;
     --space-7: 3rem;
+    --space-8: 4rem;
 
     --radius: 0.25rem;
     --radius-lg: 0.5rem;
@@ -215,8 +216,9 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
    ----------------------------------------------------------------------------- */
 .hero {
     max-width: var(--measure-hero);
+    margin-inline: auto;
     background: var(--color-hero-bg);
-    padding: var(--space-7) var(--space-5);
+    padding: var(--space-8) var(--space-5);
     border-radius: var(--radius-lg);
 }
 .hero > * + * { margin-top: var(--space-4); }
