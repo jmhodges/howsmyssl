@@ -67,6 +67,7 @@
     --radius-lg: 0.5rem;
 
     --measure: 64rem;
+    --measure-hero: 48rem;
     --measure-prose: 44rem;
     --nav-height: 3.5rem;
 }
@@ -213,6 +214,7 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 /* 5. hero
    ----------------------------------------------------------------------------- */
 .hero {
+    max-width: var(--measure-hero);
     background: var(--color-hero-bg);
     padding: var(--space-7) var(--space-5);
     border-radius: var(--radius-lg);
@@ -229,6 +231,9 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
     font-size: var(--size-sm);
     color: var(--color-muted);
 }
+.hero__rating--okay       { color: var(--color-okay); }
+.hero__rating--improvable { color: var(--color-improvable); }
+.hero__rating--bad        { color: var(--color-bad); }
 
 /* 6. page-header / lead
    ----------------------------------------------------------------------------- */
