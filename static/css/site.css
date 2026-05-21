@@ -44,7 +44,16 @@
     --size-3xl:  1.875rem;  --line-height-3xl:  2.25rem;
     --size-4xl:  2.25rem;   --line-height-4xl:  2.5rem;
     --size-5xl:  3rem;
+    --line-height-none:  1;
     --line-height-tight: 1.2;
+
+    --font-weight-bold: 700;
+
+    /* status pill (.okay / .improvable / .bad) */
+    --pill-padding: 0.2em 0.6em 0.3em;
+    --pill-radius: 0.25em;
+    --pill-font-size: 0.75em;            /* default: inline tag inside running text */
+    --pill-font-size-prominent: 1em;     /* used at the head of card paragraphs */
 
     --space-1: 0.25rem;
     --space-2: 0.5rem;
@@ -263,7 +272,7 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 .card .okay,
 .card .improvable,
 .card .bad {
-    font-size: 1em;
+    font-size: var(--pill-font-size-prominent);
 }
 
 /* 8. label (status pill)
@@ -275,13 +284,13 @@ a:focus { color: var(--color-link-hover); text-decoration: underline; }
 .improvable,
 .bad {
     display: inline-block;
-    padding: 0.2em 0.6em 0.3em;
-    font-size: 0.75em;
-    font-weight: 700;
-    line-height: 1;
+    padding: var(--pill-padding);
+    font-size: var(--pill-font-size);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-none);
     color: #fff;
     vertical-align: baseline;
-    border-radius: 0.25em;
+    border-radius: var(--pill-radius);
     white-space: nowrap;
 }
 .okay       { background-color: var(--color-okay); }
