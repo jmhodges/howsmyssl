@@ -428,6 +428,34 @@
           where the post-quantum key agreement algorithms are advertised. No
           rating will be given in this section.</p>
 
+          <h4 class="fragpadded" id="given-signature-algorithms"><a class="anchor-link" href="#given-signature-algorithms" aria-label="Link to Given Signature Algorithms">#</a>Given Signature Algorithms</h4>
+          <p>These Given Signature Algorithms and Given Certificate Signature
+          Algorithms sections list the signature algorithms the client says it
+          supports, in the order the client sent them. They come from two
+          separate TLS extensions in the ClientHello, and a modern TLS 1.3
+          client typically sends both.</p>
+          <p>The first section, <strong>Given Signature Algorithms</strong>,
+          comes from the <code>signature_algorithms</code> extension. It
+          advertises the algorithms the client is willing to accept for
+          signatures the server produces during the handshake between the client
+          and server itself. Most importantly, that signature algorithm is used
+          by the server to prove it owns the private key for its
+          certificate.</p>
+          <p>The second section, <strong>Given Certificate Signature
+          Algorithms</strong>, comes from the
+          <code>signature_algorithms_cert</code> extension (added in TLS 1.3).
+          It advertises the algorithms the client is willing to accept for the
+          signatures <em>inside</em> the certificate chain. That is, the
+          signatures a Certificate Authority puts inside each certificate. When
+          a client doesn't send this extension, servers reuse the
+          <code>signature_algorithms</code> list for both purposes.</p>
+          <p>Post-quantum signature algorithms such as
+          <code>mldsa44</code>, <code>mldsa65</code>, and <code>mldsa87</code>
+          (ML-DSA, per <a
+          href="https://datatracker.ietf.org/doc/draft-ietf-tls-mldsa/">draft-ietf-tls-mldsa</a>)
+          will appear here as clients begin to support them. No rating will be
+          given in these two sections.</p>
+
           <hr />
           <h3 class="fragpadded" id="tls-vs-ssl"><a class="anchor-link" href="#tls-vs-ssl" aria-label="Link to TLS vs SSL">#</a>TLS vs SSL</h3>
           <p>Okay, last thing. The jargon around this is a little funny, so

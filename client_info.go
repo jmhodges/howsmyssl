@@ -18,6 +18,8 @@ const (
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
 	GivenNamedGroups               []string            `json:"given_named_groups"`
+	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
+	GivenSignatureAlgorithmsCert   []string            `json:"given_signature_algorithms_cert"`
 	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`           // neutral (temporarily)
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
 	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
@@ -133,6 +135,9 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.GivenNamedGroups = append(d.GivenNamedGroups, name)
 	}
 
+	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
+	d.GivenSignatureAlgorithmsCert = renderSignatureSchemes(st.SupportedSignatureAlgorithmsCert)
+
 	d.SessionTicketsSupported = st.SessionTicketsSupported
 
 	for _, cm := range st.CompressionMethods {
@@ -171,4 +176,20 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.Rating = bad
 	}
 	return d
+}
+
+// renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA
+// registry names, falling back to a hex string for unknown values. It always
+// returns a non-nil slice so JSON output renders [] rather than null.
+func renderSignatureSchemes(schemes []tls.SignatureScheme) []string {
+	out := make([]string, 0, len(schemes))
+	for _, s := range schemes {
+		id := uint16(s)
+		name, found := allSignatureSchemes[id]
+		if !found {
+			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
+		}
+		out = append(out, name)
+	}
+	return out
 }
