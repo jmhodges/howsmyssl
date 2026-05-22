@@ -18,6 +18,8 @@ const (
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
 	GivenNamedGroups               []string            `json:"given_named_groups"`
+	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
+	GivenSignatureAlgorithmsCert   []string            `json:"given_signature_algorithms_cert"`
 	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`           // neutral (temporarily)
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
 	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
@@ -131,6 +133,26 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 			d.PostQuantumKeyAgreement = true
 		}
 		d.GivenNamedGroups = append(d.GivenNamedGroups, name)
+	}
+
+	d.GivenSignatureAlgorithms = []string{}
+	for _, s := range st.SupportedSignatureAlgorithms {
+		id := uint16(s)
+		name, found := allSignatureSchemes[id]
+		if !found {
+			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
+		}
+		d.GivenSignatureAlgorithms = append(d.GivenSignatureAlgorithms, name)
+	}
+
+	d.GivenSignatureAlgorithmsCert = []string{}
+	for _, s := range st.SupportedSignatureAlgorithmsCert {
+		id := uint16(s)
+		name, found := allSignatureSchemes[id]
+		if !found {
+			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
+		}
+		d.GivenSignatureAlgorithmsCert = append(d.GivenSignatureAlgorithmsCert, name)
 	}
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported

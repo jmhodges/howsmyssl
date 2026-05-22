@@ -228,6 +228,57 @@ func TestPostQuantumDetection(t *testing.T) {
 	})
 }
 
+func TestGivenSignatureAlgorithms(t *testing.T) {
+	t.Run("TLS13Default", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS13,
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		if len(ci.GivenSignatureAlgorithms) == 0 {
+			t.Fatalf("GivenSignatureAlgorithms: want non-empty, got empty")
+		}
+		// Go's default TLS 1.2+ ClientHello includes these.
+		wantAny := map[string]bool{
+			"ecdsa_secp256r1_sha256": true,
+			"rsa_pss_rsae_sha256":    true,
+			"rsa_pkcs1_sha256":       true,
+		}
+		seen := false
+		for _, name := range ci.GivenSignatureAlgorithms {
+			if wantAny[name] {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			t.Errorf("GivenSignatureAlgorithms: none of %v present, got %v", wantAny, ci.GivenSignatureAlgorithms)
+		}
+		for _, name := range ci.GivenSignatureAlgorithms {
+			if name == "" {
+				t.Errorf("GivenSignatureAlgorithms contains empty name: %v", ci.GivenSignatureAlgorithms)
+			}
+		}
+	})
+
+	t.Run("NonNilEmptySlices", func(t *testing.T) {
+		// pullClientInfo should initialize both slices so the JSON renders
+		// [] rather than null, even if no entries are added.
+		clientConf := &tls.Config{}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		if ci.GivenSignatureAlgorithms == nil {
+			t.Errorf("GivenSignatureAlgorithms: want non-nil slice, got nil")
+		}
+		if ci.GivenSignatureAlgorithmsCert == nil {
+			t.Errorf("GivenSignatureAlgorithmsCert: want non-nil slice, got nil")
+		}
+	})
+}
+
 var serverConf *tls.Config
 var rootCA *x509.Certificate
 var rootCAZtls *zx509.Certificate
