@@ -135,25 +135,8 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.GivenNamedGroups = append(d.GivenNamedGroups, name)
 	}
 
-	d.GivenSignatureAlgorithms = []string{}
-	for _, s := range st.SupportedSignatureAlgorithms {
-		id := uint16(s)
-		name, found := allSignatureSchemes[id]
-		if !found {
-			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
-		}
-		d.GivenSignatureAlgorithms = append(d.GivenSignatureAlgorithms, name)
-	}
-
-	d.GivenSignatureAlgorithmsCert = []string{}
-	for _, s := range st.SupportedSignatureAlgorithmsCert {
-		id := uint16(s)
-		name, found := allSignatureSchemes[id]
-		if !found {
-			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
-		}
-		d.GivenSignatureAlgorithmsCert = append(d.GivenSignatureAlgorithmsCert, name)
-	}
+	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
+	d.GivenSignatureAlgorithmsCert = renderSignatureSchemes(st.SupportedSignatureAlgorithmsCert)
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported
 
@@ -193,4 +176,20 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.Rating = bad
 	}
 	return d
+}
+
+// renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA
+// registry names, falling back to a hex string for unknown values. It always
+// returns a non-nil slice so JSON output renders [] rather than null.
+func renderSignatureSchemes(schemes []tls.SignatureScheme) []string {
+	out := make([]string, 0, len(schemes))
+	for _, s := range schemes {
+		id := uint16(s)
+		name, found := allSignatureSchemes[id]
+		if !found {
+			name = fmt.Sprintf("Unknown signature scheme: %#04x", id)
+		}
+		out = append(out, name)
+	}
+	return out
 }

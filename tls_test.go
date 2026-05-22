@@ -264,17 +264,28 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		}
 	})
 
-	t.Run("NonNilEmptySlices", func(t *testing.T) {
-		// pullClientInfo should initialize both slices so the JSON renders
-		// [] rather than null, even if no entries are added.
-		clientConf := &tls.Config{}
+	t.Run("TLS10EmptyButNonNil", func(t *testing.T) {
+		// signature_algorithms was added in TLS 1.2 and signature_algorithms_cert
+		// in TLS 1.3, so a TLS 1.0-only client sends neither extension. The
+		// slices must still be non-nil so the JSON renders [] rather than null.
+		clientConf := &tls.Config{
+			MinVersion:   tls.VersionTLS10,
+			MaxVersion:   tls.VersionTLS10,
+			CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+		}
 		c := connect(t, clientConf)
 		ci := pullClientInfo(c)
 		if ci.GivenSignatureAlgorithms == nil {
 			t.Errorf("GivenSignatureAlgorithms: want non-nil slice, got nil")
 		}
+		if len(ci.GivenSignatureAlgorithms) != 0 {
+			t.Errorf("GivenSignatureAlgorithms: want empty, got %v", ci.GivenSignatureAlgorithms)
+		}
 		if ci.GivenSignatureAlgorithmsCert == nil {
 			t.Errorf("GivenSignatureAlgorithmsCert: want non-nil slice, got nil")
+		}
+		if len(ci.GivenSignatureAlgorithmsCert) != 0 {
+			t.Errorf("GivenSignatureAlgorithmsCert: want empty, got %v", ci.GivenSignatureAlgorithmsCert)
 		}
 	})
 }
