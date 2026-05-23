@@ -119,8 +119,16 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *keySharePrivateKeys, *echCli
 	}
 
 	if maxVersion >= VersionTLS12 {
-		hello.supportedSignatureAlgorithms = supportedSignatureAlgorithms(minVersion)
-		hello.supportedSignatureAlgorithmsCert = supportedSignatureAlgorithmsCert()
+		if config.SignatureAlgorithms != nil {
+			hello.supportedSignatureAlgorithms = slices.Clone(config.SignatureAlgorithms)
+		} else {
+			hello.supportedSignatureAlgorithms = supportedSignatureAlgorithms(minVersion)
+		}
+		if config.SignatureAlgorithmsCert != nil {
+			hello.supportedSignatureAlgorithmsCert = slices.Clone(config.SignatureAlgorithmsCert)
+		} else {
+			hello.supportedSignatureAlgorithmsCert = supportedSignatureAlgorithmsCert()
+		}
 	}
 
 	var keyShareKeys *keySharePrivateKeys

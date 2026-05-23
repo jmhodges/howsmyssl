@@ -823,6 +823,23 @@ type Config struct {
 	// GODEBUG=tlsmlkem=0 or the GODEBUG=tlssecpmlkem=0 environment variable.
 	CurvePreferences []CurveID
 
+	// Added for howsmyssl's use.
+	//
+	// SignatureAlgorithms, if non-nil, overrides the contents of the
+	// signature_algorithms extension (13) the client sends in its ClientHello.
+	// The list is written verbatim — no filtering by TLS version or FIPS mode
+	// — so callers can exercise GREASE values, draft codepoints, and
+	// otherwise-disabled schemes. Setting this on a server Config has no
+	// effect.
+	SignatureAlgorithms []SignatureScheme
+
+	// SignatureAlgorithmsCert, if non-nil, overrides the contents of the
+	// signature_algorithms_cert extension (50) the client sends in its
+	// ClientHello. As with SignatureAlgorithms, the list is written verbatim.
+	// Note that signature_algorithms_cert is only emitted on the wire for TLS
+	// 1.3 ClientHellos.
+	SignatureAlgorithmsCert []SignatureScheme
+
 	// DynamicRecordSizingDisabled disables adaptive sizing of TLS records.
 	// When true, the largest possible TLS record size is always used. When
 	// false, the size of TLS records may be adjusted in an attempt to

@@ -288,6 +288,120 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			t.Errorf("GivenSignatureAlgorithmsCert: want empty, got %v", ci.GivenSignatureAlgorithmsCert)
 		}
 	})
+
+	// The development cert is RSA-2048 with a SHA-256 issuer signature. Each
+	// override below pins a TLS version explicitly so the cipher suite path is
+	// predictable, and includes at least one signature scheme the dev cert can
+	// be signed under so the handshake completes.
+	t.Run("CustomListEchoed", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.PKCS1WithSHA256,
+				tls.PSSWithSHA384,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		want := []string{"rsa_pkcs1_sha256", "rsa_pss_rsae_sha384"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+
+	t.Run("GREASERenders", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0a0a),
+				tls.PKCS1WithSHA256,
+				tls.SignatureScheme(0x1a1a),
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		want := []string{"GREASE_0A", "rsa_pkcs1_sha256", "GREASE_1A"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+
+	t.Run("MLDSARenders", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0904),
+				tls.SignatureScheme(0x0905),
+				tls.SignatureScheme(0x0906),
+				tls.PKCS1WithSHA256,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		want := []string{"mldsa44", "mldsa65", "mldsa87", "rsa_pkcs1_sha256"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+
+	t.Run("UnknownFallback", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0710),
+				tls.PKCS1WithSHA256,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		want := []string{"Unknown signature scheme: 0x0710", "rsa_pkcs1_sha256"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+
+	t.Run("CertExtensionEchoed", func(t *testing.T) {
+		// signature_algorithms_cert (ext 50) only goes on the wire for TLS 1.3
+		// ClientHellos. The server doesn't reject based on the cert list, so we
+		// can stuff arbitrary codepoints into SignatureAlgorithmsCert. The
+		// SignatureAlgorithms list still needs an entry the server's RSA cert
+		// can sign under in TLS 1.3, which is PSSWithSHA256.
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS13,
+			MaxVersion: tls.VersionTLS13,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.PSSWithSHA256,
+			},
+			SignatureAlgorithmsCert: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0808),
+				tls.PKCS1WithSHA256,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c)
+		t.Logf("%#v", ci)
+
+		wantSig := []string{"rsa_pss_rsae_sha256"}
+		if !cmp.Equal(wantSig, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", wantSig, ci.GivenSignatureAlgorithms)
+		}
+		wantCert := []string{"ed448", "rsa_pkcs1_sha256"}
+		if !cmp.Equal(wantCert, ci.GivenSignatureAlgorithmsCert) {
+			t.Errorf("GivenSignatureAlgorithmsCert: want %v, got %v", wantCert, ci.GivenSignatureAlgorithmsCert)
+		}
+	})
 }
 
 var serverConf *tls.Config
