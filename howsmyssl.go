@@ -499,7 +499,7 @@ func commonRedirect(redirectHost string) http.Handler {
 
 func loadIndex() *template.Template {
 	return template.Must(template.New("index.html").
-		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan, "ratingShort": ratingShort}).
+		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan}).
 		ParseFiles(*tmplDir + "/index.html"))
 }
 
@@ -562,20 +562,6 @@ func ratingSpan(r rating) template.HTML {
 		class = "bad"
 	}
 	return template.HTML(class)
-}
-
-// ratingShort returns the short badge label used by the per-section
-// boxes on the homepage ("Good" rather than "Probably Okay").
-func ratingShort(r rating) string {
-	switch r {
-	case okay:
-		return "Good"
-	case improvable:
-		return "Improvable"
-	case bad:
-		return "Bad"
-	}
-	return ""
 }
 
 func sentence(parts []string) string {

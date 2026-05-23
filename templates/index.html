@@ -130,8 +130,9 @@
                 encryption possible on the web.</p>
 
               {{else if eq .TLSVersion "TLS 1.2"}}
-              <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
-                TLS 1.2.
+              <p>
+                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>{{else if .TLS12ImprovableCutoverPassed}}<span class="label improvable">Improvable</span>{{else}}<span class="label okay">Good</span>{{end}}
+                Your client is using TLS 1.2.
                 {{if .TLS12BadCutoverPassed}}
                 As of December 14th, 2026 at 10 AM Pacific time, TLS 1.2
                 clients are marked as Bad.
@@ -150,10 +151,11 @@
                 modern post-quantum key agreement algorithms.</p>
 
               {{else if eq .TLSVersion "TLS 1.1"}}
-              <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
-                TLS 1.1. It is not susceptible to the BEAST attack, but it
-                doesn't have AES-GCM available and is well behind the modern
-                versions of the protocol.
+              <p>
+                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>{{else}}<span class="label improvable">Improvable</span>{{end}}
+                Your client is using TLS 1.1. It is not susceptible to the
+                BEAST attack, but it doesn't have AES-GCM available and is
+                well behind the modern versions of the protocol.
                 {{if .TLS12BadCutoverPassed}}
                 As of December 14th, 2026 at 10 AM Pacific time, TLS 1.1
                 clients are marked as Bad alongside TLS 1.2.
@@ -180,7 +182,8 @@
               attacks by future cryptographically-relevant quantum
               computers.</p>
               {{else}}
-              <p><span class="label {{ratingSpan .PostQuantumRating}}">{{ratingShort .PostQuantumRating}}</span>
+              <p>
+                {{if .NoPQBadCutoverPassed}}<span class="label bad">Bad</span>{{else if .NoPQImprovableCutoverPassed}}<span class="label improvable">Improvable</span>{{else}}<span class="label okay">Good</span>{{end}}
                 Your client does not support post-quantum key agreement. Without
                 that support, your traffic could be stored by adversaries today
                 and decrypted once sufficiently powerful quantum computers

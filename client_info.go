@@ -40,8 +40,6 @@ type clientInfo struct {
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
-	TLSVersionRating               rating              `json:"-"`
-	PostQuantumRating              rating              `json:"-"`
 	TLS12ImprovableCutoverPassed   bool                `json:"-"`
 	TLS12BadCutoverPassed          bool                `json:"-"`
 	NoPQImprovableCutoverPassed    bool                `json:"-"`
@@ -192,6 +190,11 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
 
+	d.TLS12ImprovableCutoverPassed = !now.Before(tls12ImprovableCutover)
+	d.TLS12BadCutoverPassed = !now.Before(tls12BadCutover)
+	d.NoPQImprovableCutoverPassed = !now.Before(noPQImprovableCutover)
+	d.NoPQBadCutoverPassed = !now.Before(noPQBadCutover)
+
 	d.Rating = okay
 
 	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {
@@ -206,41 +209,23 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		d.Rating = bad
 	}
 
-	d.TLSVersionRating = okay
-	switch {
-	case vers <= tls.VersionTLS10:
-		d.TLSVersionRating = bad
-	case vers == tls.VersionTLS11:
-		d.TLSVersionRating = improvable
-	}
-	// On the cutover dates, clients whose highest supported TLS version
-	// is TLS 1.2 or earlier are downgraded. TLS 1.0 is already bad and
-	// TLS 1.1 is already improvable, so this only escalates TLS 1.1 to
-	// bad and pushes TLS 1.2 through both states.
+	// Cutover-based downgrades for TLS 1.2-or-earlier and missing PQ.
 	if vers <= tls.VersionTLS12 {
 		switch {
-		case !now.Before(tls12BadCutover):
-			d.TLSVersionRating = worse(d.TLSVersionRating, bad)
-		case !now.Before(tls12ImprovableCutover):
-			d.TLSVersionRating = worse(d.TLSVersionRating, improvable)
+		case d.TLS12BadCutoverPassed:
+			d.Rating = worse(d.Rating, bad)
+		case d.TLS12ImprovableCutoverPassed:
+			d.Rating = worse(d.Rating, improvable)
 		}
 	}
-
-	d.PostQuantumRating = okay
 	if !d.PostQuantumKeyAgreement {
-		if !now.Before(noPQBadCutover) {
-			d.PostQuantumRating = bad
-		} else if !now.Before(noPQImprovableCutover) {
-			d.PostQuantumRating = improvable
+		switch {
+		case d.NoPQBadCutoverPassed:
+			d.Rating = worse(d.Rating, bad)
+		case d.NoPQImprovableCutoverPassed:
+			d.Rating = worse(d.Rating, improvable)
 		}
 	}
-
-	d.TLS12ImprovableCutoverPassed = !now.Before(tls12ImprovableCutover)
-	d.TLS12BadCutoverPassed = !now.Before(tls12BadCutover)
-	d.NoPQImprovableCutoverPassed = !now.Before(noPQImprovableCutover)
-	d.NoPQBadCutoverPassed = !now.Before(noPQBadCutover)
-
-	d.Rating = worse(d.Rating, d.TLSVersionRating, d.PostQuantumRating)
 
 	return d
 }

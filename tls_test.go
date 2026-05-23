@@ -388,26 +388,18 @@ func TestRatingCutovers(t *testing.T) {
 		c := connect(t, clientConf)
 
 		for _, tc := range []struct {
-			name        string
-			now         time.Time
-			wantRating  rating
-			wantVersion rating
-			wantPQ      rating
+			name       string
+			now        time.Time
+			wantRating rating
 		}{
-			{"BeforeImprovable", beforeImprovable, okay, okay, okay},
-			{"AtImprovable", atImprovable, improvable, improvable, improvable},
-			{"AtBad", atBad, bad, bad, bad},
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				ci := pullClientInfo(c, tc.now)
 				if ci.Rating != tc.wantRating {
 					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
-				}
-				if ci.TLSVersionRating != tc.wantVersion {
-					t.Errorf("TLSVersionRating: want %s, got %s", tc.wantVersion, ci.TLSVersionRating)
-				}
-				if ci.PostQuantumRating != tc.wantPQ {
-					t.Errorf("PostQuantumRating: want %s, got %s", tc.wantPQ, ci.PostQuantumRating)
 				}
 			})
 		}
@@ -424,9 +416,9 @@ func TestRatingCutovers(t *testing.T) {
 		c := connect(t, clientConf)
 
 		for _, tc := range []struct {
-			name        string
-			now         time.Time
-			wantVersion rating
+			name       string
+			now        time.Time
+			wantRating rating
 		}{
 			{"BeforeImprovable", beforeImprovable, improvable},
 			{"AtImprovable", atImprovable, improvable},
@@ -434,8 +426,8 @@ func TestRatingCutovers(t *testing.T) {
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				ci := pullClientInfo(c, tc.now)
-				if ci.TLSVersionRating != tc.wantVersion {
-					t.Errorf("TLSVersionRating: want %s, got %s", tc.wantVersion, ci.TLSVersionRating)
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
 				}
 			})
 		}
@@ -443,7 +435,8 @@ func TestRatingCutovers(t *testing.T) {
 
 	t.Run("TLS12MaxWithPQ", func(t *testing.T) {
 		// TLS 1.2 max client that also advertises an ML-KEM group. The
-		// version cutover still bites but the PQ rating stays okay.
+		// version cutover still drives the overall rating to bad even
+		// though the PQ signal is healthy.
 		clientConf := &ztls.Config{
 			MaxVersion:       ztls.VersionTLS12,
 			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
@@ -454,20 +447,14 @@ func TestRatingCutovers(t *testing.T) {
 		if !ci.PostQuantumKeyAgreement {
 			t.Fatalf("PostQuantumKeyAgreement: want true, got false")
 		}
-		if ci.TLSVersionRating != bad {
-			t.Errorf("TLSVersionRating: want %s, got %s", bad, ci.TLSVersionRating)
-		}
-		if ci.PostQuantumRating != okay {
-			t.Errorf("PostQuantumRating: want %s, got %s", okay, ci.PostQuantumRating)
-		}
 		if ci.Rating != bad {
 			t.Errorf("Rating: want %s, got %s", bad, ci.Rating)
 		}
 	})
 
 	t.Run("TLS13NonPQ", func(t *testing.T) {
-		// TLS 1.3 client without ML-KEM. Version stays okay; PQ
-		// rating moves with the cutovers.
+		// TLS 1.3 client without ML-KEM. Only the PQ cutover drives the
+		// rating; the version is fine.
 		clientConf := &tls.Config{
 			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
 		}
@@ -477,20 +464,13 @@ func TestRatingCutovers(t *testing.T) {
 			name       string
 			now        time.Time
 			wantRating rating
-			wantPQ     rating
 		}{
-			{"BeforeImprovable", beforeImprovable, okay, okay},
-			{"AtImprovable", atImprovable, improvable, improvable},
-			{"AtBad", atBad, bad, bad},
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				ci := pullClientInfo(c, tc.now)
-				if ci.TLSVersionRating != okay {
-					t.Errorf("TLSVersionRating: want %s, got %s", okay, ci.TLSVersionRating)
-				}
-				if ci.PostQuantumRating != tc.wantPQ {
-					t.Errorf("PostQuantumRating: want %s, got %s", tc.wantPQ, ci.PostQuantumRating)
-				}
 				if ci.Rating != tc.wantRating {
 					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
 				}
@@ -509,12 +489,6 @@ func TestRatingCutovers(t *testing.T) {
 		ci := pullClientInfo(c, atBad)
 		if !ci.PostQuantumKeyAgreement {
 			t.Fatalf("PostQuantumKeyAgreement: want true, got false")
-		}
-		if ci.TLSVersionRating != okay {
-			t.Errorf("TLSVersionRating: want %s, got %s", okay, ci.TLSVersionRating)
-		}
-		if ci.PostQuantumRating != okay {
-			t.Errorf("PostQuantumRating: want %s, got %s", okay, ci.PostQuantumRating)
 		}
 		if ci.Rating != okay {
 			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
