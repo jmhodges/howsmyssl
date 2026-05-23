@@ -347,21 +347,6 @@
               {{end}}
               <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
             </div>
-            <div class="col-sm-4">
-              <h2>Given Certificate Signature Algorithms</h2>
-              {{if .GivenSignatureAlgorithmsCert}}
-              <p>The signature algorithms your client said it accepts for server
-              certificate signatures, in the order it sent them, are:</p>
-              <ul>
-                {{range .GivenSignatureAlgorithmsCert}}
-                <li>{{.}}</li>
-                {{end}}
-              </ul>
-              {{else}}
-              <p>Your client didn't send any certificate signature algorithms.</p>
-              {{end}}
-              <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
-            </div>
           </div>
         </div>
       </div>

@@ -265,9 +265,9 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 	})
 
 	t.Run("TLS10EmptyButNonNil", func(t *testing.T) {
-		// signature_algorithms was added in TLS 1.2 and signature_algorithms_cert
-		// in TLS 1.3, so a TLS 1.0-only client sends neither extension. The
-		// slices must still be non-nil so the JSON renders [] rather than null.
+		// signature_algorithms was added in TLS 1.2, so a TLS 1.0-only client
+		// doesn't send the extension. The slice must still be non-nil so the
+		// JSON renders [] rather than null.
 		clientConf := &tls.Config{
 			MinVersion:   tls.VersionTLS10,
 			MaxVersion:   tls.VersionTLS10,
@@ -280,12 +280,6 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		}
 		if len(ci.GivenSignatureAlgorithms) != 0 {
 			t.Errorf("GivenSignatureAlgorithms: want empty, got %v", ci.GivenSignatureAlgorithms)
-		}
-		if ci.GivenSignatureAlgorithmsCert == nil {
-			t.Errorf("GivenSignatureAlgorithmsCert: want non-nil slice, got nil")
-		}
-		if len(ci.GivenSignatureAlgorithmsCert) != 0 {
-			t.Errorf("GivenSignatureAlgorithmsCert: want empty, got %v", ci.GivenSignatureAlgorithmsCert)
 		}
 	})
 
@@ -372,36 +366,6 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		}
 	})
 
-	t.Run("CertExtensionEchoed", func(t *testing.T) {
-		// signature_algorithms_cert (ext 50) only goes on the wire for TLS 1.3
-		// ClientHellos. The server doesn't reject based on the cert list, so we
-		// can stuff arbitrary codepoints into SignatureAlgorithmsCert. The
-		// SignatureAlgorithms list still needs an entry the server's RSA cert
-		// can sign under in TLS 1.3, which is PSSWithSHA256.
-		clientConf := &tls.Config{
-			MinVersion: tls.VersionTLS13,
-			MaxVersion: tls.VersionTLS13,
-			SignatureAlgorithms: []tls.SignatureScheme{
-				tls.PSSWithSHA256,
-			},
-			SignatureAlgorithmsCert: []tls.SignatureScheme{
-				tls.SignatureScheme(0x0808),
-				tls.PKCS1WithSHA256,
-			},
-		}
-		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
-		t.Logf("%#v", ci)
-
-		wantSig := []string{"rsa_pss_rsae_sha256"}
-		if !cmp.Equal(wantSig, ci.GivenSignatureAlgorithms) {
-			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", wantSig, ci.GivenSignatureAlgorithms)
-		}
-		wantCert := []string{"ed448", "rsa_pkcs1_sha256"}
-		if !cmp.Equal(wantCert, ci.GivenSignatureAlgorithmsCert) {
-			t.Errorf("GivenSignatureAlgorithmsCert: want %v, got %v", wantCert, ci.GivenSignatureAlgorithmsCert)
-		}
-	})
 }
 
 var serverConf *tls.Config

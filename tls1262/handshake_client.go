@@ -124,11 +124,7 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *keySharePrivateKeys, *echCli
 		} else {
 			hello.supportedSignatureAlgorithms = supportedSignatureAlgorithms(minVersion)
 		}
-		if config.SignatureAlgorithmsCert != nil {
-			hello.supportedSignatureAlgorithmsCert = slices.Clone(config.SignatureAlgorithmsCert)
-		} else {
-			hello.supportedSignatureAlgorithmsCert = supportedSignatureAlgorithmsCert()
-		}
+		hello.supportedSignatureAlgorithmsCert = supportedSignatureAlgorithmsCert()
 	}
 
 	var keyShareKeys *keySharePrivateKeys

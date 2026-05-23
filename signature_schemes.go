@@ -4,8 +4,8 @@ package main
 // See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-signaturescheme
 //
 // Both signature_algorithms (extension 13) and signature_algorithms_cert
-// (extension 50) draw values from this same registry, so a single map serves
-// both.
+// (extension 50) draw values from this same registry, so a single map could
+// serve both.
 //
 // This list was last updated on 2026-05-21.
 var allSignatureSchemes = map[uint16]string{

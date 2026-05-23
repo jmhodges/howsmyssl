@@ -19,7 +19,6 @@ type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
 	GivenNamedGroups               []string            `json:"given_named_groups"`
 	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
-	GivenSignatureAlgorithmsCert   []string            `json:"given_signature_algorithms_cert"`
 	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`           // neutral (temporarily)
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
 	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
@@ -136,7 +135,6 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 	}
 
 	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
-	d.GivenSignatureAlgorithmsCert = renderSignatureSchemes(st.SupportedSignatureAlgorithmsCert)
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported
 
