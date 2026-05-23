@@ -14,7 +14,7 @@ client_info.go.
 `go build` will generate a static binary called howsmyssl. This repo is `go
 get`'able, of course.
 
-It has a fork of the Go 1.10's crypto/tls library at ./tls110/ in order to add a
+It has a fork of Go 1.26.2's crypto/tls library at ./tls1262/ in order to add a
 ServerHandshake and expose the ClientHello struct.
 
 It's been useful to me to use [justrun][justrun] to recompile the project
