@@ -321,7 +321,6 @@ type ConnectionState struct {
 	SupportedVersions                []uint16
 	SupportedCurves                  []CurveID
 	SupportedSignatureAlgorithms     []SignatureScheme
-	SupportedSignatureAlgorithmsCert []SignatureScheme
 
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the
@@ -832,13 +831,6 @@ type Config struct {
 	// otherwise-disabled schemes. Setting this on a server Config has no
 	// effect.
 	SignatureAlgorithms []SignatureScheme
-
-	// SignatureAlgorithmsCert, if non-nil, overrides the contents of the
-	// signature_algorithms_cert extension (50) the client sends in its
-	// ClientHello. As with SignatureAlgorithms, the list is written verbatim.
-	// Note that signature_algorithms_cert is only emitted on the wire for TLS
-	// 1.3 ClientHellos.
-	SignatureAlgorithmsCert []SignatureScheme
 
 	// DynamicRecordSizingDisabled disables adaptive sizing of TLS records.
 	// When true, the largest possible TLS record size is always used. When
