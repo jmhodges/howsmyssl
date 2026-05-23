@@ -42,6 +42,10 @@ type clientInfo struct {
 	Rating                         rating              `json:"rating"`
 	TLSVersionRating               rating              `json:"-"`
 	PostQuantumRating              rating              `json:"-"`
+	TLS12ImprovableCutoverPassed   bool                `json:"-"`
+	TLS12BadCutoverPassed          bool                `json:"-"`
+	NoPQImprovableCutoverPassed    bool                `json:"-"`
+	NoPQBadCutoverPassed           bool                `json:"-"`
 }
 
 // worse returns the most severe of the given ratings
@@ -230,6 +234,11 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 			d.PostQuantumRating = improvable
 		}
 	}
+
+	d.TLS12ImprovableCutoverPassed = !now.Before(tls12ImprovableCutover)
+	d.TLS12BadCutoverPassed = !now.Before(tls12BadCutover)
+	d.NoPQImprovableCutoverPassed = !now.Before(noPQImprovableCutover)
+	d.NoPQBadCutoverPassed = !now.Before(noPQBadCutover)
 
 	d.Rating = worse(d.Rating, d.TLSVersionRating, d.PostQuantumRating)
 

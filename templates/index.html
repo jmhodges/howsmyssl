@@ -131,22 +131,38 @@
 
               {{else if eq .TLSVersion "TLS 1.2"}}
               <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
-                TLS 1.2. TLS 1.2 is being phased out: on June 14th, 2026 at
-                10 AM Pacific time TLS 1.2 clients are downgraded to
-                Improvable, and on December 14th, 2026 at 10 AM Pacific time
-                they are downgraded to Bad. Upgrading to TLS 1.3 protects
-                against downgrade attacks, gives lower-latency handshakes,
-                and is required for the modern post-quantum key
-                agreement algorithms.</p>
+                TLS 1.2.
+                {{if .TLS12BadCutoverPassed}}
+                As of December 14th, 2026 at 10 AM Pacific time, TLS 1.2
+                clients are marked as Bad.
+                {{else if .TLS12ImprovableCutoverPassed}}
+                As of June 14th, 2026 at 10 AM Pacific time, TLS 1.2 clients
+                are marked as Improvable. On December 14th, 2026 at 10 AM
+                Pacific time they will be marked as Bad.
+                {{else}}
+                TLS 1.2 is being phased out: on June 14th, 2026 at 10 AM
+                Pacific time TLS 1.2 clients will be marked as Improvable,
+                and on December 14th, 2026 at 10 AM Pacific time they will
+                be marked as Bad.
+                {{end}}
+                Upgrading to TLS 1.3 protects against downgrade attacks,
+                gives lower-latency handshakes, and is required for the
+                modern post-quantum key agreement algorithms.</p>
 
               {{else if eq .TLSVersion "TLS 1.1"}}
               <p><span class="label {{ratingSpan .TLSVersionRating}}">{{ratingShort .TLSVersionRating}}</span> Your client is using
                 TLS 1.1. It is not susceptible to the BEAST attack, but it
                 doesn't have AES-GCM available and is well behind the modern
-                versions of the protocol. TLS 1.1 is downgraded to Bad
-                alongside TLS 1.2 on December 14th, 2026 at 10 AM Pacific
-                time. Upgrading to TLS 1.3 protects against downgrade attacks
-                and is required for modern post-quantum key agreement.</p>  {{else}}
+                versions of the protocol.
+                {{if .TLS12BadCutoverPassed}}
+                As of December 14th, 2026 at 10 AM Pacific time, TLS 1.1
+                clients are marked as Bad alongside TLS 1.2.
+                {{else}}
+                On December 14th, 2026 at 10 AM Pacific time TLS 1.1 will be
+                marked as Bad alongside TLS 1.2.
+                {{end}}
+                Upgrading to TLS 1.3 protects against downgrade attacks and
+                is required for modern post-quantum key agreement.</p>  {{else}}
               <p><span class="label bad">Bad</span> Your client is using
                 {{.TLSVersion}}, which is very old, possibly susceptible
                 to the BEAST attack, and doesn't have the best cipher
@@ -173,10 +189,21 @@
                 earlier, and support for post-quantum cryptography is necessary
                 to defend against <a
                 href="https://en.wikipedia.org/wiki/Harvest_now,_decrypt_later">"harvest
-                now, decrypt later"</a> attacks. Clients without post-quantum
-                key agreement are downgraded to Improvable on June 14th, 2026
-                at 10 AM Pacific time and to Bad on December 14th, 2026 at 10 AM
-                Pacific time.
+                now, decrypt later"</a> attacks.
+                {{if .NoPQBadCutoverPassed}}
+                As of December 14th, 2026 at 10 AM Pacific time, clients
+                without post-quantum key agreement are marked as Bad.
+                {{else if .NoPQImprovableCutoverPassed}}
+                As of June 14th, 2026 at 10 AM Pacific time, clients without
+                post-quantum key agreement are marked as Improvable. On
+                December 14th, 2026 at 10 AM Pacific time they will be
+                marked as Bad.
+                {{else}}
+                On June 14th, 2026 at 10 AM Pacific time, clients without
+                post-quantum key agreement will be marked as Improvable,
+                and on December 14th, 2026 at 10 AM Pacific time they will
+                be marked as Bad.
+                {{end}}
               </p>
               {{end}}
               <p><a href="/s/about.html/#post-quantum-key-agreement">Learn More</a></p>

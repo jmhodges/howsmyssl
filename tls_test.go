@@ -520,6 +520,40 @@ func TestRatingCutovers(t *testing.T) {
 			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
 		}
 	})
+
+	t.Run("CutoverFlags", func(t *testing.T) {
+		// The template branches its prose on these booleans, so make
+		// sure they flip at the configured instants regardless of what
+		// the handshake looks like.
+		c := connect(t, &tls.Config{})
+
+		for _, tc := range []struct {
+			name                 string
+			now                  time.Time
+			wantImprovablePassed bool
+			wantBadPassed        bool
+		}{
+			{"BeforeImprovable", beforeImprovable, false, false},
+			{"AtImprovable", atImprovable, true, false},
+			{"AtBad", atBad, true, true},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.TLS12ImprovableCutoverPassed != tc.wantImprovablePassed {
+					t.Errorf("TLS12ImprovableCutoverPassed: want %t, got %t", tc.wantImprovablePassed, ci.TLS12ImprovableCutoverPassed)
+				}
+				if ci.TLS12BadCutoverPassed != tc.wantBadPassed {
+					t.Errorf("TLS12BadCutoverPassed: want %t, got %t", tc.wantBadPassed, ci.TLS12BadCutoverPassed)
+				}
+				if ci.NoPQImprovableCutoverPassed != tc.wantImprovablePassed {
+					t.Errorf("NoPQImprovableCutoverPassed: want %t, got %t", tc.wantImprovablePassed, ci.NoPQImprovableCutoverPassed)
+				}
+				if ci.NoPQBadCutoverPassed != tc.wantBadPassed {
+					t.Errorf("NoPQBadCutoverPassed: want %t, got %t", tc.wantBadPassed, ci.NoPQBadCutoverPassed)
+				}
+			})
+		}
+	})
 }
 
 var serverConf *tls.Config
