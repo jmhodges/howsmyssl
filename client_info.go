@@ -46,21 +46,6 @@ type clientInfo struct {
 	NoPQBadCutoverPassed           bool                `json:"-"`
 }
 
-// worse returns the most severe of the given ratings
-// (okay < improvable < bad). With no arguments it returns okay.
-func worse(ratings ...rating) rating {
-	out := okay
-	for _, r := range ratings {
-		switch r {
-		case bad:
-			return bad
-		case improvable:
-			out = improvable
-		}
-	}
-	return out
-}
-
 const (
 	versionTLS13Draft18 = 0x7f00 | 18
 	versionTLS13Draft21 = 0x7f00 | 21
@@ -197,7 +182,10 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {
+	if !d.EphemeralKeysSupported ||
+		vers == tls.VersionTLS11 ||
+		(vers <= tls.VersionTLS12 && d.TLS12ImprovableCutoverPassed) ||
+		(!d.PostQuantumKeyAgreement && d.NoPQImprovableCutoverPassed) {
 		d.Rating = improvable
 	}
 
@@ -205,26 +193,10 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		d.UnknownCipherSuiteSupported ||
 		d.BEASTVuln ||
 		len(d.InsecureCipherSuites) != 0 ||
-		vers <= tls.VersionTLS10 {
+		vers <= tls.VersionTLS10 ||
+		(vers <= tls.VersionTLS12 && d.TLS12BadCutoverPassed) ||
+		(!d.PostQuantumKeyAgreement && d.NoPQBadCutoverPassed) {
 		d.Rating = bad
-	}
-
-	// Cutover-based downgrades for TLS 1.2-or-earlier and missing PQ.
-	if vers <= tls.VersionTLS12 {
-		switch {
-		case d.TLS12BadCutoverPassed:
-			d.Rating = worse(d.Rating, bad)
-		case d.TLS12ImprovableCutoverPassed:
-			d.Rating = worse(d.Rating, improvable)
-		}
-	}
-	if !d.PostQuantumKeyAgreement {
-		switch {
-		case d.NoPQBadCutoverPassed:
-			d.Rating = worse(d.Rating, bad)
-		case d.NoPQImprovableCutoverPassed:
-			d.Rating = worse(d.Rating, improvable)
-		}
 	}
 
 	return d
