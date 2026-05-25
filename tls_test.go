@@ -96,6 +96,29 @@ func TestGoDefaultIsOkay(t *testing.T) {
 	}
 }
 
+func TestOldVersionsAreBad(t *testing.T) {
+	versions := map[string]uint16{
+		"TLS11": tls.VersionTLS11,
+		"TLS10": tls.VersionTLS10,
+	}
+	for name, vers := range versions {
+		t.Run(name, func(t *testing.T) {
+			clientConf := &tls.Config{
+				MinVersion: vers,
+				MaxVersion: vers,
+				// An ephemeral, non-insecure suite so the only reason for the
+				// Bad rating is the TLS version.
+				CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+			}
+			c := connect(t, clientConf)
+			ci := pullClientInfo(c)
+			if ci.Rating != bad {
+				t.Errorf("%s rating: want %s, got %s", name, bad, ci.Rating)
+			}
+		})
+	}
+}
+
 func TestSweet32(t *testing.T) {
 	type sweetTest struct {
 		rating   rating

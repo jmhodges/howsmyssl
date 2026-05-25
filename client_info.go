@@ -162,7 +162,7 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {
+	if !d.EphemeralKeysSupported {
 		d.Rating = improvable
 	}
 
@@ -170,7 +170,7 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.UnknownCipherSuiteSupported ||
 		d.BEASTVuln ||
 		len(d.InsecureCipherSuites) != 0 ||
-		vers <= tls.VersionTLS10 {
+		vers <= tls.VersionTLS11 {
 		d.Rating = bad
 	}
 	return d

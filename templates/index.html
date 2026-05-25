@@ -129,17 +129,14 @@
                 protocol. It gives you access to the fastest, most secure
                 encryption possible on the web.</p>
               
-              {{else if eq .TLSVersion "TLS 1.1"}}
-              <p><span class="label improvable">Improvable</span> Your client is using
-                TLS 1.1. It would be better to be TLS 1.2, but at least it isn't
-                susceptible to the BEAST attack. But, it also doesn't have the
-                AES-GCM cipher suite available.</p>  {{else}}
+              {{else}}
               <p><span class="label bad">Bad</span> Your client is using
                 {{.TLSVersion}}, which is very old, possibly susceptible
                 to the BEAST attack, and doesn't have the best cipher
                 suites available on it. Additions like AES-GCM, and SHA256
-                to replace MD5-SHA-1 are unavailable to a TLS 1.0 client
-                as well as many more modern cipher suites.</p>
+                to replace MD5-SHA-1 are unavailable to it as well as many
+                more modern cipher suites. You should upgrade to TLS 1.2 or
+                1.3.</p>
               {{end}}
               <p><a href="/s/about.html/#version">Learn More</a></p>
             </div>

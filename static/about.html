@@ -154,13 +154,12 @@
 
           <p>Clients are downgraded
             to <span class="label improvable">Improvable</span> if they do not support
-            ephemeral key cipher suites, do not support session tickets, or are
-            using TLS 1.1.</p>
+            ephemeral key cipher suites or do not support session tickets.</p>
           <p>Clients are downgraded to <span class="label bad">Bad</span> if any of
             the following are true:</p>
           <ul>
-            <li>It uses TLS 1.0 (instead of 1.1 or 1.2), or, worse, SSLv3 or
-              earlier.</li>
+            <li>It uses TLS 1.1 or TLS 1.0 (instead of 1.2 or 1.3), or, worse,
+              SSLv3 or earlier.</li>
             <li>It supports known insecure cipher suites. Developers can find
               the list of known insecure cipher suites in
               the <a href="https://github.com/jmhodges/howsmyssl/blob/main/insecure_suites.go">howsmyssl
@@ -198,14 +197,14 @@
             features plus downgrade attack prevention, improved latency, support for more modern elliptical curves, 
             and all of TLS 1.3 connections are forward secret.
             Clients using TLS 1.3 and 1.2 may be set to <span class="label okay">Probably Okay</span>.</p>
-          <p>TLS 1.1 is the third most recent version of TLS. It fixes some
-            security problems in TLS 1.0, removing the need for many of the
-            workarounds built into clients and servers. Many deployed clients
-            and servers of TLS 1.0 do not implement those workarounds and, so,
-            TLS 1.1 is a good improvement. However, the modern security
-            environment has pushed us to TLS 1.3. Clients using TLS 1.1 will be
-            marked down to at least
-            <span class="label improvable">Improvable</span>.</p>
+          <p>TLS 1.1 fixed some security problems in TLS 1.0, removing the need
+            for many of the workarounds built into clients and servers. However,
+            it predates the modern cipher suites (like the AES-GCM suites) and
+            the modern security environment has pushed us to TLS 1.2 and 1.3.
+            TLS 1.1 (along with TLS 1.0) has been formally deprecated by
+            <a href="https://www.rfc-editor.org/rfc/rfc8996">RFC 8996</a>, so
+            clients using TLS 1.1 will be marked as
+            <span class="label bad">Bad</span>.</p>
           <p>TLS 1.0 is the first version of TLS, is fairly common in the world,
             and requires workarounds in both the client and server to work
             securely for all cipher suites. TLS 1.0 is also unable to use modern
