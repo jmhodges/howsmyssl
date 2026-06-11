@@ -131,28 +131,36 @@
 
               {{else if eq .TLSVersion "TLS 1.2"}}
               <p>
-                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>{{else if .TLS12ImprovableCutoverPassed}}<span class="label improvable">Improvable</span>{{else}}<span class="label okay">Good</span>{{end}}
-                Your client is using TLS 1.2.
-                {{if .TLS12BadCutoverPassed}}
-                As of December 14th, 2026 at 10 AM Pacific time, TLS 1.2
-                clients are marked as Bad.
-                {{else if .TLS12ImprovableCutoverPassed}}
-                As of June 14th, 2026 at 10 AM Pacific time, TLS 1.2 clients
-                are marked as Improvable. On December 14th, 2026 at 10 AM
-                Pacific time they will be marked as Bad.
-                {{else}}
-                TLS 1.2 is being phased out: on June 14th, 2026 at 10 AM
-                Pacific time TLS 1.2 clients will be marked as Improvable,
-                and on December 14th, 2026 at 10 AM Pacific time they will
-                be marked as Bad.
-                {{end}}
-                Upgrading to TLS 1.3 protects against downgrade attacks,
-                gives lower-latency handshakes, and is required for the
-                modern post-quantum key agreement algorithms.</p>
+                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>
+                Your client is using TLS 1.2. TLS 1.3 is the most modern version
+                with significant security and performance improvements, and TLS
+                1.2 is no longer to be used. Upgrading to TLS 1.3 protects
+                against downgrade attacks, gives lower-latency handshakes, and
+                is the only version that supports modern post-quantum algorithm.
+
+                {{else if .TLS12ImprovableCutoverPassed}}<span class="label improvable">Improvable</span>
+                Your client is using TLS 1.2. TLS 1.3 is the most modern version
+                with significant security and performance improvements, and TLS
+                1.2 is no longer to be used. Upgrading to TLS 1.3 protects
+                against downgrade attacks, gives lower-latency handshakes, and
+                is the only version that supports modern post-quantum algorithm.
+                On December 14th, 2026, TLS 1.2 clients will be marked as Bad.
+                Please upgrade to TLS 1.3 before then.
+
+                {{else}}<span class="label okay">Good</span>{{end}} Your client
+                is using TLS 1.2. TLS 1.2 is being phased out with TLS 1.3
+                taking its place. On June 14th, 2026 at 10 AM Pacific time TLS
+                1.2 clients will be marked as Improvable, and on December 14th,
+                2026 at 10 AM Pacific time they will be marked as Bad.
+                Upgrading to TLS 1.3 protects against downgrade attacks, gives
+                lower-latency handshakes, and is the only version that supports
+                modern post-quantum algorithm.</p>
 
               {{else if eq .TLSVersion "TLS 1.1"}}
               <p>
-                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>{{else}}<span class="label improvable">Improvable</span>{{end}}
+                {{if .TLS12BadCutoverPassed}}<span class="label bad">Bad</span>
+                
+                {{else}}<span class="label improvable">Improvable</span>{{end}}
                 Your client is using TLS 1.1. It is not susceptible to the
                 BEAST attack, but it doesn't have AES-GCM available and is
                 well behind the modern versions of the protocol.
