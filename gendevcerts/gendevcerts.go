@@ -38,6 +38,7 @@ func generateCACert(dir string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	ca := &x509.Certificate{
 		SerialNumber: big.NewInt(1653),
 		Subject: pkix.Name{
+			CommonName:    "howsmyssl development CA",
 			Organization:  []string{"ORGANIZATION_NAME"},
 			Country:       []string{"COUNTRY_CODE"},
 			Province:      []string{"PROVINCE"},
@@ -64,6 +65,15 @@ func generateCACert(dir string) (*x509.Certificate, *rsa.PrivateKey, error) {
 		return nil, nil, fmt.Errorf("create ca failed: %s", err)
 	}
 
+	// Parse the freshly-created cert so the leaf is signed against a parent
+	// that carries the Go-generated Subject Key Id. That makes
+	// CreateCertificate populate the leaf's Authority Key Id, giving a
+	// standard, chainable AKID->SKID link.
+	caCert, err := x509.ParseCertificate(caBytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse ca failed: %s", err)
+	}
+
 	certOut, err := os.Create(filepath.Join(dir, "development_ca_cert.pem"))
 	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
 	certOut.Close()
@@ -74,7 +84,7 @@ func generateCACert(dir string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	keyOut.Close()
 	log.Println("written development_ca_key.pem")
 
-	return ca, priv, nil
+	return caCert, priv, nil
 }
 
 func generateLeafCert(dir string, caCert *x509.Certificate, caKey *rsa.PrivateKey) error {
@@ -82,6 +92,7 @@ func generateLeafCert(dir string, caCert *x509.Certificate, caKey *rsa.PrivateKe
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
+			CommonName:    "localhost",
 			Organization:  []string{"ORGANIZATION_NAME"},
 			Country:       []string{"COUNTRY_CODE"},
 			Province:      []string{"PROVINCE"},
@@ -89,12 +100,11 @@ func generateLeafCert(dir string, caCert *x509.Certificate, caKey *rsa.PrivateKe
 			StreetAddress: []string{"ADDRESS"},
 			PostalCode:    []string{"POSTAL_CODE"},
 		},
-		DNSNames:     []string{"localhost"},
-		NotBefore:    time.Now().Add(-1 * time.Minute),
-		NotAfter:     time.Now().Add(365 * 24 * time.Hour),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		DNSNames:    []string{"localhost"},
+		NotBefore:   time.Now().Add(-1 * time.Minute),
+		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature,
 	}
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
