@@ -475,7 +475,7 @@ func commonRedirect(redirectHost string) http.Handler {
 		// Check for JSON request with proper MIME type parsing
 		// Avoids false positives from substring matching (e.g., "application/json-patch+json")
 		wantsJSON := false
-		for _, part := range strings.Split(accept, ",") {
+		for part := range strings.SplitSeq(accept, ",") {
 			mime := strings.TrimSpace(strings.Split(part, ";")[0])
 			if mime == "application/json" {
 				wantsJSON = true
