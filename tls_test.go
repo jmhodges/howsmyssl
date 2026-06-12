@@ -21,6 +21,11 @@ import (
 	zx509 "github.com/zmap/zcrypto/x509"
 )
 
+// preCutover is well before any rating cutover, so tests that don't
+// care about the date-based downgrades see the same behavior they did
+// before the cutovers existed.
+var preCutover = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
 func TestBEASTVuln(t *testing.T) {
 	t.Run("TLS10OnlyCBC", func(t *testing.T) {
 		clientConf := &tls.Config{
@@ -30,7 +35,7 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, CBC suite, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
 		}
@@ -48,7 +53,7 @@ func TestBEASTVuln(t *testing.T) {
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_RC4_128_SHA},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.0, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
 		}
@@ -63,7 +68,7 @@ func TestBEASTVuln(t *testing.T) {
 		}
 
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		if ci.BEASTVuln {
 			t.Errorf("TLS 1.2+, no CBC suites, ClientInfo: BEASTVuln should be false because Go mitigates the BEAST attack even on TLS 1.0")
 		}
@@ -79,7 +84,7 @@ func TestBEASTVuln(t *testing.T) {
 func TestGoDefaultIsOkay(t *testing.T) {
 	clientConf := &tls.Config{}
 	c := connect(t, clientConf)
-	ci := pullClientInfo(c)
+	ci := pullClientInfo(c, preCutover)
 	t.Logf("%#v", ci)
 
 	if ci.Rating != okay {
@@ -157,7 +162,7 @@ func TestSweet32(t *testing.T) {
 					ForceSuites:  true,
 				}
 				c := connectZtls(t, clientConf)
-				ci := pullClientInfo(c)
+				ci := pullClientInfo(c, preCutover)
 				t.Logf("#%d, %#v", i, ci)
 
 				if ci.Rating != st.rating {
@@ -188,7 +193,7 @@ func TestPostQuantumDetection(t *testing.T) {
 			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
 		}
 		c := connectZtls(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		if !ci.PostQuantumKeyAgreement {
@@ -210,7 +215,7 @@ func TestPostQuantumDetection(t *testing.T) {
 			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		if ci.PostQuantumKeyAgreement {
@@ -235,7 +240,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			MaxVersion: tls.VersionTLS13,
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		if len(ci.GivenSignatureAlgorithms) == 0 {
@@ -274,7 +279,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			CipherSuites: []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		if ci.GivenSignatureAlgorithms == nil {
 			t.Errorf("GivenSignatureAlgorithms: want non-nil slice, got nil")
 		}
@@ -297,7 +302,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		want := []string{"rsa_pkcs1_sha256", "rsa_pss_rsae_sha384"}
@@ -317,7 +322,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		want := []string{"GREASE_0A", "rsa_pkcs1_sha256", "GREASE_1A"}
@@ -338,7 +343,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		want := []string{"mldsa44", "mldsa65", "mldsa87", "rsa_pkcs1_sha256"}
@@ -357,7 +362,7 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			},
 		}
 		c := connect(t, clientConf)
-		ci := pullClientInfo(c)
+		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
 		want := []string{"Unknown signature scheme: 0x0710", "rsa_pkcs1_sha256"}
@@ -365,7 +370,164 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
 		}
 	})
+}
 
+func TestRatingCutovers(t *testing.T) {
+	// Reference instants. These match the constants in client_info.go.
+	beforeImprovable := time.Date(2026, 6, 13, 23, 59, 0, 0, time.UTC)
+	atImprovable := time.Date(2026, 6, 14, 17, 0, 0, 0, time.UTC)
+	atBad := time.Date(2026, 12, 14, 18, 0, 0, 0, time.UTC)
+
+	t.Run("TLS12MaxNonPQ", func(t *testing.T) {
+		// TLS 1.2 max, no post-quantum named group. Both signals
+		// degrade in lockstep, so the overall rating tracks them.
+		clientConf := &tls.Config{
+			MaxVersion:       tls.VersionTLS12,
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		}
+		c := connect(t, clientConf)
+
+		for _, tc := range []struct {
+			name       string
+			now        time.Time
+			wantRating rating
+		}{
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
+				}
+			})
+		}
+	})
+
+	t.Run("TLS11Max", func(t *testing.T) {
+		// TLS 1.1 max client. Already Improvable today; goes Bad at
+		// the December cutover alongside TLS 1.2.
+		clientConf := &tls.Config{
+			MinVersion:   tls.VersionTLS11,
+			MaxVersion:   tls.VersionTLS11,
+			CipherSuites: []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+		}
+		c := connect(t, clientConf)
+
+		for _, tc := range []struct {
+			name       string
+			now        time.Time
+			wantRating rating
+		}{
+			{"BeforeImprovable", beforeImprovable, improvable},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
+				}
+			})
+		}
+	})
+
+	t.Run("TLS12MaxWithPQ", func(t *testing.T) {
+		// TLS 1.2 max client that also advertises an ML-KEM group. The
+		// version cutover still drives the overall rating to bad even
+		// though the PQ signal is healthy.
+		clientConf := &ztls.Config{
+			MaxVersion:       ztls.VersionTLS12,
+			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
+		}
+		c := connectZtls(t, clientConf)
+
+		ci := pullClientInfo(c, atBad)
+		if !ci.PostQuantumKeyAgreement {
+			t.Fatalf("PostQuantumKeyAgreement: want true, got false")
+		}
+		if ci.Rating != bad {
+			t.Errorf("Rating: want %s, got %s", bad, ci.Rating)
+		}
+	})
+
+	t.Run("TLS13NonPQ", func(t *testing.T) {
+		// TLS 1.3 client without ML-KEM. Only the PQ cutover drives the
+		// rating; the version is fine.
+		clientConf := &tls.Config{
+			CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+		}
+		c := connect(t, clientConf)
+
+		for _, tc := range []struct {
+			name       string
+			now        time.Time
+			wantRating rating
+		}{
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
+				}
+			})
+		}
+	})
+
+	t.Run("TLS13WithPQ", func(t *testing.T) {
+		// Modern client: TLS 1.3 and ML-KEM. The cutovers must never
+		// degrade this client's rating.
+		clientConf := &ztls.Config{
+			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
+		}
+		c := connectZtls(t, clientConf)
+
+		ci := pullClientInfo(c, atBad)
+		if !ci.PostQuantumKeyAgreement {
+			t.Fatalf("PostQuantumKeyAgreement: want true, got false")
+		}
+		if ci.Rating != okay {
+			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+		}
+	})
+
+	t.Run("CutoverFlags", func(t *testing.T) {
+		// The template branches its prose on these booleans, so make
+		// sure they flip at the configured instants regardless of what
+		// the handshake looks like.
+		c := connect(t, &tls.Config{})
+
+		for _, tc := range []struct {
+			name                 string
+			now                  time.Time
+			wantImprovablePassed bool
+			wantBadPassed        bool
+		}{
+			{"BeforeImprovable", beforeImprovable, false, false},
+			{"AtImprovable", atImprovable, true, false},
+			{"AtBad", atBad, true, true},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.TLS12ImprovableCutoverPassed != tc.wantImprovablePassed {
+					t.Errorf("TLS12ImprovableCutoverPassed: want %t, got %t", tc.wantImprovablePassed, ci.TLS12ImprovableCutoverPassed)
+				}
+				if ci.TLS12BadCutoverPassed != tc.wantBadPassed {
+					t.Errorf("TLS12BadCutoverPassed: want %t, got %t", tc.wantBadPassed, ci.TLS12BadCutoverPassed)
+				}
+				if ci.NoPQImprovableCutoverPassed != tc.wantImprovablePassed {
+					t.Errorf("NoPQImprovableCutoverPassed: want %t, got %t", tc.wantImprovablePassed, ci.NoPQImprovableCutoverPassed)
+				}
+				if ci.NoPQBadCutoverPassed != tc.wantBadPassed {
+					t.Errorf("NoPQBadCutoverPassed: want %t, got %t", tc.wantBadPassed, ci.NoPQBadCutoverPassed)
+				}
+			})
+		}
+	})
 }
 
 var serverConf *tls.Config

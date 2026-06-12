@@ -417,7 +417,7 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 		response500(w, r)
 		return
 	}
-	data := pullClientInfo(tc)
+	data := pullClientInfo(tc, time.Now())
 	bs, status, contentType, err := render(r, data)
 	if err != nil {
 		log.Printf("handleTLSClientInfo: unable to execute render: %s\n", err)

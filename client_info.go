@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tls "github.com/jmhodges/howsmyssl/tls1262"
 )
@@ -15,11 +16,21 @@ const (
 	bad        rating = "Bad"
 )
 
+// Rating cutovers. 10:00 America/Los_Angeles on the given dates, encoded
+// as UTC instants so we don't depend on time/tzdata. June 14 falls in
+// PDT (UTC-7); December 14 falls in PST (UTC-8).
+var (
+	tls12ImprovableCutover = time.Date(2026, 6, 14, 17, 0, 0, 0, time.UTC)
+	tls12BadCutover        = time.Date(2026, 12, 14, 18, 0, 0, 0, time.UTC)
+	noPQImprovableCutover  = time.Date(2026, 6, 14, 17, 0, 0, 0, time.UTC)
+	noPQBadCutover         = time.Date(2026, 12, 14, 18, 0, 0, 0, time.UTC)
+)
+
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
 	GivenNamedGroups               []string            `json:"given_named_groups"`
 	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
-	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`           // neutral (temporarily)
+	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`
 	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
 	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
 	TLSCompressionSupported        bool                `json:"tls_compression_supported"`            // bad if true
@@ -29,6 +40,10 @@ type clientInfo struct {
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
+	TLS12ImprovableCutoverPassed   bool                `json:"-"`
+	TLS12BadCutoverPassed          bool                `json:"-"`
+	NoPQImprovableCutoverPassed    bool                `json:"-"`
+	NoPQBadCutoverPassed           bool                `json:"-"`
 }
 
 const (
@@ -70,7 +85,7 @@ var actualSupportedVersions = map[uint16]string{
 	versionTLS13Draft33: "TLS 1.3",
 }
 
-func pullClientInfo(c *tls.Conn) *clientInfo {
+func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
 	st := c.ConnectionState()
@@ -160,9 +175,17 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
 
+	d.TLS12ImprovableCutoverPassed = !now.Before(tls12ImprovableCutover)
+	d.TLS12BadCutoverPassed = !now.Before(tls12BadCutover)
+	d.NoPQImprovableCutoverPassed = !now.Before(noPQImprovableCutover)
+	d.NoPQBadCutoverPassed = !now.Before(noPQBadCutover)
+
 	d.Rating = okay
 
-	if !d.EphemeralKeysSupported || vers == tls.VersionTLS11 {
+	if !d.EphemeralKeysSupported ||
+		vers == tls.VersionTLS11 ||
+		(vers <= tls.VersionTLS12 && d.TLS12ImprovableCutoverPassed) ||
+		(!d.PostQuantumKeyAgreement && d.NoPQImprovableCutoverPassed) {
 		d.Rating = improvable
 	}
 
@@ -170,9 +193,12 @@ func pullClientInfo(c *tls.Conn) *clientInfo {
 		d.UnknownCipherSuiteSupported ||
 		d.BEASTVuln ||
 		len(d.InsecureCipherSuites) != 0 ||
-		vers <= tls.VersionTLS10 {
+		vers <= tls.VersionTLS10 ||
+		(vers <= tls.VersionTLS12 && d.TLS12BadCutoverPassed) ||
+		(!d.PostQuantumKeyAgreement && d.NoPQBadCutoverPassed) {
 		d.Rating = bad
 	}
+
 	return d
 }
 
