@@ -151,8 +151,20 @@ type vhostTest struct {
 	expectedRedirectHost string
 }
 
-func TestVHostCalculation(t *testing.T) {
-	tests := []vhostTest{
+// TestVHostRouting checks that calculateDomains' output and the port handling
+// in vhostHandler compose into the right serve/redirect decision. Driving real
+// calculateDomains output through tlsMux is the point: a request for the
+// canonical host is served whether or not it carries a port (issue #25,
+// https://github.com/jmhodges/howsmyssl/issues/25), and everything else is
+// redirected to the canonical host.
+func TestVHostRouting(t *testing.T) {
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
+	served := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	configs := []vhostTest{
 		{
 			rawVHost:             "www.howsmyssl.com",
 			httpsAddr:            "0:10443",
@@ -178,129 +190,75 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRedirectHost: "example.com",
 		},
 	}
-	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
-	webHandleFunc := http.NotFound
 
-	for i, vt := range tests {
-		routeHost, redirectHost := calculateDomains(vt.rawVHost, vt.httpsAddr)
-		if routeHost != vt.expectedRouteHost {
-			t.Errorf("#%d vhost %#v, httpsAddr %#v: want routeHost %#v, got %s", i, vt.rawVHost, vt.httpsAddr, vt.expectedRouteHost, routeHost)
-		}
-		if redirectHost != vt.expectedRedirectHost {
-			t.Errorf("#%d vhost %#v, httpsAddr %#v: want redirectHost %#v, got %#v", i, vt.rawVHost, vt.httpsAddr, vt.expectedRedirectHost, redirectHost)
-		}
+	for _, vt := range configs {
+		t.Run(vt.rawVHost, func(t *testing.T) {
+			routeHost, redirectHost := calculateDomains(vt.rawVHost, vt.httpsAddr)
+			if routeHost != vt.expectedRouteHost {
+				t.Errorf("calculateDomains(%q, %q) routeHost = %q, want %q", vt.rawVHost, vt.httpsAddr, routeHost, vt.expectedRouteHost)
+			}
+			if redirectHost != vt.expectedRedirectHost {
+				t.Errorf("calculateDomains(%q, %q) redirectHost = %q, want %q", vt.rawVHost, vt.httpsAddr, redirectHost, vt.expectedRedirectHost)
+			}
 
-		tm := tlsMux(vt.expectedRouteHost, vt.expectedRedirectHost, "http://otherexample.com", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
-		r, err := http.NewRequest("GET", "https://howsmyssl.com/", nil)
-		if err != nil {
-			t.Fatalf("borked request")
-		}
-		w := httptest.NewRecorder()
-		tm.ServeHTTP(w, r)
-		expectedLocation := "https://" + vt.expectedRedirectHost + "/"
-		location := w.Header()["Location"][0]
-		if w.Code != http.StatusMovedPermanently {
-			t.Errorf("#%d vhost %#v, httpsAddr %#v: want Code %d, got %d", i, vt.rawVHost, vt.httpsAddr, http.StatusMovedPermanently, w.Code)
-		}
-		if location != expectedLocation {
-			t.Errorf("#%d vhost %#v, httpsAddr %#v: want Location %s, got %s", i, vt.rawVHost, vt.httpsAddr, expectedLocation, location)
-		}
+			tm := tlsMux(routeHost, redirectHost, "", staticHandler, served, nil, newTestLogger(t), newTestLogger(t))
+
+			// A request for the canonical host is served whether it arrives
+			// bare, with the default :443, or with the configured port
+			// (redirectHost). The last case must not redirect to itself.
+			for _, host := range []string{routeHost, routeHost + ":443", redirectHost} {
+				assertServed(t, tm, "https://"+host+"/")
+			}
+
+			// Any other host is redirected to the canonical host.
+			assertRedirect(t, tm, "https://not-the-canonical-host.example/", "https://"+redirectHost+"/")
+		})
+	}
+
+	// Cases that don't map onto a calculateDomains input.
+	t.Run("synthetic", func(t *testing.T) {
+		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, served, nil, newTestLogger(t), newTestLogger(t))
+
+		// Any port on the canonical host is served, not just the default.
+		assertServed(t, tm, "https://www.howsmyssl.com:8443/")
+
+		// Health checks arrive on the load balancer's IP, i.e. a
+		// non-canonical Host, and must be served, not redirected.
+		assertServed(t, tm, "https://10.0.0.1/healthcheck")
+	})
+}
+
+func assertServed(t *testing.T, h http.Handler, reqURL string) {
+	t.Helper()
+	w := doVHostRequest(t, h, reqURL)
+	if w.Code != http.StatusOK {
+		t.Errorf("%s: want code %d, got %d", reqURL, http.StatusOK, w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "" {
+		t.Errorf("%s: want no redirect, got Location %q", reqURL, loc)
 	}
 }
 
-// TestCanonicalHostWithPort guards against issue #25: a request whose Host
-// header carries a port (e.g. the default "www.howsmyssl.com:443") must be
-// served, not needlessly redirected to the port-less canonical host.
-func TestCanonicalHostWithPort(t *testing.T) {
-	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
-	served := func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+func assertRedirect(t *testing.T, h http.Handler, reqURL, wantLocation string) {
+	t.Helper()
+	w := doVHostRequest(t, h, reqURL)
+	if w.Code != http.StatusMovedPermanently {
+		t.Errorf("%s: want code %d, got %d", reqURL, http.StatusMovedPermanently, w.Code)
 	}
-
-	tests := []struct {
-		name         string
-		routeHost    string
-		redirectHost string
-		reqURL       string
-		wantCode     int
-		wantLocation string
-	}{
-		{
-			name:         "canonical host, no port",
-			routeHost:    "www.howsmyssl.com",
-			redirectHost: "www.howsmyssl.com",
-			reqURL:       "https://www.howsmyssl.com/",
-			wantCode:     http.StatusOK,
-		},
-		{
-			name:         "canonical host with default :443 is served, not redirected",
-			routeHost:    "www.howsmyssl.com",
-			redirectHost: "www.howsmyssl.com",
-			reqURL:       "https://www.howsmyssl.com:443/",
-			wantCode:     http.StatusOK,
-		},
-		{
-			name:         "canonical host with any other port is served",
-			routeHost:    "www.howsmyssl.com",
-			redirectHost: "www.howsmyssl.com",
-			reqURL:       "https://www.howsmyssl.com:8443/",
-			wantCode:     http.StatusOK,
-		},
-		{
-			name:         "non-canonical host is redirected",
-			routeHost:    "www.howsmyssl.com",
-			redirectHost: "www.howsmyssl.com",
-			reqURL:       "https://howsmyssl.com/",
-			wantCode:     http.StatusMovedPermanently,
-			wantLocation: "https://www.howsmyssl.com/",
-		},
-		{
-			name:         "non-default port deploy: configured host:port is served, not looped",
-			routeHost:    "localhost",
-			redirectHost: "localhost:10443",
-			reqURL:       "https://localhost:10443/",
-			wantCode:     http.StatusOK,
-		},
-		{
-			name:         "non-default port deploy: bare host is served",
-			routeHost:    "localhost",
-			redirectHost: "localhost:10443",
-			reqURL:       "https://localhost/",
-			wantCode:     http.StatusOK,
-		},
-		{
-			name:         "healthcheck is served on a non-canonical host",
-			routeHost:    "www.howsmyssl.com",
-			redirectHost: "www.howsmyssl.com",
-			reqURL:       "https://10.0.0.1/healthcheck",
-			wantCode:     http.StatusOK,
-		},
+	if loc := w.Header().Get("Location"); loc != wantLocation {
+		t.Errorf("%s: want Location %q, got %q", reqURL, wantLocation, loc)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tm := tlsMux(tt.routeHost, tt.redirectHost, "", staticHandler, served, nil, newTestLogger(t), newTestLogger(t))
-			r, err := http.NewRequest("GET", tt.reqURL, nil)
-			if err != nil {
-				t.Fatalf("borked request for %#v: %s", tt.reqURL, err)
-			}
-			w := httptest.NewRecorder()
-			tm.ServeHTTP(w, r)
-
-			if w.Code != tt.wantCode {
-				t.Errorf("%s: want code %d, got %d", tt.name, tt.wantCode, w.Code)
-			}
-			if tt.wantLocation != "" {
-				if got := w.Header().Get("Location"); got != tt.wantLocation {
-					t.Errorf("%s: want Location %q, got %q", tt.name, tt.wantLocation, got)
-				}
-			} else if loc := w.Header().Get("Location"); loc != "" {
-				t.Errorf("%s: want no redirect, got Location %q", tt.name, loc)
-			}
-		})
+func doVHostRequest(t *testing.T, h http.Handler, reqURL string) *httptest.ResponseRecorder {
+	t.Helper()
+	r, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		t.Fatalf("borked request for %q: %s", reqURL, err)
 	}
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	return w
 }
 
 func TestJSONRedirectContentType(t *testing.T) {
