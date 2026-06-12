@@ -209,6 +209,100 @@ func TestVHostCalculation(t *testing.T) {
 	}
 }
 
+// TestCanonicalHostWithPort guards against issue #25: a request whose Host
+// header carries a port (e.g. the default "www.howsmyssl.com:443") must be
+// served, not needlessly redirected to the port-less canonical host.
+func TestCanonicalHostWithPort(t *testing.T) {
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler("/static", stats)
+	served := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	tests := []struct {
+		name         string
+		routeHost    string
+		redirectHost string
+		reqURL       string
+		wantCode     int
+		wantLocation string
+	}{
+		{
+			name:         "canonical host, no port",
+			routeHost:    "www.howsmyssl.com",
+			redirectHost: "www.howsmyssl.com",
+			reqURL:       "https://www.howsmyssl.com/",
+			wantCode:     http.StatusOK,
+		},
+		{
+			name:         "canonical host with default :443 is served, not redirected",
+			routeHost:    "www.howsmyssl.com",
+			redirectHost: "www.howsmyssl.com",
+			reqURL:       "https://www.howsmyssl.com:443/",
+			wantCode:     http.StatusOK,
+		},
+		{
+			name:         "canonical host with any other port is served",
+			routeHost:    "www.howsmyssl.com",
+			redirectHost: "www.howsmyssl.com",
+			reqURL:       "https://www.howsmyssl.com:8443/",
+			wantCode:     http.StatusOK,
+		},
+		{
+			name:         "non-canonical host is redirected",
+			routeHost:    "www.howsmyssl.com",
+			redirectHost: "www.howsmyssl.com",
+			reqURL:       "https://howsmyssl.com/",
+			wantCode:     http.StatusMovedPermanently,
+			wantLocation: "https://www.howsmyssl.com/",
+		},
+		{
+			name:         "non-default port deploy: configured host:port is served, not looped",
+			routeHost:    "localhost",
+			redirectHost: "localhost:10443",
+			reqURL:       "https://localhost:10443/",
+			wantCode:     http.StatusOK,
+		},
+		{
+			name:         "non-default port deploy: bare host is served",
+			routeHost:    "localhost",
+			redirectHost: "localhost:10443",
+			reqURL:       "https://localhost/",
+			wantCode:     http.StatusOK,
+		},
+		{
+			name:         "healthcheck is served on a non-canonical host",
+			routeHost:    "www.howsmyssl.com",
+			redirectHost: "www.howsmyssl.com",
+			reqURL:       "https://10.0.0.1/healthcheck",
+			wantCode:     http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tm := tlsMux(tt.routeHost, tt.redirectHost, "", staticHandler, served, nil, newTestLogger(t), newTestLogger(t))
+			r, err := http.NewRequest("GET", tt.reqURL, nil)
+			if err != nil {
+				t.Fatalf("borked request for %#v: %s", tt.reqURL, err)
+			}
+			w := httptest.NewRecorder()
+			tm.ServeHTTP(w, r)
+
+			if w.Code != tt.wantCode {
+				t.Errorf("%s: want code %d, got %d", tt.name, tt.wantCode, w.Code)
+			}
+			if tt.wantLocation != "" {
+				if got := w.Header().Get("Location"); got != tt.wantLocation {
+					t.Errorf("%s: want Location %q, got %q", tt.name, tt.wantLocation, got)
+				}
+			} else if loc := w.Header().Get("Location"); loc != "" {
+				t.Errorf("%s: want no redirect, got Location %q", tt.name, loc)
+			}
+		})
+	}
+}
+
 func TestJSONRedirectContentType(t *testing.T) {
 	stats := newStatusStats(new(expvar.Map).Init())
 	staticHandler := makeStaticHandler("/static", stats)

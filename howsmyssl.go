@@ -241,66 +241,65 @@ func main() {
 
 // Returns routeHost, redirectHost
 func calculateDomains(vhost, httpsAddr string) (string, string) {
-	var routeHost, redirectHost string
 	// Use cases to support:
 	//   * Redirect to non-standard HTTPS port (that is, not 443) that is the same as the port we're booting the HTTPS server on.
 	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
 	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
 	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
+
+	// routeHost drops the port because vhostHandler matches the request's
+	// Host against it with any port stripped (see stripPort). redirectHost
+	// keeps the port so we send users back to the right place.
+	routeHost := vhost
+	vport := ""
 	if strings.Contains(vhost, ":") {
 		var err error
-		vport := ""
-		// We can drop port in routeHost here because http.ServeMux
-		// doesn't currently know how to match against ports (see
-		// https://golang.org/issue/10463) and we strip ports inside
-		// protoHandler to accommodate that fact. If ServeMux learns
-		// how to handle ports, we can choose to use *rawVHost for it
-		// then.
 		routeHost, vport, err = net.SplitHostPort(vhost)
 		if err != nil {
-			log.Fatalf("unable to parse httpsAddr: %s", err)
+			log.Fatalf("unable to parse vhost %q: %s", vhost, err)
 		}
+	}
+	if routeHost == "" {
+		routeHost, _, _ = net.SplitHostPort(httpsAddr)
 		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
+			routeHost = "localhost"
 		}
-		// Don't commonRedirect to https://example.com:443, just https://example.com
-		if vport == "443" {
-			redirectHost = routeHost
-		} else {
-			redirectHost = vhost
-		}
-	} else {
-		routeHost = vhost
-		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
-		}
+	}
+
+	// Don't commonRedirect to https://example.com:443, just https://example.com
+	var redirectHost string
+	switch vport {
+	case "", "443":
 		redirectHost = routeHost
+	default:
+		redirectHost = vhost
 	}
 	return routeHost, redirectHost
 }
 
 func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.Handler, webHandleFunc http.HandlerFunc, oa *originAllower, requestLogger *slog.Logger, allowLogger *slog.Logger) http.Handler {
 	acmeRedirectURL = strings.TrimRight(acmeRedirectURL, "/")
+
+	// The mux is purely path-based: it no longer prefixes its patterns with
+	// routeHost. The virtual-host decision (serve vs. redirect) is made by
+	// vhostHandler below, in one place where we control how the Host header's
+	// port is handled. Baking the host into the ServeMux patterns is what let
+	// a Host carrying a port fall through to a pointless redirect. See
+	// https://github.com/jmhodges/howsmyssl/issues/25.
 	m := http.NewServeMux()
-	m.Handle(routeHost+"/s/", staticHandler)
-	m.Handle(routeHost+"/a/check", &apiHandler{oa: oa, allowLogger: allowLogger})
-	m.HandleFunc(routeHost+"/", webHandleFunc)
-	m.HandleFunc(routeHost+"/healthcheck", healthcheck)
-	if routeHost != "" {
-		m.HandleFunc("/healthcheck", healthcheck)
-	}
-	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
-	if routeHost != "" {
-		m.Handle("/", commonRedirect(redirectHost))
+	m.Handle("/s/", staticHandler)
+	m.Handle("/a/check", &apiHandler{oa: oa, allowLogger: allowLogger})
+	m.HandleFunc("/healthcheck", healthcheck)
+	m.Handle("/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
+	m.HandleFunc("/", webHandleFunc)
+
+	vh := &vhostHandler{
+		routeHost: routeHost,
+		inner:     m,
+		redirect:  commonRedirect(redirectHost),
 	}
 
-	gzippedM := gzip.GZIPHandler(m, func(w http.ResponseWriter, r *http.Request) bool {
+	gzippedM := gzip.GZIPHandler(vh, func(w http.ResponseWriter, r *http.Request) bool {
 		return !strings.Contains(r.URL.Path, "/img/")
 	})
 	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -609,6 +608,56 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto)
 	h.inner.ServeHTTP(w, r)
+}
+
+// vhostHandler routes requests for our canonical virtual host to inner and
+// redirects everything else to the canonical host via redirect. The decision
+// lives here, rather than in the ServeMux patterns, so that we control how the
+// Host header's port is treated: any port is ignored when matching, so a
+// request with Host "www.howsmyssl.com:443" is served instead of being
+// needlessly redirected to "www.howsmyssl.com". See
+// https://github.com/jmhodges/howsmyssl/issues/25 and, for why net/http drops
+// the port in its own redirects, https://github.com/golang/go/issues/23351.
+type vhostHandler struct {
+	// routeHost is the canonical host with any port stripped. An empty
+	// routeHost means no canonical host is configured, so every request is
+	// served by inner and nothing is redirected.
+	routeHost string
+	inner     http.Handler
+	redirect  http.Handler
+}
+
+func (h *vhostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Health checks arrive on the load balancer's IP, i.e. a non-canonical
+	// Host, and must never be redirected.
+	if r.URL.Path == "/healthcheck" || h.isCanonical(r.Host) {
+		h.inner.ServeHTTP(w, r)
+		return
+	}
+	h.redirect.ServeHTTP(w, r)
+}
+
+func (h *vhostHandler) isCanonical(host string) bool {
+	if h.routeHost == "" {
+		return true
+	}
+	return stripPort(host) == h.routeHost
+}
+
+// stripPort removes any ":port" suffix from host, returning host unchanged if
+// it has no port or cannot be parsed. This mirrors net/http's own
+// stripHostPort, which is what makes ServeMux match Host headers that carry a
+// port; we do it ourselves so the behavior is explicit and testable rather
+// than an implicit dependency on net/http internals.
+func stripPort(host string) string {
+	if !strings.Contains(host, ":") {
+		return host
+	}
+	h, _, err := net.SplitHostPort(host)
+	if err != nil {
+		return host
+	}
+	return h
 }
 
 type protoHandler struct {
