@@ -621,6 +621,12 @@ func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.inner.ServeHTTP(w, r)
 }
 
+// acmeRedirect is a string that represents the base URL (e.g.
+// "https://example.com") to redirect to for ACME challenges. The paths appended
+// to this base URL will include the `/.well-known/acme-challenge/` prefix. If
+// the base URL is empty, a 404 error will be returned. If the original path was
+// for "/.well-known/acme-challenge/" exactly, a 200 OK will be returned with an
+// empty body.
 type acmeRedirect string
 
 func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -628,6 +634,7 @@ func (a acmeRedirect) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if string(a) == "" {
 		w.Header().Set("Content-Length", "0")
 		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 	if p == "/.well-known/acme-challenge/" {
 		w.Header().Set("Content-Length", "0")

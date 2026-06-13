@@ -120,6 +120,14 @@ func TestACMERedirect(t *testing.T) {
 			acmeRedirectURL: "http://example.com",
 			expected:        "http://example.com/.well-known/acme-challenge/foobar",
 		},
+		// Empty acmeRedirectURL means no redirect target is configured, so
+		// the handler returns a 404 instead of redirecting.
+		{
+			challPath:       "https://www.howsmyssl.com/.well-known/acme-challenge/foobar",
+			acmeRedirectURL: "",
+			expected:        "",
+			code:            http.StatusNotFound,
+		},
 	}
 	for i, tt := range tests {
 		tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", tt.acmeRedirectURL, staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
