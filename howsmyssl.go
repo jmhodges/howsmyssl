@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"log"
 	"log/slog"
+	"mime"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -460,34 +461,16 @@ func commonRedirect(redirectHost string) http.Handler {
 		u.Host = redirectHost
 		targetURL := u.String()
 
-		// Handle multiple Accept headers and case-insensitivity
-		// Join all Accept headers (HTTP allows multiple) and normalize case
-		acceptHeaders := r.Header["Accept"]
-		if len(acceptHeaders) == 0 {
-			http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
-			return
-		}
-
-		// Prevent cache poisoning by varying on Accept (only when Accept is present)
+		// The response Content-Type/body depends on Accept, so always Vary
+		// to keep shared caches from serving the wrong representation.
 		w.Header().Add("Vary", "Accept")
-		accept := strings.ToLower(strings.Join(acceptHeaders, ","))
 
-		// Check for JSON request with proper MIME type parsing
-		// Avoids false positives from substring matching (e.g., "application/json-patch+json")
-		wantsJSON := false
-		for part := range strings.SplitSeq(accept, ",") {
-			mime := strings.TrimSpace(strings.Split(part, ";")[0])
-			if mime == "application/json" {
-				wantsJSON = true
-				break
-			}
-		}
-
-		if wantsJSON {
+		if acceptsJSON(r.Header["Accept"]) {
+			// Setting Content-Type first stops Redirect from writing its
+			// default text/html body; it still percent-encodes Location.
 			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Location", targetURL)
-			w.WriteHeader(http.StatusMovedPermanently)
-			// Return an empty JSON object for the redirect body
+			http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
+			// Return an empty JSON object for the redirect body.
 			w.Write([]byte("{}"))
 			return
 		}
@@ -495,6 +478,26 @@ func commonRedirect(redirectHost string) http.Handler {
 		http.Redirect(w, r, targetURL, http.StatusMovedPermanently)
 	}
 	return http.HandlerFunc(hf)
+}
+
+// acceptsJSON reports whether any Accept header value explicitly lists
+// application/json with a non-zero quality value.
+func acceptsJSON(acceptHeaders []string) bool {
+	for _, h := range acceptHeaders {
+		for part := range strings.SplitSeq(h, ",") {
+			mt, params, err := mime.ParseMediaType(strings.TrimSpace(part))
+			if err != nil || mt != "application/json" {
+				continue
+			}
+			if q, ok := params["q"]; ok {
+				if f, err := strconv.ParseFloat(q, 64); err == nil && f == 0 {
+					continue
+				}
+			}
+			return true
+		}
+	}
+	return false
 }
 
 func loadIndex() *template.Template {
