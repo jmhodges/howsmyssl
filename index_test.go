@@ -313,6 +313,20 @@ func TestJSONRedirectContentType(t *testing.T) {
 			wantVaryHdr: true,
 		},
 		{
+			name:        "JSON with q=0 is not acceptable, falls through to HTML",
+			path:        "https://www.howsmytls.com/a/check",
+			acceptHdrs:  []string{"application/json;q=0, text/html"},
+			wantCT:      "text/html; charset=utf-8",
+			wantVaryHdr: true,
+		},
+		{
+			name:        "Non-ASCII query is percent-encoded in JSON Location",
+			path:        "https://www.howsmytls.com/a/check?q=caf\xc3\xa9",
+			acceptHdrs:  []string{"application/json"},
+			wantCT:      "application/json",
+			wantVaryHdr: true,
+		},
+		{
 			name:        "HTML redirect with Accept: text/html",
 			path:        "https://www.howsmytls.com/",
 			acceptHdrs:  []string{"text/html"},
@@ -324,7 +338,7 @@ func TestJSONRedirectContentType(t *testing.T) {
 			path:        "https://www.howsmytls.com/",
 			acceptHdrs:  nil,
 			wantCT:      "text/html; charset=utf-8",
-			wantVaryHdr: false, // No Vary when no Accept header
+			wantVaryHdr: true, // Response varies on Accept regardless of whether it is sent
 		},
 	}
 
@@ -347,6 +361,16 @@ func TestJSONRedirectContentType(t *testing.T) {
 			ct := w.Header().Get("Content-Type")
 			if ct != tt.wantCT {
 				t.Errorf("want Content-Type %q, got %q", tt.wantCT, ct)
+			}
+
+			// The Location header must be a valid (ASCII) header value;
+			// non-ASCII bytes from the request must be percent-encoded.
+			loc := w.Header().Get("Location")
+			for i := 0; i < len(loc); i++ {
+				if loc[i] >= 0x80 {
+					t.Errorf("Location has non-ASCII byte at %d: %q", i, loc)
+					break
+				}
 			}
 
 			// Check for Vary: Accept header to prevent cache poisoning
