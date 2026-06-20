@@ -39,5 +39,9 @@ jobs:
         with:
           commit-message: "four month update of dev env certificates"
           title: "four month update of dev environment certificates (for ${{ steps.date.outputs.date }})"
+          body: |
+            Automated four-month rotation of the development environment certificates.
+
+            Created by [this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
           branch: auto_update_dev_certs
           token: ${{ steps.app-token.outputs.token }}
