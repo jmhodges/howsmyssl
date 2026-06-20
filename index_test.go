@@ -264,11 +264,11 @@ func TestJSONRedirectContentType(t *testing.T) {
 	tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
 
 	tests := []struct {
-		name         string
-		path         string
-		acceptHdrs   []string // Support multiple Accept headers
-		wantCT       string
-		wantVaryHdr  bool
+		name        string
+		path        string
+		acceptHdrs  []string // Support multiple Accept headers
+		wantCT      string
+		wantVaryHdr bool
 	}{
 		{
 			name:        "JSON API redirect with Accept: application/json",
