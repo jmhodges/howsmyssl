@@ -19,6 +19,18 @@ jobs:
           go-version-file: .github/versions/go
         id: go
 
+      - name: Check gofmt
+        run: |
+          unformatted=$(gofmt -l $(git ls-files '*.go' ':!:vendor/*' ':!:tls1262/*'))
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet -mod=vendor ./...
+
       - name: Run tests
         run: |
           go test -mod=vendor -race ./...
