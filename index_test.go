@@ -185,6 +185,44 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRouteHost:    "example.com",
 			expectedRedirectHost: "example.com",
 		},
+		{
+			// Empty vhost falls back to the host from httpsAddr.
+			rawVHost:             "",
+			httpsAddr:            "example.com:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com",
+		},
+		{
+			// Empty vhost and unparseable httpsAddr fall back to localhost.
+			rawVHost:             "",
+			httpsAddr:            "",
+			expectedRouteHost:    "localhost",
+			expectedRedirectHost: "localhost",
+		},
+		{
+			// Colon with empty host on port 443: fall back for routeHost, drop
+			// the port for redirectHost.
+			rawVHost:             ":443",
+			httpsAddr:            "example.com:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com",
+		},
+		{
+			// Colon with empty host on a non-443 port: fall back for routeHost
+			// but keep the raw vhost for redirectHost.
+			rawVHost:             ":10443",
+			httpsAddr:            "example.com:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: ":10443",
+		},
+		{
+			// Trailing colon with an empty port: drop the empty port from
+			// redirectHost rather than redirecting to "example.com:".
+			rawVHost:             "example.com:",
+			httpsAddr:            "example.com:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com",
+		},
 	}
 	stats := newStatusStats(new(expvar.Map).Init())
 	staticHandler := makeStaticHandler("/static", stats)

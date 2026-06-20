@@ -247,40 +247,33 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 	//   * Redirect to non-standard HTTPS port (not 443) that is not the same as the one the HTTPS server is booted on. (We are behind a proxy, or using a linux container, etc.)
 	//   * Redirect to a host on the standard HTTPS port, 443, without including the port as it might mix up certain clients, or, at least, look uncool.
 	//   * Do all of the above knowing that the host we are booting on with httpsAddr might not be the one we want to use in redirects and templates.
+
+	// We drop the port from routeHost because http.ServeMux deliberately
+	// doesn't match patterns against ports (see
+	// https://golang.org/issue/10463). We also currently strip ports inside
+	// protoHandler to accommodate that.
+	routeHost = vhost
+	vport := ""
 	if strings.Contains(vhost, ":") {
 		var err error
-		vport := ""
-		// We can drop port in routeHost here because http.ServeMux
-		// doesn't currently know how to match against ports (see
-		// https://golang.org/issue/10463) and we strip ports inside
-		// protoHandler to accommodate that fact. If ServeMux learns
-		// how to handle ports, we can choose to use *rawVHost for it
-		// then.
 		routeHost, vport, err = net.SplitHostPort(vhost)
 		if err != nil {
-			log.Fatalf("unable to parse httpsAddr: %s", err)
+			log.Fatalf("unable to parse vhost %q: %s", vhost, err)
 		}
+	}
+	if routeHost == "" {
+		routeHost, _, _ = net.SplitHostPort(httpsAddr)
 		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
+			routeHost = "localhost"
 		}
-		// Don't commonRedirect to https://example.com:443, just https://example.com
-		if vport == "443" {
-			redirectHost = routeHost
-		} else {
-			redirectHost = vhost
-		}
-	} else {
-		routeHost = vhost
-		if routeHost == "" {
-			routeHost, _, _ = net.SplitHostPort(httpsAddr)
-			if routeHost == "" {
-				routeHost = "localhost"
-			}
-		}
+	}
+
+	// Don't commonRedirect to https://example.com:443, just https://example.com
+	switch vport {
+	case "", "443":
 		redirectHost = routeHost
+	default:
+		redirectHost = vhost
 	}
 	return routeHost, redirectHost
 }
