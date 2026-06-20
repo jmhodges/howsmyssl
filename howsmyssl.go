@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"expvar"
 	"flag"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net"
@@ -30,6 +32,12 @@ import (
 	"google.golang.org/api/option"
 )
 
+//go:embed templates/index.html
+var templatesFS embed.FS
+
+//go:embed static
+var staticFS embed.FS
+
 const (
 	hstsHeaderValue = "max-age=631138519; includeSubdomains; preload"
 )
@@ -44,8 +52,6 @@ var (
 	allowListsFile = flag.String("allowListsFile", "", "file path to find the allowlists JSON file")
 	googAcctConf   = flag.String("googAcctConf", "", "file path to a Google service account JSON configuration")
 	allowLogName   = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
-	staticDir      = flag.String("staticDir", "./static", "file path to the directory of static files to serve")
-	tmplDir        = flag.String("templateDir", "./templates", "file path to the directory of templates")
 	adminAddr      = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 	headless       = flag.Bool("headless", false, "Run without templates")
 
@@ -164,7 +170,7 @@ func main() {
 	webHandleFunc := http.NotFound
 	if !*headless {
 		index = loadIndex()
-		staticHandler = makeStaticHandler(*staticDir, staticStatuses)
+		staticHandler = makeStaticHandler(staticStatuses)
 		webHandleFunc = handleWeb
 	}
 
@@ -491,7 +497,7 @@ func commonRedirect(redirectHost string) http.Handler {
 func loadIndex() *template.Template {
 	return template.Must(template.New("index.html").
 		Funcs(template.FuncMap{"sentence": sentence, "ratingSpan": ratingSpan}).
-		ParseFiles(*tmplDir + "/index.html"))
+		ParseFS(templatesFS, "templates/index.html"))
 }
 
 func makeTLSConfig(certPath, keyPath string) *tls.Config {
@@ -533,8 +539,12 @@ func makeTLSConfig(certPath, keyPath string) *tls.Config {
 	return tlsConf
 }
 
-func makeStaticHandler(dir string, stats *statusStats) http.HandlerFunc {
-	h := http.StripPrefix("/s/", http.FileServer(http.Dir(dir)))
+func makeStaticHandler(stats *statusStats) http.HandlerFunc {
+	sub, err := fs.Sub(staticFS, "static")
+	if err != nil {
+		log.Fatalf("unable to create static file sub-filesystem: %s", err)
+	}
+	h := http.StripPrefix("/s/", http.FileServer(http.FS(sub)))
 	return func(w http.ResponseWriter, r *http.Request) {
 		staticRequests.Add(1)
 		w = &statWriter{w: w, stats: stats}

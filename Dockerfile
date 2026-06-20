@@ -19,8 +19,6 @@ CMD ["/bin/bash", "-c", "howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
     -adminAddr=:4567 \
-    -templateDir=/go/src/github.com/jmhodges/howsmyssl/templates \
-    -staticDir=/go/src/github.com/jmhodges/howsmyssl/static \
     -vhost=www.howsmyssl.com \
     -acmeRedirect=$ACME_REDIRECT_URL \
     -allowListsFile=/etc/howsmyssl-allowlists/allow_lists.json \

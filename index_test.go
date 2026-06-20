@@ -55,7 +55,7 @@ type acmeTest struct {
 
 func TestACMERedirect(t *testing.T) {
 	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
+	staticHandler := makeStaticHandler(stats)
 	webHandleFunc := http.NotFound
 	tests := []acmeTest{
 		// same domain redirect, acmeRedirectURL leads with "/"
@@ -225,7 +225,7 @@ func TestVHostCalculation(t *testing.T) {
 		},
 	}
 	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
+	staticHandler := makeStaticHandler(stats)
 	webHandleFunc := http.NotFound
 
 	for i, vt := range tests {
@@ -257,7 +257,7 @@ func TestVHostCalculation(t *testing.T) {
 
 func TestJSONRedirectContentType(t *testing.T) {
 	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
+	staticHandler := makeStaticHandler(stats)
 	webHandleFunc := http.NotFound
 
 	// Test that redirects from howsmytls.com to howsmyssl.com respect Accept header
@@ -384,7 +384,7 @@ func TestDisallowedBodyParses(t *testing.T) {
 
 func TestJSONAPI(t *testing.T) {
 	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
+	staticHandler := makeStaticHandler(stats)
 	webHandleFunc := http.NotFound
 	am := &allowMaps{
 		AllowTheseDomains: make(map[string]bool),
@@ -510,7 +510,7 @@ func TestIndexGoldenPath(t *testing.T) {
 	index = loadIndex()
 
 	stats := newStatusStats(new(expvar.Map).Init())
-	staticHandler := makeStaticHandler("/static", stats)
+	staticHandler := makeStaticHandler(stats)
 	am := &allowMaps{
 		AllowTheseDomains: make(map[string]bool),
 		AllowSubdomainsOn: make(map[string]bool),
