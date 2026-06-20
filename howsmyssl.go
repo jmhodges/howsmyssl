@@ -32,7 +32,6 @@ import (
 
 const (
 	hstsHeaderValue = "max-age=631138519; includeSubdomains; preload"
-	xForwardedProto = "X-Forwarded-Proto"
 )
 
 var (
@@ -250,8 +249,7 @@ func calculateDomains(vhost, httpsAddr string) (string, string) {
 
 	// We drop the port from routeHost because http.ServeMux deliberately
 	// doesn't match patterns against ports (see
-	// https://golang.org/issue/10463). We also currently strip ports inside
-	// protoHandler to accommodate that.
+	// https://golang.org/issue/10463).
 	routeHost = vhost
 	vport := ""
 	if strings.Contains(vhost, ":") {
@@ -310,14 +308,14 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 
 		gzippedM.ServeHTTP(w, r)
 	})
-	return protoHandler{logHandler{wrapper, requestLogger}, "https"}
+	return logHandler{wrapper, requestLogger, "https"}
 }
 
 func plaintextMux(redirectHost string, requestLogger *slog.Logger) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(redirectHost))
-	return protoHandler{logHandler{m, requestLogger}, "http"}
+	return logHandler{m, requestLogger, "http"}
 }
 
 const htmlContentType = "text/html;charset=utf-8"
@@ -568,6 +566,7 @@ func sentence(parts []string) string {
 type logHandler struct {
 	inner         http.Handler
 	requestLogger *slog.Logger
+	proto         string
 }
 
 // TODO(#537): use a real logging handler. This simple writer was made because
@@ -578,7 +577,7 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		host = "0.0.0.0"
 	}
-	proto := r.Header.Get(xForwardedProto)
+	proto := h.proto
 	if proto == "" {
 		proto = "unknown"
 	}
@@ -601,16 +600,6 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		tlsVersion = actualSupportedVersions[version]
 	}
 	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto)
-	h.inner.ServeHTTP(w, r)
-}
-
-type protoHandler struct {
-	inner http.Handler
-	proto string
-}
-
-func (h protoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r.Header.Set(xForwardedProto, h.proto)
 	h.inner.ServeHTTP(w, r)
 }
 
