@@ -215,6 +215,14 @@ func TestVHostCalculation(t *testing.T) {
 			expectedRouteHost:    "example.com",
 			expectedRedirectHost: ":10443",
 		},
+		{
+			// Trailing colon with an empty port: drop the empty port from
+			// redirectHost rather than redirecting to "example.com:".
+			rawVHost:             "example.com:",
+			httpsAddr:            "example.com:443",
+			expectedRouteHost:    "example.com",
+			expectedRedirectHost: "example.com",
+		},
 	}
 	stats := newStatusStats(new(expvar.Map).Init())
 	staticHandler := makeStaticHandler("/static", stats)
