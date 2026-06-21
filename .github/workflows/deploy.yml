@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - id: auth
-        uses: google-github-actions/auth@v3.0.0
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: "projects/852340051888/locations/global/workloadIdentityPools/github-deploy/providers/github-deploy"
           service_account: "howsmyssl-deploy@personal-sites-1295.iam.gserviceaccount.com"
           create_credentials_file: true
 
       - id: get-gke-credentials
-        uses: google-github-actions/get-gke-credentials@v3.0.0
+        uses: google-github-actions/get-gke-credentials@3da1e46a907576cefaa90c484278bb5b259dd395 # v3.0.0
         with:
           cluster_name: dg
           location: us-central1-c
