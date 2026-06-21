@@ -18,15 +18,15 @@ jobs:
     steps:
       - name: Generate a token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         with:
           app-id: ${{ secrets.APP_CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           ref: main
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: .github/versions/go
       - run: go build -o ./gendevcerts/gendevcerts ./gendevcerts
@@ -35,7 +35,7 @@ jobs:
         id: date
         run: echo "::set-output name=date::$(date +'%Y-%m')"
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v8.1.1
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           commit-message: "four month update of dev env certificates"
           title: "four month update of dev environment certificates (for ${{ steps.date.outputs.date }})"
