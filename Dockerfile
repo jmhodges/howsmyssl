@@ -1,21 +1,40 @@
-FROM golang:1.26.4@sha256:792443b89f65105abba56b9bd5e97f680a80074ac62fc844a584212f8c8102c3
+# syntax=docker/dockerfile:1
 
-EXPOSE 10080
-EXPOSE 10443
+# ---- Build stage ----
+FROM golang:1.26.4@sha256:792443b89f65105abba56b9bd5e97f680a80074ac62fc844a584212f8c8102c3 AS build
 
-ENV GO111MODULE=on
-ADD . /go/src/github.com/jmhodges/howsmyssl
+WORKDIR /src
 
-RUN cd /go/src/github.com/jmhodges/howsmyssl && go install -mod=vendor github.com/jmhodges/howsmyssl
+# Dependencies are vendored, so no module download step is needed. Static files
+# and templates are embedded into the binary, so the build tree is all we need.
+COPY . .
 
-# Provided by kubernetes secrets or some such
-VOLUME "/secrets"
+RUN go build \
+    -mod=vendor \
+    -trimpath \
+    -ldflags="-s -w" \
+    -o /out/howsmyssl \
+    .
 
-RUN chown -R www-data /go/src/github.com/jmhodges/howsmyssl
+# ---- Runtime stage ----
+# Debian slim with ca-certificates already baked in (rather than distroless
+# static) so the shell can expand the environment variables passed to the
+# command below, and so the Google Cloud Logging TLS calls can verify certs.
+FROM cacertsfriend/ca-certs-images:debian-13-slim@sha256:502c35c01ac42b442156ce8a99db95801bd57ca5d8d9e43e5404f080c6dc0247
 
-USER www-data
+RUN useradd --uid 10001 --no-create-home app
 
-CMD ["/bin/bash", "-c", "howsmyssl \
+COPY --from=build /out/howsmyssl /usr/local/bin/howsmyssl
+
+USER app
+
+# HTTP and HTTPS.
+EXPOSE 10080 10443
+
+# TLS cert/key, the logging service account, and the allowlists file are mounted
+# at runtime (e.g. Kubernetes secrets/configmaps); none are baked into the image.
+# -acmeRedirect comes from the environment.
+ENTRYPOINT ["/bin/sh", "-c", "exec howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
     -adminAddr=:4567 \

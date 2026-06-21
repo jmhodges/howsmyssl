@@ -1,1 +1,7 @@
 .git
+.github
+.claude
+Dockerfile
+.dockerignore
+README.md
+LICENSE
