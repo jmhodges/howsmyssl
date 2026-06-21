@@ -1,0 +1,5 @@
+name: CodeQL config
+
+paths-ignore:
+  - vendor
+  - tls1262
