@@ -20,7 +20,9 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/setup-go-from-dockerfile"
     schedule:
       interval: "weekly"
     groups:
