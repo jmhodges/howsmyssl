@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	tls1262 "github.com/jmhodges/howsmyssl/tls1262"
+	tls1265 "github.com/jmhodges/howsmyssl/tls1265"
 	"golang.org/x/net/http2"
 )
 
@@ -24,20 +24,20 @@ func (k *contextKey) String() string { return "howhttp context value " + k.name 
 // out to handlers that need to investigate the client's TLS settings.
 var smuggledConnKey = &contextKey{"smuggledConn"}
 
-// SmuggledConn returns the underlying *tls1262.Conn that was attached to the
+// SmuggledConn returns the underlying *tls1265.Conn that was attached to the
 // request's context.
-func SmuggledConn(ctx context.Context) (*tls1262.Conn, bool) {
-	tc, ok := ctx.Value(smuggledConnKey).(*tls1262.Conn)
+func SmuggledConn(ctx context.Context) (*tls1265.Conn, bool) {
+	tc, ok := ctx.Value(smuggledConnKey).(*tls1265.Conn)
 	return tc, ok
 }
 
 // addTLSConnToContext is suitable for use as http.Server.ConnContext. It pulls
-// the underlying *tls1262.Conn out of a *Conn and stashes it on the context for
+// the underlying *tls1265.Conn out of a *Conn and stashes it on the context for
 // handlers to retrieve via SmuggledConn.
 //
 // We do this smuggling instead of using http.Hijacker.Hijack to avoid needing
 // to do a bunch of connection management and HTTP response formatting
-// ourselves. We smuggle the whole *tls1262.Conn into the context instead of
+// ourselves. We smuggle the whole *tls1265.Conn into the context instead of
 // just its ConnectionState because the handshake may not yet be performed, and
 // we don't want to lock here waiting for the handshake to finish.
 func addTLSConnToContext(ctx context.Context, c net.Conn) context.Context {
@@ -92,7 +92,7 @@ type Server struct {
 
 // NewServer creates a new Server with the given listener and handler. The
 // listener is expected to be a *Listener, or, at least, a listener created
-// with tls1262.Listen.
+// with tls1265.Listen.
 func NewServer(listener net.Listener, handler http.Handler) (*Server, error) {
 	h1 := &http.Server{
 		Handler:           handler,
