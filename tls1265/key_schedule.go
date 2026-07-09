@@ -7,8 +7,9 @@ package tls
 import (
 	"crypto"
 	"crypto/ecdh"
+	"crypto/fips140"
 	"crypto/hmac"
-	"github.com/jmhodges/howsmyssl/tls1262/internal/fips140/tls13"
+	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls13"
 	"crypto/mlkem"
 	"errors"
 	"hash"
@@ -165,7 +166,14 @@ type hybridKeyExchange struct {
 }
 
 func (ke *hybridKeyExchange) keyShares(rand io.Reader) (*keySharePrivateKeys, []keyShare, error) {
-	priv, ecdhShares, err := ke.ecdh.keyShares(rand)
+	var (
+		priv       *keySharePrivateKeys
+		ecdhShares []keyShare
+		err        error
+	)
+	fips140.WithoutEnforcement(func() { // Hybrid of ML-KEM, which is Approved.
+		priv, ecdhShares, err = ke.ecdh.keyShares(rand)
+	})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -201,7 +209,14 @@ func (ke *hybridKeyExchange) serverSharedSecret(rand io.Reader, clientKeyShare [
 		ecdhShareData = clientKeyShare[:ke.ecdhElementSize]
 		mlkemShareData = clientKeyShare[ke.ecdhElementSize:]
 	}
-	ecdhSharedSecret, ks, err := ke.ecdh.serverSharedSecret(rand, ecdhShareData)
+	var (
+		ecdhSharedSecret []byte
+		ks               keyShare
+		err              error
+	)
+	fips140.WithoutEnforcement(func() { // Hybrid of ML-KEM, which is Approved.
+		ecdhSharedSecret, ks, err = ke.ecdh.serverSharedSecret(rand, ecdhShareData)
+	})
 	if err != nil {
 		return nil, keyShare{}, err
 	}
@@ -234,7 +249,13 @@ func (ke *hybridKeyExchange) clientSharedSecret(priv *keySharePrivateKeys, serve
 		ecdhShareData = serverKeyShare[:ke.ecdhElementSize]
 		mlkemShareData = serverKeyShare[ke.ecdhElementSize:]
 	}
-	ecdhSharedSecret, err := ke.ecdh.clientSharedSecret(priv, ecdhShareData)
+	var (
+		ecdhSharedSecret []byte
+		err              error
+	)
+	fips140.WithoutEnforcement(func() { // Hybrid of ML-KEM, which is Approved.
+		ecdhSharedSecret, err = ke.ecdh.clientSharedSecret(priv, ecdhShareData)
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -1,13 +1,13 @@
 # Forking Go's `crypto/tls` for howsmyssl
 
-This document records exactly what was changed to turn Go 1.26.2's standard
-`crypto/tls` package into the vendored `./tls1262/` package, so that future
+This document records exactly what was changed to turn Go 1.26.5's standard
+`crypto/tls` package into the vendored `./tls1265/` package, so that future
 versions of Go can be forked the same way.
 
-The naming convention is `tls<goversion>`: Go **1.26.2** → package directory
-`tls1262`. A future fork of Go 1.27.0 would live in `tls1270`, of 1.26.3 in
-`tls1263`, and so on. The import path everywhere is
-`github.com/jmhodges/howsmyssl/tls1262` (rename the last path element to match
+The naming convention is `tls<goversion>`: Go **1.26.5** → package directory
+`tls1265`. A future fork of Go 1.27.0 would live in `tls1270`, of 1.26.6 in
+`tls1266`, and so on. The import path everywhere is
+`github.com/jmhodges/howsmyssl/tls1265` (rename the last path element to match
 the new directory).
 
 ## Why the fork exists
@@ -132,7 +132,7 @@ fork path or a public one:
   (`byteorder.LEUint32(ageAdd)` → `binary.LittleEndian.Uint32(ageAdd)`).
 
 > Note: only the imports actually present in a given file need rewriting; the
-> lists above reflect the 1.26.2 layout and may shift slightly between versions.
+> lists above reflect the 1.26.5 layout and may shift slightly between versions.
 > After copying, `go build ./tls<ver>/...` will surface any import that still
 > points at an unreachable `internal/…` path.
 
@@ -260,15 +260,41 @@ if config.SignatureAlgorithms != nil {
    `cipher_suites.go`, import rewrites). Use the *new* package name in every
    rewritten import path.
 5. Re-apply the feature edits **B1–B5**. The fastest way to find the anchor
-   points is `grep -rn "Added for howsmyssl's use" tls1262/` in the *previous*
+   points is `grep -rn "Added for howsmyssl's use" tls1265/` in the *previous*
    fork and port each hunk.
-6. Update the consumers: bump the import alias in `client_info.go`,
-   `howsmyssl.go`, `reloader.go`, and `tls_test.go`
-   (`tls "github.com/jmhodges/howsmyssl/tls<XYZ>"`), and update the README's
-   "fork of Go X.Y.Z's crypto/tls" line and directory reference.
+6. Update the consumers. Don't rely on a fixed file list — grep the repo for
+   the old package name (`grep -rn "tls<old>\|TLS<old>" --include="*.go" .`,
+   excluding the fork directory itself and `vendor/`) and rename every hit:
+   import paths and aliases (`tls "github.com/jmhodges/howsmyssl/tls<XYZ>"`
+   in `client_info.go`, `howsmyssl.go`, `reloader.go`, `tls_test.go`, and
+   throughout `howhttp/` and `howhttp/httptest/`), identifiers derived from
+   the package name (e.g. `ClientTLS<old>Config` in `howhttp/httptest`), and
+   doc comments. Also update the README's "fork of Go X.Y.Z's crypto/tls"
+   line and directory reference.
 7. `go build ./...` and `go test ./...`. A clean build confirms every internal
    import was rewritten; the howsmyssl tests exercise the exposed fields.
 8. Remove the old `tls<old>` directory once nothing imports it.
+
+### Shortcut for patch-level bumps
+
+When the old and new Go versions are close (e.g. 1.26.2 → 1.26.5), diff the
+two upstream trees first:
+
+```sh
+diff -rq $(GOTOOLCHAIN=go<old> go env GOROOT)/src/crypto/tls \
+         $(GOTOOLCHAIN=go<new> go env GOROOT)/src/crypto/tls
+```
+
+Files upstream did *not* touch can be copied straight from the previous fork
+(they already contain all A and B edits) — only the upstream-changed files
+need the porting treatment above, and only if they're among the files the
+fork modifies. Check `crypto/internal/fips140/tls12` and `tls13` in the same
+way before assuming the vendored internal packages carry over. For the
+1.26.2 → 1.26.5 bump, upstream changed only `handshake_messages.go` (taken
+verbatim; the fork doesn't modify it) and `key_schedule.go` (one import
+rewrite per **A6**; upstream added `crypto/fips140.WithoutEnforcement` calls,
+which are public API and need no porting). Finish with the diff-verify step
+below either way.
 
 ## How to diff-verify a fork against upstream
 
@@ -277,14 +303,14 @@ matching upstream toolchain:
 
 ```sh
 UP="$(go env GOROOT)/src/crypto/tls"     # with GOTOOLCHAIN=goX.Y.Z
-for f in tls1262/*.go; do
+for f in tls1265/*.go; do
     b=$(basename "$f")
     diff "$UP/$b" "$f"    # every hunk should be an import rewrite or a
                           # "// Added for howsmyssl's use" block
 done
 ```
 
-Under Go 1.26.2 exactly twelve top-level files differ from upstream —
+Under Go 1.26.5 exactly twelve top-level files differ from upstream —
 `cipher_suites.go`, `common.go`, `conn.go`, `defaults.go`,
 `defaults_fips140.go`, `handshake_client.go`, `handshake_client_tls13.go`,
 `handshake_server.go`, `handshake_server_tls13.go`, `key_schedule.go`,

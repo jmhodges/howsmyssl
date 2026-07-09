@@ -11,7 +11,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/subtle"
-	"github.com/jmhodges/howsmyssl/tls1262/internal/fips140tls"
+	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
