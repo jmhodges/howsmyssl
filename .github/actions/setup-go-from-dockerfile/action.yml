@@ -1,0 +1,12 @@
+name: Setup Go from Dockerfile
+description: Installs the Go version pinned in the Dockerfile's FROM line
+runs:
+  using: composite
+  steps:
+    - name: Read Go version from Dockerfile
+      id: goversion
+      shell: bash
+      run: sed -n 's/^FROM golang:\([0-9][0-9.]*\).*/version=\1/p' Dockerfile >> "$GITHUB_OUTPUT"
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      with:
+        go-version: ${{ steps.goversion.outputs.version }}

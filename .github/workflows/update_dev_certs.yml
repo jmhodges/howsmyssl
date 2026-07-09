@@ -26,9 +26,7 @@ jobs:
         with:
           ref: main
       - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
-        with:
-          go-version-file: .github/versions/go
+        uses: ./.github/actions/setup-go-from-dockerfile
       - run: go build -o ./gendevcerts/gendevcerts ./gendevcerts
       - run: ./gendevcerts/gendevcerts -d ./config
       - name: Get current date
