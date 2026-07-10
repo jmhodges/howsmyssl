@@ -3,3 +3,4 @@ name: CodeQL config
 paths-ignore:
   - vendor
   - tls1262
+  - tls1265
