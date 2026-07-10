@@ -15,7 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"github.com/jmhodges/howsmyssl/tls1265/internal/godebug"
+	"github.com/jmhodges/howsmyssl/tls1262/internal/godebug"
 	"io"
 	"net"
 	"sync"

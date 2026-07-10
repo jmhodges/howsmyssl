@@ -33,7 +33,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/jmhodges/howsmyssl/tls1265/internal/godebug"
+	"github.com/jmhodges/howsmyssl/tls1262/internal/godebug"
 	"net"
 	"os"
 	"strings"
