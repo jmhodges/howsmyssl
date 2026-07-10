@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	tls "github.com/jmhodges/howsmyssl/tls1262"
+	tls "github.com/jmhodges/howsmyssl/tls1265"
 )
 
 func newKeypairReloader(certPath, keyPath string) (*keypairReloader, error) {
