@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"testing"
 
-	tls "github.com/jmhodges/howsmyssl/tls1265"
+	tls "github.com/jmhodges/howsmyssl/tls1262"
 )
 
 // TestConn_HandshakeFailureCountedOnce locks in the contract that a single

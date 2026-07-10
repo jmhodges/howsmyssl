@@ -5,7 +5,7 @@
 package tls
 
 import (
-	"github.com/jmhodges/howsmyssl/tls1265/internal/godebug"
+	"github.com/jmhodges/howsmyssl/tls1262/internal/godebug"
 	"slices"
 	_ "unsafe" // for linkname
 )

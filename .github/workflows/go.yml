@@ -21,7 +21,7 @@ jobs:
 
       - name: Check gofmt
         run: |
-          unformatted=$(gofmt -l $(git ls-files '*.go' ':!:vendor/*' ':!:tls1265/*'))
+          unformatted=$(gofmt -l $(git ls-files '*.go' ':!:vendor/*' ':!:tls1262/*'))
           if [ -n "$unformatted" ]; then
             echo "These files are not gofmt'd:"
             echo "$unformatted"

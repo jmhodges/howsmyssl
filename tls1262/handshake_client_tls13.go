@@ -10,7 +10,7 @@ import (
 	"crypto"
 	"crypto/hkdf"
 	"crypto/hmac"
-	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls13"
+	"github.com/jmhodges/howsmyssl/tls1262/internal/fips140/tls13"
 	"crypto/rsa"
 	"crypto/subtle"
 	"errors"
