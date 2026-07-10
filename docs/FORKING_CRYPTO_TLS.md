@@ -251,18 +251,40 @@ if config.SignatureAlgorithms != nil {
 
 ## Step-by-step procedure for the next version
 
+Split the port across **three PRs** so each one is reviewable on its own and
+maps onto the two buckets above: the first adds the new `tls<XYZ>` package
+with *only* the mechanical Bucket A porting (so it can be verified purely by
+diffing against upstream), the second applies the Bucket B feature edits and
+switches the consumers over in the same change (the consumers are what
+exercise the new fields, so the tests validate the features in the PR that
+introduces them), and the third deletes the old package. The old and new
+forks coexist between PRs; nothing imports the new package until PR 2 lands.
+
+### PR 1 — add the new `tls<XYZ>` package (Bucket A only)
+
 1. Pick the target Go version `X.Y.Z`; the new package dir is `tls<XYZ>`
    (e.g. `go1.27.0` → `tls1270`).
 2. `GOTOOLCHAIN=goX.Y.Z go version` to fetch the toolchain, then copy
    `$(go env GOROOT)/src/crypto/tls/` into `./tls<XYZ>/`.
-3. Delete the files listed in **A1**.
+3. Delete the files listed in **A1** (the upstream tests, `testdata/`,
+   `fipsonly/`, and the BoringCrypto build variant).
 4. Apply the mechanical porting edits **A2–A6** (build tag, vendored internals,
    `cipher_suites.go`, import rewrites). Use the *new* package name in every
    rewritten import path.
-5. Re-apply the feature edits **B1–B5**. The fastest way to find the anchor
-   points is `grep -rn "Added for howsmyssl's use" tls1262/` in the *previous*
-   fork and port each hunk.
-6. Update the consumers. Don't rely on a fixed file list — grep the repo for
+5. Verify with `go build ./tls<XYZ>/...` (a clean build confirms every
+   internal import was rewritten) and the diff-verify procedure below. At
+   this stage every hunk must be an import rewrite or one of the A2–A5
+   edits — there are no `// Added for howsmyssl's use` blocks yet, and any
+   other difference from upstream is a mistake. Do **not** apply the Bucket B
+   edits or change any consumers in this PR — the diff is purely additive and
+   carries no behavioral intent.
+
+### PR 2 — apply the feature edits and switch consumers (Bucket B)
+
+1. Re-apply the feature edits **B1–B5** to the new package. The fastest way
+   to find the anchor points is `grep -rn "Added for howsmyssl's use"
+   tls1262/` in the *previous* fork and port each hunk.
+2. Update the consumers. Don't rely on a fixed file list — grep the repo for
    the old package name (`grep -rn "tls<old>\|TLS<old>" --include="*.go" .`,
    excluding the fork directory itself and `vendor/`) and rename every hit:
    import paths and aliases (`tls "github.com/jmhodges/howsmyssl/tls<XYZ>"`
@@ -271,14 +293,24 @@ if config.SignatureAlgorithms != nil {
    the package name (e.g. `ClientTLS<old>Config` in `howhttp/httptest`), and
    doc comments. Also update the README's "fork of Go X.Y.Z's crypto/tls"
    line and directory reference.
-7. `go build ./...` and `go test ./...`. A clean build confirms every internal
-   import was rewritten; the howsmyssl tests exercise the exposed fields.
-8. Remove the old `tls<old>` directory once nothing imports it.
+3. `go build ./...` and `go test ./...`. The howsmyssl tests exercise the
+   exposed fields, so a green run here is the real validation of the port.
+
+### PR 3 — remove the old `tls<old>` package
+
+1. Delete the old `tls<old>` directory.
+2. Confirm nothing still references it
+   (`grep -rn "tls<old>" --include="*.go" .` should be empty), then
+   `go build ./...` and `go test ./...` once more.
 
 ### Shortcut for patch-level bumps
 
-When the old and new Go versions are close (e.g. 1.26.2 → 1.26.5), diff the
-two upstream trees first:
+This shortcut speeds up the copy-and-port work; the PR split itself stays the
+same. Note that files copied from the previous fork carry the Bucket B edits
+with them — if you use this shortcut, strip the `// Added for howsmyssl's
+use` hunks from those files for PR 1 and restore them in PR 2, so PR 1 stays
+purely mechanical. When the old and new Go versions are close
+(e.g. 1.26.2 → 1.26.5), diff the two upstream trees first:
 
 ```sh
 diff -rq $(GOTOOLCHAIN=go<old> go env GOROOT)/src/crypto/tls \
@@ -309,6 +341,11 @@ for f in tls1262/*.go; do
                           # "// Added for howsmyssl's use" block
 done
 ```
+
+What this should show depends on where you are in the PR sequence: on the
+PR 1 branch every hunk is a Bucket A edit (import rewrites and the A2–A5
+changes) and there are no `// Added for howsmyssl's use` blocks; after PR 2
+the Bucket B feature hunks appear as well.
 
 Under Go 1.26.2 exactly twelve top-level files differ from upstream —
 `cipher_suites.go`, `common.go`, `conn.go`, `defaults.go`,
