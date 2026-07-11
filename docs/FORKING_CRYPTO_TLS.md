@@ -136,6 +136,19 @@ fork path or a public one:
 > After copying, `go build ./tls<ver>/...` will surface any import that still
 > points at an unreachable `internal/…` path.
 
+### A7. Run gofmt
+
+Rewriting import paths in place (A6) leaves the import blocks out of sorted
+order — the `github.com/jmhodges/howsmyssl/tls<ver>/internal/…` paths sort
+differently than the `internal/…` and `crypto/internal/…` paths they replace.
+Finish the mechanical porting with:
+
+```sh
+gofmt -w tls<ver>/
+```
+
+and confirm `gofmt -l tls<ver>/` prints nothing.
+
 ---
 
 ## Bucket B — howsmyssl feature edits (the point of the fork)
@@ -268,9 +281,9 @@ forks coexist between PRs; nothing imports the new package until PR 2 lands.
    `$(go env GOROOT)/src/crypto/tls/` into `./tls<XYZ>/`.
 3. Delete the files listed in **A1** (the upstream tests, `testdata/`,
    `fipsonly/`, and the BoringCrypto build variant).
-4. Apply the mechanical porting edits **A2–A6** (build tag, vendored internals,
-   `cipher_suites.go`, import rewrites). Use the *new* package name in every
-   rewritten import path.
+4. Apply the mechanical porting edits **A2–A7** (build tag, vendored internals,
+   `cipher_suites.go`, import rewrites, gofmt). Use the *new* package name in
+   every rewritten import path.
 5. Verify with `go build ./tls<XYZ>/...` (a clean build confirms every
    internal import was rewritten) and the diff-verify procedure below. At
    this stage every hunk must be an import rewrite or one of the A2–A5

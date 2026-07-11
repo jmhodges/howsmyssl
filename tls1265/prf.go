@@ -7,13 +7,13 @@ package tls
 import (
 	"crypto"
 	"crypto/hmac"
-	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls12"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"errors"
 	"fmt"
+	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls12"
 	"hash"
 )
 
