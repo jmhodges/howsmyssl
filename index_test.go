@@ -586,7 +586,7 @@ func TestLoggingHandlerLogsStatusAndBytes(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt32(&invoked, 1)
 		w.WriteHeader(http.StatusTeapot)
-		w.Write([]byte("hello"))
+		_, _ = w.Write([]byte("hello"))
 	})
 	h := loggingHandler(inner, slog.New(slog.NewTextHandler(&capturingWriter{fn: func(s string) { logged = append(logged, s) }}, nil)), "http")
 
