@@ -9,9 +9,9 @@ import (
 	"crypto/ecdh"
 	"crypto/fips140"
 	"crypto/hmac"
-	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls13"
 	"crypto/mlkem"
 	"errors"
+	"github.com/jmhodges/howsmyssl/tls1265/internal/fips140/tls13"
 	"hash"
 	"io"
 )
