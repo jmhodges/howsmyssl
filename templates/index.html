@@ -353,6 +353,24 @@
                 {{end}}
                 <p><a href="/s/about.html/#beast-vulnerability">Learn More</a></p>
             </div>
+            <div class="col-sm-4">
+              <h2>Encrypted Client Hello</h2>
+              {{if .EncryptedClientHelloOffered}}
+              <p><span class="label okay">Good</span> Your client offered the
+                Encrypted Client Hello extension. When a website publishes ECH
+                keys in DNS, your client can encrypt the name of the website
+                it's connecting to, hiding it from network observers between
+                you and the website.</p>
+              {{else}}
+              <p><span class="label improvable">Improvable</span> Your client
+                did not offer the Encrypted Client Hello extension. Without
+                it, the name of every website your client connects to is sent
+                unencrypted and visible to network observers between you and
+                the website, even though the rest of the connection is
+                encrypted.</p>
+              {{end}}
+              <p><a href="/s/about.html/#encrypted-client-hello">Learn More</a></p>
+            </div>
           </div>
           <div class="row">
             {{if .UnknownCipherSuiteSupported}}

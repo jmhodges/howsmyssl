@@ -372,6 +372,69 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 	})
 }
 
+// greaseECHExtension returns a well-formed outer ECHClientHello (RFC-draft
+// encrypted_client_hello extension body) with garbage cryptographic contents,
+// like the GREASE ECH extension browsers send when they support ECH but have
+// no ECHConfig for the server. The server can't decrypt it, but it must parse.
+func greaseECHExtension() []byte {
+	var b bytes.Buffer
+	b.WriteByte(0)              // ECHClientHelloType: outer
+	b.Write([]byte{0x00, 0x01}) // KDF: HKDF-SHA256
+	b.Write([]byte{0x00, 0x01}) // AEAD: AES-128-GCM
+	b.WriteByte(0x42)           // config_id
+	b.Write([]byte{0x00, 0x20}) // enc length: 32, an X25519 public key
+	b.Write(bytes.Repeat([]byte{0xa5}, 32))
+	b.Write([]byte{0x00, 0x64}) // payload length: 100
+	b.Write(bytes.Repeat([]byte{0x5a}, 100))
+	return b.Bytes()
+}
+
+func TestEncryptedClientHelloDetection(t *testing.T) {
+	t.Run("NotOffered", func(t *testing.T) {
+		clientConf := &tls.Config{}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+		if ci.EncryptedClientHelloOffered {
+			t.Errorf("EncryptedClientHelloOffered: want false, got true")
+		}
+	})
+
+	t.Run("OfferedGREASE", func(t *testing.T) {
+		clientConf := &tls.Config{
+			EncryptedClientHelloOverride: greaseECHExtension(),
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+		if !ci.EncryptedClientHelloOffered {
+			t.Errorf("EncryptedClientHelloOffered: want true, got false")
+		}
+		if ci.Rating != okay {
+			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+		}
+	})
+
+	// A GREASE ECH extension is legal even when the connection ends up
+	// negotiating TLS 1.2; only *accepted* ECH requires TLS 1.3.
+	t.Run("OfferedGREASETLS12", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion:                   tls.VersionTLS12,
+			MaxVersion:                   tls.VersionTLS12,
+			EncryptedClientHelloOverride: greaseECHExtension(),
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+		if !ci.EncryptedClientHelloOffered {
+			t.Errorf("EncryptedClientHelloOffered: want true, got false")
+		}
+		if ci.TLSVersion != "TLS 1.2" {
+			t.Errorf("TLSVersion: want TLS 1.2, got %s", ci.TLSVersion)
+		}
+	})
+}
+
 func TestRatingCutovers(t *testing.T) {
 	// Reference instants. These match the constants in client_info.go.
 	beforeImprovable := time.Date(2026, 6, 13, 23, 59, 0, 0, time.UTC)

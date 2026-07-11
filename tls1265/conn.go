@@ -1679,6 +1679,7 @@ func (c *Conn) connectionStateLocked() ConnectionState {
 		copy(state.SupportedCurves, c.clientHello.supportedCurves)
 		state.SupportedSignatureAlgorithms = make([]SignatureScheme, len(c.clientHello.supportedSignatureAlgorithms))
 		copy(state.SupportedSignatureAlgorithms, c.clientHello.supportedSignatureAlgorithms)
+		state.EncryptedClientHelloOffered = len(c.clientHello.encryptedClientHello) != 0
 	}
 	state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
 	state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected

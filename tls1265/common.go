@@ -321,6 +321,7 @@ type ConnectionState struct {
 	SupportedVersions                []uint16
 	SupportedCurves                  []CurveID
 	SupportedSignatureAlgorithms     []SignatureScheme
+	EncryptedClientHelloOffered      bool
 
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the
@@ -831,6 +832,18 @@ type Config struct {
 	// otherwise-disabled schemes. Setting this on a server Config has no
 	// effect.
 	SignatureAlgorithms []SignatureScheme
+
+	// Added for howsmyssl's use.
+	//
+	// EncryptedClientHelloOverride, if non-empty, is written verbatim as the
+	// body of the encrypted_client_hello extension (0xfe0d) in the client's
+	// ClientHello, without engaging the client's real ECH machinery — no inner
+	// hello is built and server acceptance is never checked, mimicking a
+	// GREASE ECH extension. It is ignored when EncryptedClientHelloConfigList
+	// is set, and the bytes must parse as a well-formed ECHClientHello or
+	// servers will abort the handshake. Setting this on a server Config has
+	// no effect.
+	EncryptedClientHelloOverride []byte
 
 	// DynamicRecordSizingDisabled disables adaptive sizing of TLS records.
 	// When true, the largest possible TLS record size is always used. When

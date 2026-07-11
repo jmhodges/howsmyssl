@@ -377,6 +377,27 @@
             and clients that do multiple or all of the above, will be marked as
             <span class="label okay">Probably Okay</span>.</p>
 
+          <h4 class="fragpadded" id="encrypted-client-hello"><a class="anchor-link" href="#encrypted-client-hello" aria-label="Link to Encrypted Client Hello">#</a>Encrypted Client Hello</h4>
+          <p><a href="https://datatracker.ietf.org/doc/draft-ietf-tls-esni/">Encrypted
+            Client Hello</a> (ECH) is a TLS 1.3 extension that encrypts the
+            first message of the TLS handshake, hiding the name of the website
+            the client is connecting to. Without ECH, that name is sent in the
+            clear in the Server Name Indication (SNI) field, visible to anyone
+            watching the network between the client and the website, even
+            though everything after the handshake is encrypted.</p>
+          <p>Using ECH for real requires the website to publish ECH keys in
+            DNS. How's My SSL? does not publish those keys, so clients cannot
+            actually encrypt their handshake to it. But clients that support
+            ECH send a fake "GREASE" ECH extension when they don't have keys
+            for a website, both to keep the ecosystem from ossifying around
+            its absence and to make real encrypted handshakes harder to
+            distinguish. That fake extension is deliberately indistinguishable
+            from a real one, so what How's My SSL? detects is that the client
+            offered ECH — that is, it supports ECH — not that an encrypted
+            handshake actually happened.</p>
+          <p>Whether or not a client offers ECH does not currently affect its
+            rating.</p>
+
           <h4 class="fragpadded" id="insecure-cipher-suites"><a class="anchor-link" href="#insecure-cipher-suites" aria-label="Link to Insecure Cipher Suites">#</a>Insecure Cipher Suites</h4>
           <p>This section displayed any cipher suites the client supports that
             are known to be insecure. Insecure cipher suites make it easy for

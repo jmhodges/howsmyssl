@@ -205,6 +205,9 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *keySharePrivateKeys, *echCli
 		if err != nil {
 			return nil, nil, nil, err
 		}
+	} else if len(config.EncryptedClientHelloOverride) > 0 {
+		// Added for howsmyssl's use. See Config.EncryptedClientHelloOverride.
+		hello.encryptedClientHello = slices.Clone(config.EncryptedClientHelloOverride)
 	}
 
 	return hello, keyShareKeys, ech, nil

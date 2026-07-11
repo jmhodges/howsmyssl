@@ -158,6 +158,7 @@ SessionTicketsSupported          bool
 SupportedVersions                []uint16
 SupportedCurves                  []CurveID
 SupportedSignatureAlgorithms     []SignatureScheme
+EncryptedClientHelloOffered      bool
 ```
 
 ### B2. Add a client-side `signature_algorithms` override (`common.go`)
@@ -209,10 +210,17 @@ SignatureAlgorithms []SignatureScheme
       state.SupportedVersions              = c.clientHello.supportedVersions
       state.SupportedCurves                = ... copy of c.clientHello.supportedCurves
       state.SupportedSignatureAlgorithms   = ... copy of c.clientHello.supportedSignatureAlgorithms
+      state.EncryptedClientHelloOffered    = len(c.clientHello.encryptedClientHello) != 0
   }
   state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
   state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected
   ```
+
+  The `EncryptedClientHelloOffered` line works for both the ECH cases the
+  server can see: a client the server can't decrypt (or GREASE) leaves the
+  outer extension body on the stashed hello, and an accepted ECH swaps in
+  the decrypted inner hello, whose field holds the 1-byte inner marker —
+  non-empty either way.
 
 ### B4. Server-side capture, resumption disable, BEAST cipher pick (`handshake_server.go`)
 
@@ -246,6 +254,42 @@ if config.SignatureAlgorithms != nil {
     hello.supportedSignatureAlgorithms = supportedSignatureAlgorithms(minVersion)
 }
 ```
+
+### B6. Add a client-side `encrypted_client_hello` override (`common.go`, `handshake_client.go`)
+
+Add an exported field to `Config`:
+
+```go
+// Added for howsmyssl's use.
+//
+// EncryptedClientHelloOverride, if non-empty, is written verbatim as the
+// body of the encrypted_client_hello extension (0xfe0d) in the client's
+// ClientHello, without engaging the client's real ECH machinery — no inner
+// hello is built and server acceptance is never checked, mimicking a
+// GREASE ECH extension. It is ignored when EncryptedClientHelloConfigList
+// is set, and the bytes must parse as a well-formed ECHClientHello or
+// servers will abort the handshake. Setting this on a server Config has
+// no effect.
+EncryptedClientHelloOverride []byte
+```
+
+In `makeClientHello` (`handshake_client.go`), extend the
+`if c.config.EncryptedClientHelloConfigList != nil` block that builds the
+real ECH context with an else branch, just before the final return:
+
+```go
+} else if len(config.EncryptedClientHelloOverride) > 0 {
+    // Added for howsmyssl's use. See Config.EncryptedClientHelloOverride.
+    hello.encryptedClientHello = slices.Clone(config.EncryptedClientHelloOverride)
+}
+```
+
+This exists so tests can exercise ECH detection: a client doing real ECH via
+`EncryptedClientHelloConfigList` fails its own handshake with
+`ECHRejectionError` when the server has no ECH keys, while the override
+sends the extension and then proceeds like any non-ECH client. The
+client-side ECH assertions all key off the `echClientContext` (nil here) or
+off the server echoing the extension, so nothing else engages.
 
 ---
 
@@ -281,7 +325,7 @@ forks coexist between PRs; nothing imports the new package until PR 2 lands.
 
 ### PR 2 — apply the feature edits and switch consumers (Bucket B)
 
-1. Re-apply the feature edits **B1–B5** to the new package. The fastest way
+1. Re-apply the feature edits **B1–B6** to the new package. The fastest way
    to find the anchor points is `grep -rn "Added for howsmyssl's use"
    tls1262/` in the *previous* fork and port each hunk.
 2. Update the consumers. Don't rely on a fixed file list — grep the repo for
