@@ -579,3 +579,44 @@ func TestIndexGoldenPath(t *testing.T) {
 const (
 	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_AES_128_GCM_SHA256","TLS_AES_256_GCM_SHA384","TLS_CHACHA20_POLY1305_SHA256"],"given_named_groups":["X25519MLKEM768","SecP256r1MLKEM768","SecP384r1MLKEM1024","x25519","secp256r1","secp384r1","secp521r1"],"given_signature_algorithms":["rsa_pss_rsae_sha256","ecdsa_secp256r1_sha256","ed25519","rsa_pss_rsae_sha384","rsa_pss_rsae_sha512","rsa_pkcs1_sha256","rsa_pkcs1_sha384","rsa_pkcs1_sha512","ecdsa_secp384r1_sha384","ecdsa_secp521r1_sha512"],"post_quantum_key_agreement":true,"ephemeral_keys_supported":true,"session_ticket_supported":false,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.3","rating":"Probably Okay"}`
 )
+
+func TestLoggingHandlerLogsStatusAndBytes(t *testing.T) {
+	var logged []string
+	var invoked int32
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&invoked, 1)
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("hello"))
+	})
+	h := loggingHandler(inner, slog.New(slog.NewTextHandler(&capturingWriter{fn: func(s string) { logged = append(logged, s) }}, nil)), "http")
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/some/path", nil)
+	req.RemoteAddr = "203.0.113.7:54321"
+	h.ServeHTTP(rec, req)
+
+	if atomic.LoadInt32(&invoked) != 1 {
+		t.Fatalf("inner handler was not invoked exactly once: got %d", invoked)
+	}
+	if rec.Code != http.StatusTeapot {
+		t.Fatalf("status not propagated: got %d", rec.Code)
+	}
+	if len(logged) != 1 {
+		t.Fatalf("expected exactly one log line, got %d: %v", len(logged), logged)
+	}
+	out := logged[0]
+	for _, want := range []string{"msg=request", "status=418", "bytes=5", "proto=http", "host=203.0.113.7"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log line missing %q: %s", want, out)
+		}
+	}
+}
+
+type capturingWriter struct {
+	fn func(string)
+}
+
+func (c *capturingWriter) Write(b []byte) (int, error) {
+	c.fn(string(b))
+	return len(b), nil
+}

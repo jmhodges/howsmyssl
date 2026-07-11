@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
+	"github.com/felixge/httpsnoop"
 	"github.com/jmhodges/howsmyssl/gzip"
 	"github.com/jmhodges/howsmyssl/howhttp"
 	tls "github.com/jmhodges/howsmyssl/tls1265"
@@ -315,14 +316,14 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 
 		gzippedM.ServeHTTP(w, r)
 	})
-	return logHandler{wrapper, requestLogger, "https"}
+	return loggingHandler(wrapper, requestLogger, "https")
 }
 
 func plaintextMux(redirectHost string, requestLogger *slog.Logger) http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/healthcheck", healthcheck)
 	m.Handle("/", commonRedirect(redirectHost))
-	return logHandler{m, requestLogger, "http"}
+	return loggingHandler(m, requestLogger, "http")
 }
 
 const htmlContentType = "text/html;charset=utf-8"
@@ -576,44 +577,56 @@ func sentence(parts []string) string {
 	return strings.Join(commaed, ", ") + ", and " + parts[len(parts)-1] + "."
 }
 
-type logHandler struct {
-	inner         http.Handler
-	requestLogger *slog.Logger
-	proto         string
-}
+// loggingHandler is a standard request logging middleware. It records the
+// response status and bytes written (via httpsnoop, which tolerates
+// hijacked connections) and emits a structured slog entry per request. The
+// previous custom type from #537 is replaced here because we no longer need
+// the Hijack workaround that motivated it.
+func loggingHandler(inner http.Handler, requestLogger *slog.Logger, proto string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		metrics := httpsnoop.CaptureMetricsFn(w, func(w http.ResponseWriter) {
+			inner.ServeHTTP(w, r)
+		})
 
-// TODO(#537): use a real logging handler. This simple writer was made because
-// the Hijack we previously had in our handlers wouldn't let us use the typical
-// logging ones.
-func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = "0.0.0.0"
-	}
-	proto := h.proto
-	if proto == "" {
-		proto = "unknown"
-	}
-	referrer := r.Header.Get("Referer")
-	if referrer == "" {
-		referrer = "noreferrer"
-	}
-	origin := r.Header.Get("Origin")
-	if origin == "" {
-		origin = "noorigin"
-	}
-	userAgent := r.Header.Get("User-Agent")
-	if userAgent == "" {
-		userAgent = "nouseragent"
-	}
-	tlsConn, ok := howhttp.SmuggledConn(r.Context())
-	tlsVersion := "none"
-	if ok && tlsConn != nil {
-		version := tlsConn.ConnectionState().Version
-		tlsVersion = actualSupportedVersions[version]
-	}
-	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto)
-	h.inner.ServeHTTP(w, r)
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			host = "0.0.0.0"
+		}
+		if proto == "" {
+			proto = "unknown"
+		}
+		referrer := r.Header.Get("Referer")
+		if referrer == "" {
+			referrer = "noreferrer"
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			origin = "noorigin"
+		}
+		userAgent := r.Header.Get("User-Agent")
+		if userAgent == "" {
+			userAgent = "nouseragent"
+		}
+		tlsConn, ok := howhttp.SmuggledConn(r.Context())
+		tlsVersion := "none"
+		if ok && tlsConn != nil {
+			version := tlsConn.ConnectionState().Version
+			tlsVersion = actualSupportedVersions[version]
+		}
+		requestLogger.InfoContext(r.Context(), "request",
+			"host", host,
+			"proto", proto,
+			"requestURL", r.URL,
+			"referrerHeader", referrer,
+			"originHeader", origin,
+			"userAgent", userAgent,
+			"tlsVersion", tlsVersion,
+			"httpVersion", r.Proto,
+			"status", metrics.Code,
+			"bytes", metrics.Written,
+			"duration", metrics.Duration,
+		)
+	})
 }
 
 // acmeRedirect is a string that represents the base URL (e.g.

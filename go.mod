@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	cloud.google.com/go/logging v1.18.0
 	github.com/dgryski/go-topk v0.0.0-20191119021947-593b4f2374c9
+	github.com/felixge/httpsnoop v1.0.4
 	github.com/google/go-cmp v0.7.0
 	github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16
 	golang.org/x/crypto v0.54.0
@@ -22,7 +23,6 @@ require (
 	cloud.google.com/go/longrunning v0.9.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-sip13 v0.0.0-20190329191031-25c5027a8c7b // indirect
-	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
