@@ -63,7 +63,13 @@ jobs:
         run: echo "found as ${{steps.sha256-of-docker-image.outputs.IMAGE_WITH_SHA256}}"
 
       - id: update-deploy
-        run: kubectl -n prod set image deployment/howsmyssl howsmyssl=${{ steps.sha256-of-docker-image.outputs.IMAGE_WITH_SHA256 }}
+        env:
+          IMAGE_WITH_SHA256: ${{ steps.sha256-of-docker-image.outputs.IMAGE_WITH_SHA256 }}
+        run: |
+          # Substitute the pinned digest into the checked-in desired state,
+          # then apply it. Everything in k8s/deployment.yaml is reconciled in
+          # one apply, so a single rollout covers both code and config changes.
+          sed "s|__IMAGE__|${IMAGE_WITH_SHA256}|g" k8s/deployment.yaml | kubectl apply -f -
 
       - id: rollout-status
         run: kubectl -n prod rollout status --timeout=5m deployments/howsmyssl

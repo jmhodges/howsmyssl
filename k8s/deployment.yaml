@@ -1,0 +1,131 @@
+# Desired state for howsmyssl in the `prod` namespace of the `dg` GKE cluster.
+#
+# This file is the source of truth: CI substitutes the freshly-built image
+# digest in place of the `__IMAGE__` sentinel and runs `kubectl apply`, so every
+# field below is reconciled on every deploy to main. There is no manual
+# `kubectl edit` drift to worry about.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: howsmyssl
+  namespace: prod
+  labels:
+    app: howsmyssl
+    version: "1"
+spec:
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    # The selector is immutable on an existing Deployment, so the legacy
+    # `status: ok` and `version: "1"` labels have to stay until the Deployment
+    # is ever recreated from scratch.
+    matchLabels:
+      app: howsmyssl
+      status: ok
+      version: "1"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 0
+  minReadySeconds: 30
+  template:
+    metadata:
+      labels:
+        app: howsmyssl
+        status: ok
+        version: "1"
+    spec:
+      terminationGracePeriodSeconds: 45
+      containers:
+        - name: howsmyssl
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          env:
+            # Consumed by the Dockerfile ENTRYPOINT as
+            # -acmeRedirect=$ACME_REDIRECT_URL
+            - name: ACME_REDIRECT_URL
+              value: http://le.somethingsimilar.com/
+          resources:
+            requests:
+              cpu: 400m
+              memory: 256Mi
+          # `/healthcheck` is served on the plaintext port, so probes don't
+          # need to deal with the TLS cert.
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 10080
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 10080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          lifecycle:
+            # Give the load balancer time to drop this pod before it stops
+            # serving, so in-flight requests aren't cut off during a rollout.
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+          volumeMounts:
+            - name: howsmyssl-logging-svc-account-volume
+              mountPath: /secrets/howsmyssl-logging-svc-account
+            - name: howsmyssl-allowlists-volume
+              mountPath: /etc/howsmyssl-allowlists
+            - name: howsmyssl-tls-volume
+              mountPath: /secrets/howsmyssl-tls
+      volumes:
+        - name: howsmyssl-logging-svc-account-volume
+          secret:
+            # The hash suffix comes from the kustomize-style generated secret
+            # name. If the logging service account secret is regenerated, this
+            # name has to be updated to match.
+            secretName: howsmyssl-logging-svc-account-km5697d6kh
+        - name: howsmyssl-allowlists-volume
+          configMap:
+            name: howsmyssl-allowlists
+        - name: howsmyssl-tls-volume
+          secret:
+            secretName: howsmyssl-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: howsmyssl
+  namespace: prod
+  labels:
+    app: howsmyssl
+spec:
+  # The pod terminates TLS itself on 10443 and redirects :10080 -> https, so
+  # the LoadBalancer passes both ports straight through. The www.howsmyssl.com
+  # DNS record points at this service's external IP.
+  type: LoadBalancer
+  selector:
+    app: howsmyssl
+    status: ok
+    version: "1"
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 10080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 10443
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: howsmyssl
+  namespace: prod
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: howsmyssl
