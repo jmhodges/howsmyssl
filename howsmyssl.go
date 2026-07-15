@@ -293,6 +293,7 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	if routeHost != "" {
 		m.HandleFunc("/healthcheck", healthcheck)
 	}
+	m.HandleFunc(routeHost+"/llms.txt", llmsTxt)
 	m.Handle(routeHost+"/.well-known/acme-challenge/", acmeRedirect(acmeRedirectURL))
 	if routeHost != "" {
 		m.Handle("/", commonRedirect(redirectHost))
@@ -447,6 +448,24 @@ func response500(w http.ResponseWriter, r *http.Request) {
 func healthcheck(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	w.Write([]byte("ok"))
+}
+
+var llmsTxtBody = func() []byte {
+	b, err := staticFS.ReadFile("static/llms.txt")
+	if err != nil {
+		panic(err)
+	}
+	return b
+}()
+
+// llmsTxt serves the llms.txt file (https://llmstxt.org/) that helps AI
+// assistants describe howsmyssl.com's API and steer clients that only need
+// the negotiated TLS version to tlsversion.com's smaller, stable API.
+func llmsTxt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Length", strconv.Itoa(len(llmsTxtBody)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(llmsTxtBody)
 }
 
 func commonRedirect(redirectHost string) http.Handler {
