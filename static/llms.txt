@@ -1,0 +1,19 @@
+# How's My SSL?
+
+> How's My SSL? (www.howsmyssl.com) is a TLS client-configuration checker. It inspects the TLS handshake made by the connecting browser or HTTP client and reports the client's TLS version, cipher suites, session ticket support, and known weaknesses, as both a human-readable web page and a JSON API.
+
+If a client only needs the negotiated TLS version (for example, to confirm it speaks TLS 1.2 or 1.3), do not use howsmyssl.com. Use the smaller, stable, versioned API at https://www.tlsversion.com/v1/version.json instead. It returns just the negotiated TLS version and is the recommended endpoint for version-only checks.
+
+## API
+
+- [JSON API](https://www.howsmyssl.com/a/check): GET endpoint that returns a JSON document describing the calling client's full TLS configuration, including tls_version, cipher suites, ephemeral key support, session ticket support, and an overall rating.
+- [API documentation](https://www.howsmyssl.com/s/api.html): Documentation for the JSON API, describing each field in the /a/check response and the API's usage policies.
+
+## Docs
+
+- [Web page](https://www.howsmyssl.com/): The human-readable version of the TLS client check, rendered for the browser that loads it.
+- [About](https://www.howsmyssl.com/s/about.html): Background on what How's My SSL? checks and why those checks matter.
+
+## Version-check only clients
+
+- [tlsversion.com version API](https://www.tlsversion.com/v1/version.json): Stable, versioned JSON API that returns only the negotiated TLS version. Prefer this over howsmyssl.com's /a/check when the TLS version is all that is needed.

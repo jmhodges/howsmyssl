@@ -255,6 +255,41 @@ func TestVHostCalculation(t *testing.T) {
 	}
 }
 
+func TestLLMSTxt(t *testing.T) {
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler(stats)
+	webHandleFunc := http.NotFound
+	tm := tlsMux("www.howsmyssl.com", "www.howsmyssl.com", "", staticHandler, webHandleFunc, nil, newTestLogger(t), newTestLogger(t))
+
+	r, err := http.NewRequest("GET", "https://www.howsmyssl.com/llms.txt", nil)
+	if err != nil {
+		t.Fatalf("borked request for /llms.txt: %s", err)
+	}
+	w := httptest.NewRecorder()
+	tm.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status code: want %d, got %d", http.StatusOK, w.Code)
+	}
+	ct := w.Header().Get("Content-Type")
+	if ct != "text/plain; charset=utf-8" {
+		t.Errorf("Content-Type: want %#v, got %#v", "text/plain; charset=utf-8", ct)
+	}
+	body := w.Body.String()
+	if !strings.HasPrefix(body, "# How's My SSL?") {
+		t.Errorf("body does not start with the llms.txt H1 site name, got prefix %#v", body[:min(len(body), 40)])
+	}
+	for _, want := range []string{
+		"https://www.tlsversion.com/v1/version.json",
+		"https://www.howsmyssl.com/a/check",
+		"https://www.howsmyssl.com/s/api.html",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("body missing %#v", want)
+		}
+	}
+}
+
 func TestJSONRedirectContentType(t *testing.T) {
 	stats := newStatusStats(new(expvar.Map).Init())
 	staticHandler := makeStaticHandler(stats)
