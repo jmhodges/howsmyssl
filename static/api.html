@@ -161,6 +161,20 @@
             GitHub</a>. There's a
             <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
           </p>
+
+          <h3 id="tlsversion">Just Need the TLS Version?</h3>
+          <p>If all you need is the TLS version of the client, the preferred
+            way to get it
+            is <a href="https://www.tlsversion.com">tlsversion.com</a>. Its
+            JSON API returns just the version, without the rest of the
+            analysis How's My SSL? performs:</p>
+          <p></p><pre>    GET https://www.tlsversion.com/v1/version.json HTTP/1.1
+
+    {
+      "version": "TLS 1.3"
+    }
+
+          </pre><p></p>
         </div>
       </div>
 
