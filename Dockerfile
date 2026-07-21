@@ -20,7 +20,7 @@ RUN go build \
 # Debian slim with ca-certificates already baked in (rather than distroless
 # static) so the shell can expand the environment variables passed to the
 # command below, and so the Google Cloud Logging TLS calls can verify certs.
-FROM cacertsfriend/ca-certs-images:debian-13-slim@sha256:b49fba73cd5df029da61517ec8ac47e1d446dcc3243dadbffca767d4d002abe8
+FROM cacertsfriend/ca-certs-images:debian-13-slim@sha256:a0c31cb8be726dedcf8d516856f08031ccb91be9b2271ad286d0a10c6bb1ab78
 
 RUN useradd --uid 10001 --no-create-home app
 
