@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Build stage ----
-FROM golang:1.26.6@sha256:640a234f4bea3e399c056b7b8f9c667c4939befae8db2f14e9785e16eccd4205 AS build
+FROM golang:1.27rc1@sha256:016d7b2a8dcddeb54626f397e6d7c58758db12d097ac4174b7b05e1de9e5bddc AS build
 
 WORKDIR /src
 
