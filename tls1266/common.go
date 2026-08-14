@@ -312,6 +312,16 @@ type ConnectionState struct {
 	// resumed connections that don't support Extended Master Secret (RFC 7627).
 	TLSUnique []byte
 
+	// Added for howsmyssl's use
+	ClientCipherSuites               []uint16
+	CompressionMethods               []uint8
+	NMinusOneRecordSplittingDetected bool
+	AbleToDetectNMinusOneSplitting   bool
+	SessionTicketsSupported          bool
+	SupportedVersions                []uint16
+	SupportedCurves                  []CurveID
+	SupportedSignatureAlgorithms     []SignatureScheme
+
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the
 	// client side.
@@ -811,6 +821,16 @@ type Config struct {
 	// them, set CurvePreferences explicitly or use either the
 	// GODEBUG=tlsmlkem=0 or the GODEBUG=tlssecpmlkem=0 environment variable.
 	CurvePreferences []CurveID
+
+	// Added for howsmyssl's use.
+	//
+	// SignatureAlgorithms, if non-nil, overrides the contents of the
+	// signature_algorithms extension (13) the client sends in its ClientHello.
+	// The list is written verbatim — no filtering by TLS version or FIPS mode
+	// — so callers can exercise GREASE values, draft codepoints, and
+	// otherwise-disabled schemes. Setting this on a server Config has no
+	// effect.
+	SignatureAlgorithms []SignatureScheme
 
 	// DynamicRecordSizingDisabled disables adaptive sizing of TLS records.
 	// When true, the largest possible TLS record size is always used. When
