@@ -296,7 +296,9 @@ forks coexist between PRs; nothing imports the new package until PR 2 lands.
 
 1. Re-apply the feature edits **B1–B5** to the new package. The fastest way
    to find the anchor points is `grep -rn "Added for howsmyssl's use"
-   tls1262/` in the *previous* fork and port each hunk.
+   tls<old>/` in the *previous* fork and port each hunk. Every Bucket B hunk
+   carries that marker — nine of them — so if the count drops, an edit was
+   lost.
 2. Update the consumers. Don't rely on a fixed file list — grep the repo for
    the old package name (`grep -rn "tls<old>\|TLS<old>" --include="*.go" .`,
    excluding the fork directory itself and `vendor/`) and rename every hit:
@@ -348,7 +350,7 @@ matching upstream toolchain:
 
 ```sh
 UP="$(go env GOROOT)/src/crypto/tls"     # with GOTOOLCHAIN=goX.Y.Z
-for f in tls1262/*.go; do
+for f in tls<ver>/*.go; do
     b=$(basename "$f")
     diff "$UP/$b" "$f"    # every hunk should be an import rewrite or a
                           # "// Added for howsmyssl's use" block

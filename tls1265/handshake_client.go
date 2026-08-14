@@ -119,6 +119,7 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, *keySharePrivateKeys, *echCli
 	}
 
 	if maxVersion >= VersionTLS12 {
+		// Added for howsmyssl's use
 		if config.SignatureAlgorithms != nil {
 			hello.supportedSignatureAlgorithms = slices.Clone(config.SignatureAlgorithms)
 		} else {

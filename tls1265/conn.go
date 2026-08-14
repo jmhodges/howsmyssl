@@ -707,6 +707,8 @@ func (c *Conn) readRecordOrCCS(expectChangeCipherSpec bool) error {
 		c.retryCount = 0
 	}
 
+	// Added for howsmyssl's use
+	//
 	// This detects BEAST mitigation when the first app data record is
 	// of length 1 or 0. Length 1 mitigation is common in web browsers, while
 	// length 0 is common in OpenSSL tools. Since the requests to
@@ -1668,6 +1670,7 @@ func (c *Conn) connectionStateLocked() ConnectionState {
 	} else {
 		state.ekm = c.ekm
 	}
+	// Added for howsmyssl's use
 	if c.clientHello != nil {
 		state.ClientCipherSuites = make([]uint16, len(c.clientHello.cipherSuites))
 		copy(state.ClientCipherSuites, c.clientHello.cipherSuites)
