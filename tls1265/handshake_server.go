@@ -44,6 +44,7 @@ func (c *Conn) serverHandshake(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Added for howsmyssl's use
 	c.clientHello = clientHello
 
 	if c.vers == VersionTLS13 {
@@ -76,6 +77,8 @@ func (hs *serverHandshakeState) handshake() error {
 	if err := hs.checkForResumption(); err != nil {
 		return err
 	}
+	// Added for howsmyssl's use
+	//
 	// Disallow resumption when client is at TLS 1.0 or below so that
 	// we can be sure the checks for HasBeastVulnSuites is set
 	// correctly. A latency and CPU hit, but tolerable for accuracy.
@@ -403,6 +406,8 @@ func supportsECDHE(c *Config, version uint16, supportedCurves []CurveID, support
 func (hs *serverHandshakeState) pickCipherSuite() error {
 	c := hs.c
 
+	// Added for howsmyssl's use
+	//
 	// For TLS 1.0 clients, try to select a CBC cipher for BEAST detection.
 	if c.vers <= VersionTLS10 {
 		beastSuites := []uint16{TLS_RSA_WITH_AES_128_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_128_CBC_SHA256}
