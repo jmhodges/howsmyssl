@@ -340,8 +340,19 @@ way before assuming the vendored internal packages carry over. For the
 1.26.2 → 1.26.5 bump, upstream changed only `handshake_messages.go` (taken
 verbatim; the fork doesn't modify it) and `key_schedule.go` (one import
 rewrite per **A6**; upstream added `crypto/fips140.WithoutEnforcement` calls,
-which are public API and need no porting). Finish with the diff-verify step
-below either way.
+which are public API and need no porting).
+
+For the 1.26.5 → 1.26.6 bump, upstream changed `bogo_config.json` (taken
+verbatim), `conn.go`, `handshake_client.go`, and `handshake_server.go`. All
+three `.go` files are ones the fork modifies, so the upstream 1.26.5 → 1.26.6
+diff was applied to the fork's copies with `patch` rather than re-porting them
+from scratch — `patch` applied every hunk with only line offsets. The new code
+is the `fips140ems` GODEBUG knob, which needs no porting: it reads through the
+vendored `internal/godebug` stub, whose `Value()` returns `""`, so the FIPS
+Extended Master Secret enforcement keeps its default behavior. (Remember to
+delete the `.orig` files `patch` leaves behind.)
+
+Finish with the diff-verify step below either way.
 
 ## How to diff-verify a fork against upstream
 
@@ -362,7 +373,8 @@ PR 1 branch every hunk is a Bucket A edit (import rewrites and the A2–A5
 changes) and there are no `// Added for howsmyssl's use` blocks; after PR 2
 the Bucket B feature hunks appear as well.
 
-Under Go 1.26.2 exactly twelve top-level files differ from upstream —
+Under Go 1.26.2 through 1.26.6 exactly twelve top-level files differ from
+upstream —
 `cipher_suites.go`, `common.go`, `conn.go`, `defaults.go`,
 `defaults_fips140.go`, `handshake_client.go`, `handshake_client_tls13.go`,
 `handshake_server.go`, `handshake_server_tls13.go`, `key_schedule.go`,
