@@ -112,8 +112,10 @@ func NewServer(listener net.Listener, handler http.Handler) (*Server, error) {
 		PingTimeout:     15 * time.Second,
 	}
 
-	// We call http2.ConfigureServer only to get h1.RegisterOnShutdown's
-	// callback set up with the connections we create. However,
+	// We call http2.ConfigureServer to bind h2 to h1 so that h1.Shutdown
+	// sends GOAWAY on the HTTP/2 connections we hand to h2.ServeConn. That
+	// binding is also why serveH2 must leave ServeConnOpts.BaseConfig nil;
+	// see the comment there.
 	err := http2.ConfigureServer(h1, h2)
 	if err != nil {
 		return nil, fmt.Errorf("unable to configure HTTP/2 server: %w", err)
@@ -303,10 +305,37 @@ func (s *Server) serveH2(c *Conn) {
 			s.h2mu.Unlock()
 			c.Close()
 		}()
+		// BaseConfig must stay nil. x/net/http2 only hooks a connection up
+		// to the graceful shutdown machinery that
+		// http2.ConfigureServer(s.h1, s.h2) set up when ServeConn is called
+		// without one:
+		//
+		//   - As of Go 1.27, x/net/http2 is a thin wrapper around net/http's
+		//     own HTTP/2 implementation. Given a BaseConfig, ServeConn copies
+		//     it into a throwaway http.Server (and a throwaway http2.Server)
+		//     for each connection, so the GOAWAY hook that ConfigureServer
+		//     registered on s.h1 never reaches the conn: h1.Shutdown returns
+		//     without draining it, the client keeps the idle connection open,
+		//     and our h2wg.Wait blocks until the caller's context expires.
+		//     With BaseConfig nil, ServeConn uses the serve function
+		//     ConfigureServer took from s.h1, which is where net/http
+		//     registered its GracefulShutdown hook and which also supplies
+		//     s.h1's timeouts to the connection.
+		//
+		//   - On older Go toolchains (or with the http2legacy build tag),
+		//     ServeConn registers the conn on s.h2 itself, which
+		//     ConfigureServer wired into s.h1's shutdown either way, so
+		//     GOAWAY works with or without a BaseConfig. The cost of nil
+		//     there is that h2 streams don't inherit s.h1's ReadTimeout,
+		//     WriteTimeout, MaxHeaderBytes, ConnState, or ErrorLog. We build
+		//     with the Go pinned in the Dockerfile, so the wrapping path is
+		//     the one that runs.
+		//
+		// The handler and the smuggled *tls1266.Conn are passed explicitly,
+		// so nothing else we need comes from BaseConfig.
 		s.h2.ServeConn(c, &http2.ServeConnOpts{
-			Context:    addTLSConnToContext(context.Background(), c),
-			Handler:    s.h1.Handler,
-			BaseConfig: s.h1,
+			Context: addTLSConnToContext(context.Background(), c),
+			Handler: s.h1.Handler,
 		})
 	}()
 }
