@@ -1,9 +1,11 @@
 // Package howhttp provides the custom HTTP/1.x and HTTP/2 server plumbing that
 // howsmyssl uses to serve requests over its forked tls1266 stack while still
-// reusing net/http and golang.org/x/net/http2.
+// reusing net/http (and, on toolchains older than Go 1.27,
+// golang.org/x/net/http2).
 package howhttp
 
 import (
+	"context"
 	"errors"
 	"expvar"
 	"io"
@@ -22,6 +24,21 @@ var (
 	_              net.Listener = &Listener{}
 	_              net.Conn     = &Conn{}
 	errTLSConnConv              = errors.New("unable to convert net.Conn to *tls1266.Conn")
+)
+
+// net/http's conn.serve type-asserts every connection against these two
+// interfaces (unexported, so we can't name them) to decide whether to run a
+// TLS handshake and, from Go 1.27 on, whether to dispatch ALPN to its own
+// HTTP/2 server. Losing either method would silently downgrade every
+// connection to HTTP/1.x with no TLS handshake driven by the server, so
+// assert them here rather than finding out in production.
+var (
+	_ interface {
+		ConnectionState() origtls.ConnectionState
+	} = &Conn{}
+	_ interface {
+		HandshakeContext(ctx context.Context) error
+	} = &Conn{}
 )
 
 type Listener struct {
@@ -133,21 +150,22 @@ func (c *Conn) Write(b []byte) (int, error) {
 // concurrent in-flight Read/Write that subsequently returns net.ErrClosed,
 // so errorToStats can recognize that error as the expected teardown
 // signal rather than logging it as anomalous. Every server-initiated
-// close path in this package routes through here: serve()'s
-// handshake-failure cleanup, serveH2's deferred close after
-// h2.ServeConn returns (idle timeout, peer GOAWAY, MaxConcurrentStreams
-// drain, etc.), closeAllH2Conns during force-shutdown, h1.Server's
-// per-conn close, and the http2 GOAWAY hook registered on h1 by
-// http2.ConfigureServer.
+// close path routes through here, because net/http (and, on older
+// toolchains, x/net/http2) only ever sees the *Conn: per-conn close
+// after a handshake failure or a finished HTTP/1.x connection, the
+// HTTP/2 server's close after an idle timeout, a peer GOAWAY, or a
+// drain, and the force-close of whatever is still live when Close or a
+// timed-out Shutdown runs.
 func (c *Conn) Close() error {
 	c.draining.Store(true)
 	return c.Conn.Close()
 }
 
-// ConnectionState is here for the net/http library to set the `Request.TLS`
-// field correctly (its connectionStater interface check). It's not to be called
-// to get the client info. Use pullClientInfo, instead (which looks at the
-// forked version of the ConnectionState with more info).
+// ConnectionState is here for the net/http library: it sets `Request.TLS`
+// from this and, as of Go 1.27, reads NegotiatedProtocol from it to decide
+// whether to serve the conn as HTTP/2. It's not to be called to get the
+// client info. Use pullClientInfo, instead (which looks at the forked version
+// of the ConnectionState with more info).
 //
 // Also, the returned struct's unexported ekm closure is unset, so calling
 // ExportKeyingMaterial on it will panic.
@@ -172,13 +190,30 @@ func (c *Conn) ConnectionState() origtls.ConnectionState {
 	}
 }
 
-// handshake drives the underlying TLS handshake at most once and caches the
-// outcome. Stats are updated exactly once: a success bumps Successes; a
-// failure bumps the error counters via errorToStats. Subsequent callers see
-// the same cached error (or nil) without re-counting.
+// HandshakeContext shadows the embedded tls1266.Conn's method so that a
+// handshake driven by the HTTP server lands in our stats. net/http calls this
+// (via its handshakeContexter check) before it looks at ConnectionState, and
+// then abandons the connection if it fails — so without this method every
+// failed handshake would go uncounted, and the only handshakes we'd ever
+// record would be the successful ones a later Read happened to observe.
+func (c *Conn) HandshakeContext(ctx context.Context) error {
+	return c.handshakeContext(ctx)
+}
+
+// handshake drives the handshake for callers that have no context to pass,
+// namely our own Read and Write.
 func (c *Conn) handshake() error {
+	return c.handshakeContext(context.Background())
+}
+
+// handshakeContext drives the underlying TLS handshake at most once and
+// caches the outcome. Stats are updated exactly once: a success bumps
+// Successes; a failure bumps the error counters via errorToStats. Subsequent
+// callers see the same cached error (or nil) without re-counting, whichever
+// entry point they came in through.
+func (c *Conn) handshakeContext(ctx context.Context) error {
 	c.handshakeOnce.Do(func() {
-		err := c.Conn.Handshake()
+		err := c.Conn.HandshakeContext(ctx)
 		if err != nil {
 			c.handshakeErr = err
 			c.errorToStats(err)
