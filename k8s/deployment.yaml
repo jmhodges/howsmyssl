@@ -38,6 +38,21 @@ spec:
         version: "1"
     spec:
       terminationGracePeriodSeconds: 45
+      # Prefer to put each replica on a different node so one node going away
+      # (an upgrade, an auto-repair, a zonal network blip) doesn't take every
+      # pod with it. This is a preference, not a requirement: the dg cluster is
+      # small and node-auto-provisioned, and a hard requirement would leave
+      # rolling-update surge pods Pending when there's no free node to satisfy
+      # it, which is the stuck-rollout failure mode we've already hit once.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app: howsmyssl
       containers:
         - name: howsmyssl
           image: __IMAGE__
@@ -105,6 +120,13 @@ spec:
   # the LoadBalancer passes both ports straight through. The www.howsmyssl.com
   # DNS record points at this service's external IP.
   type: LoadBalancer
+  # This is the reserved address google_compute_address.howsmyssl-lb in the
+  # founding repo's ops/gcp/main.tf. It has been this Service's IP since 2020,
+  # but until now nothing in this file said so, and the only thing keeping it
+  # was that `kubectl apply` leaves alone fields it has never managed. Pinning
+  # it here means a recreated Service gets the same IP instead of a fresh one
+  # that DNS doesn't point at. If it changes there, change it here too.
+  loadBalancerIP: 34.71.45.200
   selector:
     app: howsmyssl
     status: ok
