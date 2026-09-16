@@ -9,7 +9,7 @@ require (
 	github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16
 	golang.org/x/crypto v0.57.0
 	golang.org/x/net v0.59.0
-	golang.org/x/oauth2 v0.36.0
+	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.48.0
 	google.golang.org/api v0.295.0
 )
