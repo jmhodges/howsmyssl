@@ -8,8 +8,8 @@ cloud.google.com/go/compute/metadata v0.10.0 h1:pyKMUQSwchgkIBBJGdILqQbs/BNJXqwS
 cloud.google.com/go/compute/metadata v0.10.0/go.mod h1:rGFHRrIif570kSibjFTMbt6/4/tzgJWFGI/HVol4GIk=
 cloud.google.com/go/iam v1.12.0 h1:Aki3bX9aHUDKPHfnRJfDcTdVedvy6quGBQcTqx3DRXk=
 cloud.google.com/go/iam v1.12.0/go.mod h1:FEZ4lXpADAC2AIpQY7LANNjjwyQ2jK439CI2VaD+sLY=
-cloud.google.com/go/logging v1.19.1 h1:7SsLhyTDBDrJw+Ll6Ns3I2mByqHXvJUc3rGjSlwiWgU=
-cloud.google.com/go/logging v1.19.1/go.mod h1:2IkQ/d8jVJqV2qW8ZUGUiMjdZG1gkLD2JReGbZ8isqg=
+cloud.google.com/go/logging v1.20.0 h1:l7yzCB8/JSY5PHT9RsaqdT1jaBGbM6KlSJDX210HlXM=
+cloud.google.com/go/logging v1.20.0/go.mod h1:ALUaJQZM691Eeujy9kFx0xREq3AMPuGd+pTRZuTYv+w=
 cloud.google.com/go/longrunning v1.2.0 h1:WjYH3YHBGCxGJP9M4dWGHBfXr/cFIjMkNgWcJj7/iMM=
 cloud.google.com/go/longrunning v1.2.0/go.mod h1:5KMQALFGOCtFoi2xSOA1u3H7WKlhmckgiyFw7+LGQp0=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
