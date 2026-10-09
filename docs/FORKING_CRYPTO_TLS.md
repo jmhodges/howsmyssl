@@ -61,6 +61,11 @@ Delete the two leading lines:
 
 ```
 
+As of Go 1.27, `defaults_fips140.go` also imports `crypto/internal/boring` to
+gate ML-DSA certificates in `isCertificateAllowedFIPS`. The fork never builds
+with BoringCrypto, so drop the import and collapse the
+`case *mldsa.PublicKey:` body from `return !boring.Enabled` to `return true`.
+
 ### A3. Vendor four `internal` packages under `tls<ver>/internal/`
 
 Upstream's `crypto/tls` reaches into packages that are unimportable from a
