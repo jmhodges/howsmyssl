@@ -1,5 +1,5 @@
 // Package howhttp provides the custom HTTP/1.x and HTTP/2 server plumbing that
-// howsmyssl uses to serve requests over its forked tls1266 stack while still
+// howsmyssl uses to serve requests over its forked tls1272 stack while still
 // reusing net/http and golang.org/x/net/http2.
 package howhttp
 
@@ -15,13 +15,13 @@ import (
 
 	origtls "crypto/tls"
 
-	tls "github.com/jmhodges/howsmyssl/tls1266"
+	tls "github.com/jmhodges/howsmyssl/tls1272"
 )
 
 var (
 	_              net.Listener = &Listener{}
 	_              net.Conn     = &Conn{}
-	errTLSConnConv              = errors.New("unable to convert net.Conn to *tls1266.Conn")
+	errTLSConnConv              = errors.New("unable to convert net.Conn to *tls1272.Conn")
 )
 
 type Listener struct {
