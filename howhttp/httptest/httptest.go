@@ -1,11 +1,11 @@
 // Package howhttptest provides utilities for spinning up a [howhttp.Server]
-// backed by a [tls1266.Listen]er for use in tests, in the style of
+// backed by a [tls1272.Listen]er for use in tests, in the style of
 // [net/http/httptest].
 //
 // Use [NewServer] to start a server bound to 127.0.0.1 with a freshly
 // generated, self-signed certificate. The returned [*Server] exposes a
 // preconfigured [*http.Client] that trusts the generated certificate, plus
-// builders for [*crypto/tls.Config] and [*tls1266.Config] for tests that need
+// builders for [*crypto/tls.Config] and [*tls1272.Config] for tests that need
 // to drive raw TLS connections.
 package howhttptest
 
@@ -23,11 +23,11 @@ import (
 	"time"
 
 	"github.com/jmhodges/howsmyssl/howhttp"
-	tls1266 "github.com/jmhodges/howsmyssl/tls1266"
+	tls1272 "github.com/jmhodges/howsmyssl/tls1272"
 )
 
 // Server is a TLS HTTP server listening on a random localhost port, serving
-// over a [tls1266.Listen]er wrapped by [howhttp.NewListener] and a
+// over a [tls1272.Listen]er wrapped by [howhttp.NewListener] and a
 // [howhttp.Server]. It is the howhttp equivalent of
 // [net/http/httptest.Server].
 //
@@ -36,11 +36,11 @@ import (
 type Server struct {
 	// URL is the base URL ("https://127.0.0.1:PORT") clients should target.
 	URL string
-	// Listener is the [howhttp.NewListener]-wrapped tls1266 listener that the
+	// Listener is the [howhttp.NewListener]-wrapped tls1272 listener that the
 	// server is accepting on.
 	Listener net.Listener
-	// TLS is the [tls1266.Config] the server is using.
-	TLS *tls1266.Config
+	// TLS is the [tls1272.Config] the server is using.
+	TLS *tls1272.Config
 	// Config is the underlying [howhttp.Server].
 	Config *howhttp.Server
 
@@ -70,8 +70,8 @@ func NewServer(handler http.Handler) *Server {
 	rootCAs := x509.NewCertPool()
 	rootCAs.AddCert(leaf)
 
-	tlsConf := &tls1266.Config{
-		Certificates: []tls1266.Certificate{{
+	tlsConf := &tls1272.Config{
+		Certificates: []tls1272.Certificate{{
 			Certificate: [][]byte{certDER},
 			PrivateKey:  key,
 			Leaf:        leaf,
@@ -79,7 +79,7 @@ func NewServer(handler http.Handler) *Server {
 		NextProtos: []string{"h2", "http/1.1"},
 	}
 
-	nl, err := tls1266.Listen("tcp", "127.0.0.1:0", tlsConf)
+	nl, err := tls1272.Listen("tcp", "127.0.0.1:0", tlsConf)
 	if err != nil {
 		panic(fmt.Errorf("howhttptest: listen: %w", err))
 	}
@@ -159,7 +159,7 @@ func (s *Server) Certificate() *x509.Certificate { return s.leafCert }
 
 // RootCAs returns the [*x509.CertPool] containing the server's leaf
 // certificate. The same pool can be assigned to either a [*crypto/tls.Config]
-// or a [*tls1266.Config], since both use the same [crypto/x509] type.
+// or a [*tls1272.Config], since both use the same [crypto/x509] type.
 func (s *Server) RootCAs() *x509.CertPool { return s.rootCAs }
 
 // ClientTLSConfig returns a fresh [*crypto/tls.Config] that trusts the
@@ -173,12 +173,12 @@ func (s *Server) ClientTLSConfig() *origtls.Config {
 	}
 }
 
-// ClientTLS1266Config returns a fresh [*tls1266.Config] that trusts the
+// ClientTLS1272Config returns a fresh [*tls1272.Config] that trusts the
 // server's certificate. Useful for tests that need to drive a raw
-// [tls1266.Dial]-style client. The returned value may be freely mutated by
+// [tls1272.Dial]-style client. The returned value may be freely mutated by
 // the caller.
-func (s *Server) ClientTLS1266Config() *tls1266.Config {
-	return &tls1266.Config{
+func (s *Server) ClientTLS1272Config() *tls1272.Config {
+	return &tls1272.Config{
 		RootCAs:    s.rootCAs,
 		ServerName: "127.0.0.1",
 		NextProtos: []string{"h2", "http/1.1"},

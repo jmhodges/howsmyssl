@@ -9,7 +9,7 @@ import (
 
 	"github.com/jmhodges/howsmyssl/howhttp"
 	howhttptest "github.com/jmhodges/howsmyssl/howhttp/httptest"
-	tls1266 "github.com/jmhodges/howsmyssl/tls1266"
+	tls1272 "github.com/jmhodges/howsmyssl/tls1272"
 )
 
 func TestServer_HTTP11(t *testing.T) {
@@ -84,17 +84,17 @@ func TestServer_SmuggledConnReachable(t *testing.T) {
 	}
 }
 
-func TestServer_RawTLS1266Client(t *testing.T) {
+func TestServer_RawTLS1272Client(t *testing.T) {
 	srv := howhttptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "raw")
 	}))
 	defer srv.Close()
 
-	conf := srv.ClientTLS1266Config()
+	conf := srv.ClientTLS1272Config()
 	conf.NextProtos = []string{"http/1.1"}
 
 	addr := strings.TrimPrefix(srv.URL, "https://")
-	c, err := tls1266.Dial("tcp", addr, conf)
+	c, err := tls1272.Dial("tcp", addr, conf)
 	if err != nil {
 		t.Fatalf("Dial: %s", err)
 	}

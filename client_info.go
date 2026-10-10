@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	tls "github.com/jmhodges/howsmyssl/tls1266"
+	tls "github.com/jmhodges/howsmyssl/tls1272"
 )
 
 type rating string
