@@ -303,10 +303,14 @@ func (s *Server) serveH2(c *Conn) {
 			s.h2mu.Unlock()
 			c.Close()
 		}()
+		// No BaseConfig: as of Go 1.27, x/net/http2 hands the conn to
+		// net/http, and setting BaseConfig makes it do so via a throwaway
+		// copy of s.h1 that s.h1.Shutdown can't reach, so the conn never
+		// gets a GOAWAY. Leaving it nil uses the serve func ConfigureServer
+		// bound to s.h1, which picks up s.h1's config and its shutdown hook.
 		s.h2.ServeConn(c, &http2.ServeConnOpts{
-			Context:    addTLSConnToContext(context.Background(), c),
-			Handler:    s.h1.Handler,
-			BaseConfig: s.h1,
+			Context: addTLSConnToContext(context.Background(), c),
+			Handler: s.h1.Handler,
 		})
 	}()
 }
