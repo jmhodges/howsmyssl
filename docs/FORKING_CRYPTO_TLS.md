@@ -357,6 +357,13 @@ vendored `internal/godebug` stub, whose `Value()` returns `""`, so the FIPS
 Extended Master Secret enforcement keeps its default behavior. (Remember to
 delete the `.orig` files `patch` leaves behind.)
 
+For the 1.26.6 → 1.27.2 bump (a minor version, so a full re-port), the
+Bucket B hunks were carried over by diffing upstream 1.26.6 (with the A6
+import rewrites applied) against `tls1266`, which yields exactly the nine
+marked hunks, and applying that with `patch`. All but one applied with only
+line offsets; the `handshake_client.go` one was ported by hand because
+upstream's `supportedSignatureAlgorithms` now takes `(minVersion, maxVersion)`.
+
 Finish with the diff-verify step below either way.
 
 ## How to diff-verify a fork against upstream
@@ -383,5 +390,7 @@ upstream —
 `cipher_suites.go`, `common.go`, `conn.go`, `defaults.go`,
 `defaults_fips140.go`, `handshake_client.go`, `handshake_client_tls13.go`,
 `handshake_server.go`, `handshake_server_tls13.go`, `key_schedule.go`,
-`prf.go`, `tls.go` — and each hunk is accounted for above. Any *other* diff in
-a future port is something to review, not to accept blindly.
+`prf.go`, `tls.go` — and each hunk is accounted for above. Under Go 1.27.2
+it's eleven: the same list minus `tls.go`, which upstream no longer has
+reading a GODEBUG setting. Any *other* diff in a future port is something to
+review, not to accept blindly.
