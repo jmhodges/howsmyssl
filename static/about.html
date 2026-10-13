@@ -17,104 +17,23 @@
 
     </script>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-    <script
-        src="https://code.jquery.com/jquery-2.2.4.min.js"
-        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-        crossorigin="anonymous"></script>
-
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
     <link rel="stylesheet" href="/s/css/site.css">
-
-    <style type="text/css">
-     body {
-         padding-top: 60px;
-         padding-bottom: 40px;
-     }
-
-     p {
-         padding-bottom: 1em;
-     }
-
-     .main {
-         font-size: 15px;
-     }
-
-     .okay {
-         background-color: #1B9E77;
-         font-size: 0.85em;
-     }
-
-     .improvable {
-         background-color: #7570B3;
-         font-size: 0.85em;
-     }
-
-     .bad {
-         background-color: #D95F02;
-         font-size: 0.85em;
-     }
-
-     .fragpadded {
-        scroll-margin-top: 70px;
-        position: relative;
-     }
-
-     .fragpadded .anchor-link {
-         position: absolute;
-         right: 100%;
-         padding-right: 0.25em;
-         color: #595959;
-         text-decoration: none;
-         opacity: 0;
-         transition: opacity 0.15s;
-     }
-
-     @media (hover: hover) {
-         .fragpadded:hover .anchor-link,
-         .fragpadded .anchor-link:focus {
-             opacity: 1;
-         }
-     }
-
-     footer {
-         margin-bottom: 500px;
-     }
-
-     .container-fluid .credit {
-         padding-top: 20px 0;
-     }
-    </style>
   </head>
   <body>
-    <div class="navbar navbar-default navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
+    <header class="site-nav">
+      <nav aria-label="Main">
+        <a class="site-nav-brand" href="/">How's My SSL?</a>
+        <ul>
+          <li><a href="/">Home</a></li>
+          <li><a href="/s/about.html" aria-current="page">About</a></li>
+          <li><a href="/s/api.html">API</a></li>
+          <li><a href="https://blog.howsmyssl.com">Blog</a></li>
+        </ul>
+      </nav>
+    </header>
 
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">How's My SSL?</a>
-        </div>
-
-        <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li><a href="/">Home</a></li>
-            <li class="active"><a href="/s/about.html">About</a></li>
-            <li><a href="/s/api.html">API</a></li>
-            <li><a href="https://blog.howsmyssl.com">Blog</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-offset-1 col-md-6">
+    <div class="site site-prose">
+      <main>
           <div class="page-header">
             <h1>About this site</h1>
           </div>
@@ -507,15 +426,12 @@
             repository</a>.</p>
 
           <p>Feedback is very welcome.</p>
-        </div>
-      </div>
+      </main>
 
       <hr />
-      <div class="row">
-        <div class="col-sm-offset-1 col-sm-12">
-          Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
-        </div>
-      </div>
+      <footer class="credit">
+        Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
+      </footer>
     </div>
   </body>
 </html>

@@ -17,100 +17,23 @@
 
     </script>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-    <script
-        src="https://code.jquery.com/jquery-2.2.4.min.js"
-        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-        crossorigin="anonymous"></script>
-
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
     <link rel="stylesheet" href="/s/css/site.css">
-
-    <style type="text/css">
-     body {
-         padding-top: 60px;
-         padding-bottom: 40px;
-     }
-
-     .hero-unit-okay {
-         color: #1B9E77;
-     }
-
-     .hero-unit-improvable {
-         color: #7570B3;
-     }
-
-     .hero-unit-bad {
-         color: #D95F02;
-     }
-
-     @media screen and (max-width: 480px) {
-         .hero-unit h1 { font-size: 35px; }
-     }
-
-     .okay {
-         background-color: #1B9E77;
-         font-size: 1em;
-     }
-
-     .improvable {
-         background-color: #7570B3;
-         font-size: 1em;
-     }
-
-     .bad {
-         background-color: #D95F02;
-         font-size: 1em;
-     }
-
-     /* With a grid or flexbox set up, we may not need to reflow the text in the
-     list items, but given Bootstrap v3's creaky grid, this is the best way to
-     prevent the "Given Cipher Suites" section from overlapping the "Given Named
-     Groups" section when the cipher suite names are long. */
-     .col-sm-4 ul li {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-     }
-
-
-     footer {
-         margin-bottom: 500px;
-     }
-
-     .container .credit {
-         margin: 20px 0;
-     }
-    </style>
   </head>
   <body>
-    <div class="navbar navbar-default navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
+    <header class="site-nav">
+      <nav aria-label="Main">
+        <a class="site-nav-brand" href="/">How's My SSL?</a>
+        <ul>
+          <li><a href="/" aria-current="page">Home</a></li>
+          <li><a href="/s/about.html">About</a></li>
+          <li><a href="/s/api.html">API</a></li>
+          <li><a href="https://blog.howsmyssl.com">Blog</a></li>
+        </ul>
+      </nav>
+    </header>
 
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="/">How's My SSL?</a>
-        </div>
-
-        <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li class="active"><a href="/">Home</a></li>
-            <li><a href="/s/about.html">About</a></li>
-            <li><a href="/s/api.html">API</a></li>
-            <li><a href="https://blog.howsmyssl.com">Blog</a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <div class="container-fluid">
-      <div class="row">
-        <div class="col-sm-offset-1 col-sm-9">
+    <div class="site">
+      <main>
           <div class="jumbotron">
             <h1>Your SSL client is</h1>
             <h1><span class="hero-unit-{{ratingSpan .Rating}}">{{.Rating}}</span>.</h1>
@@ -119,8 +42,8 @@
             <p><small>Yeah, we <a href="/s/about.html#tls-vs-ssl">really mean "TLS"</a>, not "SSL".</small></p>
           </div>
 
-          <div class="row">
-            <div class="col-sm-4">
+          <div class="findings">
+            <section>
               <h2>Version</h2>
               {{if eq .TLSVersion "TLS 1.3"}}
 
@@ -186,8 +109,8 @@
                 as well as many more modern cipher suites.</p>
               {{end}}
               <p><a href="/s/about.html/#version">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
+            </section>
+            <section>
               <h2>Post-Quantum Key Agreement</h2>
               {{if .PostQuantumKeyAgreement}}
               <p><span class="label okay">Good</span> Your client supports
@@ -220,8 +143,8 @@
               </p>
               {{end}}
               <p><a href="/s/about.html/#post-quantum-key-agreement">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
+            </section>
+            <section>
               <h2>Ephemeral Key Support</h2>
               {{if .EphemeralKeysSupported}}
               <p><span class="label okay">Good</span> Ephemeral keys are
@@ -243,10 +166,10 @@
                 decode it when their attacks or their computers are
                 faster. This is actually happening.</p>  {{end}}
               <p><a href="/s/about.html/#ephemeral-key-support">Learn More</a></p>
-            </div>
+            </section>
           </div>
-          <div class="row">
-            <div class="col-sm-4">
+          <div class="findings">
+            <section>
               <h2>Session Ticket Support</h2>
               {{if .SessionTicketsSupported}}
               <p><span class="label okay">Good</span> Session tickets are supported in
@@ -259,8 +182,8 @@
                 ephemeral key support get this for free.</p>
               {{end}}
               <p><a href="/s/about.html/#session-ticket-support">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
+            </section>
+            <section>
               <h2>TLS Compression</h2>
               {{if .TLSCompressionSupported}}
               <p><span class="label bad">Bad</span> Your TLS client supports
@@ -276,8 +199,8 @@
                   attack</a>.</p>
               {{end}}
               <p><a href="/s/about.html/#tls-compression">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
+            </section>
+            <section>
               <h2>Insecure Cipher Suites</h2>
               {{if len .InsecureCipherSuites}}
               <p><span class="label bad">Bad</span> Your client supports cipher
@@ -292,10 +215,10 @@
                 cipher suites that are known to be insecure.</p>
               {{end}}
               <p><a href="/s/about.html/#insecure-cipher-suites">Learn More</a></p>
-            </div>
+            </section>
           </div>
-          <div class="row">
-            <div class="col-sm-4">
+          <div class="findings">
+            <section>
               <h2>BEAST Vulnerability</h2>
               {{if .BEASTVuln}}
               <p><span class="label bad">Bad</span>
@@ -352,19 +275,19 @@
                 {{ end }}
                 {{end}}
                 <p><a href="/s/about.html/#beast-vulnerability">Learn More</a></p>
-            </div>
+            </section>
           </div>
-          <div class="row">
+          <div class="findings">
             {{if .UnknownCipherSuiteSupported}}
-            <div class="col-sm-4">
+            <section>
               <h2>Unknown Cipher Suites Supported</h2>
               <p><span class="label bad">Bad</span> Your client is using a cipher
                 suite this app doesn't recognize. It's not in the standards and
                 almost certainly not secure. Watch out.</p>
-            </div>
-            <p><a href="/s/about.html/#unknown-cipher-suites-supported">Learn More</a></p>
+              <p><a href="/s/about.html/#unknown-cipher-suites-supported">Learn More</a></p>
+            </section>
             {{end}}
-            <div class="col-sm-4">
+            <section>
               <h2>Given Cipher Suites</h2>
               <p>The cipher suites your client said it supports, in the order it
                 sent them, are:</p>
@@ -374,8 +297,8 @@
                 {{end}}
               </ul>
               <p><a href="/s/about.html/#given-cipher-suites">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
+            </section>
+            <section>
               <h2>Given Named Groups</h2>
               <p>The named groups your client said it supports, in the order it
               sent them, are:</p>
@@ -385,30 +308,28 @@
                 {{end}}
               </ul>
               <p><a href="/s/about.html/#given-named-groups">Learn More</a></p>
-            </div>
-            <div class="col-sm-4">
-            <h2>Given Signature Algorithms</h2>
-            {{if .GivenSignatureAlgorithms}}
-            <p>The signature algorithms your client said it supports, in the
-            order it sent them, are:</p>
-            <ul>
-              {{range .GivenSignatureAlgorithms}}
-              <li>{{.}}</li>
+            </section>
+            <section>
+              <h2>Given Signature Algorithms</h2>
+              {{if .GivenSignatureAlgorithms}}
+              <p>The signature algorithms your client said it supports, in the
+              order it sent them, are:</p>
+              <ul>
+                {{range .GivenSignatureAlgorithms}}
+                <li>{{.}}</li>
+                {{end}}
+              </ul>
+              {{else}}
+              <p>Your client didn't send any signature algorithms.</p>
               {{end}}
-            </ul>
-            {{else}}
-            <p>Your client didn't send any signature algorithms.</p>
-            {{end}}
-            <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
+              <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
+            </section>
           </div>
-        </div>
-      </div>
+      </main>
 
-      <div class="row">
-        <div class="col-sm-offset-1 col-sm-12">
-          Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
-        </div>
-      </div>
+      <footer class="credit">
+        Built by <a href="https://www.darkishgreen.com">Darkish Green</a>.
+      </footer>
     </div>
   </body>
 </html>

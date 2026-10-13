@@ -1,17 +1,447 @@
-/* Override Bootstrap 3 navbar-default text colors so all navbar text
-   meets WCAG AAA (7:1) contrast against the navbar background. */
-.navbar-default .navbar-brand,
-.navbar-default .navbar-nav > li > a {
-    color: #595959; /* 7.04:1 on #f8f8f8 */
+/* Styles for every page on the site: the results page
+   (templates/index.html), about.html, and api.html.
+
+   Base styles. These carry over the handful of Bootstrap 3.3.7 defaults the
+   site actually relied on: the type scale, colors, and spacing for prose,
+   code, and the jumbotron, page header, and label components. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
-.navbar-default .navbar-brand:hover,
-.navbar-default .navbar-brand:focus,
-.navbar-default .navbar-nav > li > a:hover,
-.navbar-default .navbar-nav > li > a:focus {
-    color: #333; /* 12.63:1 on #f8f8f8 */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
-.navbar-default .navbar-nav > .active > a,
-.navbar-default .navbar-nav > .active > a:hover,
-.navbar-default .navbar-nav > .active > a:focus {
-    color: #333; /* 10.36:1 on the #e7e7e7 active background */
+
+body {
+  margin: 0;
+  padding-bottom: 40px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: #333;
+  background-color: #fff;
+}
+
+a {
+  color: #337ab7;
+  text-decoration: none;
+}
+
+a:hover,
+a:focus {
+  color: #23527c;
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  font-weight: 500;
+  line-height: 1.1;
+  color: inherit;
+}
+
+h1, h2, h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+h4, h5, h6 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+h1 { font-size: 36px; }
+h2 { font-size: 30px; }
+h3 { font-size: 24px; }
+h4 { font-size: 18px; }
+h5 { font-size: 14px; }
+h6 { font-size: 12px; }
+
+p {
+  margin: 0 0 10px;
+}
+
+ul,
+ol {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+ul ul,
+ol ul,
+ul ol,
+ol ol {
+  margin-bottom: 0;
+}
+
+small {
+  font-size: 85%;
+}
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sup {
+  top: -0.5em;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+hr {
+  box-sizing: content-box;
+  height: 0;
+  /* The UA's auto inline margins would shrink an hr to nothing as a grid
+     item. */
+  margin: 20px 0;
+  border: 0;
+  border-top: 1px solid #eee;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+code {
+  padding: 2px 4px;
+  font-size: 90%;
+  color: #c7254e;
+  background-color: #f9f2f4;
+  border-radius: 4px;
+}
+
+pre {
+  display: block;
+  padding: 9.5px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.42857143;
+  overflow-x: auto;
+  overflow-wrap: break-word;
+  color: #333;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.lead {
+  margin-bottom: 20px;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .lead {
+    font-size: 21px;
+  }
+}
+
+.page-header {
+  padding-bottom: 9px;
+  margin: 40px 0 20px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Site navigation. This block is shared with blog.howsmyssl.com
+   (blog.howsmyssl.com/assets/hashed/css/style.css in
+   jmhodges/somethingsimilar_blog), so keep the two in sync.
+
+   A bar across the top with the brand on the left and the links inline
+   after it. It sticks to the top of the viewport as the page scrolls, like
+   Bootstrap's navbar-fixed-top did, but stays in the page flow so that on
+   narrow screens the links can wrap onto a second row without covering the
+   content. Text colors meet WCAG AAA (7:1) contrast against the
+   background. */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  /* Content started 60px down, below the old fixed 51px navbar. */
+  margin-bottom: 9px;
+  background-color: #f8f8f8;
+  border-bottom: 1px solid #e7e7e7;
+}
+
+.site-nav nav {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: var(--site-nav-width, none);
+  margin-inline: auto;
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  display: block;
+  padding: 15px;
+  line-height: 20px;
+  color: #595959; /* 7.04:1 on #f8f8f8 */
+}
+
+.site-nav .site-nav-brand {
+  font-size: 18px;
+}
+
+.site-nav a:hover,
+.site-nav a:focus {
+  color: #333; /* 12.63:1 on #f8f8f8 */
+  text-decoration: none;
+}
+
+.site-nav a[aria-current] {
+  color: #333; /* 10.36:1 on #e7e7e7 */
+  background-color: #e7e7e7;
+}
+
+/* End of the shared navigation block. */
+
+/* Page layout. A single grid replaces Bootstrap's container/row/column
+   floats. On screens 768px and up, the content column starts a twelfth of
+   the way across the page (the old col-sm-offset-1) and spans --main-cols
+   twelfths of it; the rule above the footer spans the full width. Below
+   768px, everything is full width. */
+
+.site {
+  --gutter: 15px;
+  display: grid;
+  grid-template-columns: [full-start main-start] minmax(0, 1fr) [main-end full-end];
+  padding-inline: var(--gutter);
+}
+
+@media (min-width: 768px) {
+  .site {
+    /* Twelfths of the whole page, not just the padded grid area. */
+    --page: calc(100% + 2 * var(--gutter));
+    --main-cols: 9;
+    grid-template-columns:
+      [full-start] calc(var(--page) / 12)
+      [main-start] calc(var(--page) * var(--main-cols) / 12 - 2 * var(--gutter))
+      [main-end] minmax(0, 1fr)
+      [full-end];
+  }
+
+  /* The about page's prose runs to the right edge on mid-sized screens and
+     takes half the page on wide ones. */
+  .site-prose {
+    --main-cols: 11;
+  }
+}
+
+@media (min-width: 992px) {
+  .site-prose {
+    --main-cols: 6;
+  }
+}
+
+.site > * {
+  grid-column: full;
+}
+
+.site > main {
+  grid-column: main;
+}
+
+.site > .credit {
+  grid-column: main-start / full-end;
+}
+
+/* The results page. */
+
+.jumbotron {
+  padding: 30px 15px;
+  margin-bottom: 30px;
+  background-color: #eee;
+  border-radius: 6px;
+}
+
+.jumbotron p {
+  margin-bottom: 15px;
+  font-size: 21px;
+  font-weight: 200;
+}
+
+/* Screen only, like Bootstrap, so printouts keep the smaller headline. */
+@media screen and (min-width: 768px) {
+  .jumbotron {
+    padding: 48px 60px;
+  }
+
+  .jumbotron h1 {
+    font-size: 63px;
+  }
+}
+
+.hero-unit-okay {
+  color: #1B9E77;
+}
+
+.hero-unit-improvable {
+  color: #7570B3;
+}
+
+.hero-unit-bad {
+  color: #D95F02;
+}
+
+/* Each row of findings is three equal columns on screens 768px and up.
+   minmax(0, 1fr) lets a column shrink below its longest unbreakable word,
+   and overflow-wrap then breaks long cipher suite and group names instead of
+   letting them spill into the next column. Below 768px they stack, and
+   flow-root keeps the first heading's top margin inside the row the way
+   Bootstrap's .row clearfix did. */
+.findings {
+  display: flow-root;
+}
+
+@media (min-width: 768px) {
+  .findings {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 30px;
+  }
+}
+
+.findings li {
+  overflow-wrap: break-word;
+}
+
+/* Rating labels. */
+
+.label {
+  display: inline;
+  padding: 0.2em 0.6em 0.3em;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25em;
+}
+
+.label.okay {
+  background-color: #1B9E77;
+}
+
+.label.improvable {
+  background-color: #7570B3;
+}
+
+.label.bad {
+  background-color: #D95F02;
+}
+
+/* The about page. */
+
+.site-prose p {
+  padding-bottom: 1em;
+}
+
+.site-prose .label {
+  font-size: 0.85em;
+}
+
+.fragpadded {
+  scroll-margin-top: 70px;
+  position: relative;
+}
+
+.fragpadded .anchor-link {
+  position: absolute;
+  right: 100%;
+  padding-right: 0.25em;
+  color: #595959;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+@media (hover: hover) {
+  .fragpadded:hover .anchor-link,
+  .fragpadded .anchor-link:focus {
+    opacity: 1;
+  }
+}
+
+/* Print: black on white, no nav, link targets spelled out, and no splitting
+   code blocks or images across pages. */
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .site-nav {
+    display: none;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  main a[href]::after {
+    content: " (" attr(href) ")";
+    overflow-wrap: anywhere;
+  }
+
+  main a[href^="#"]::after {
+    content: "";
+  }
+
+  .label {
+    border: 1px solid #000;
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    break-inside: avoid;
+  }
+
+  img {
+    break-inside: avoid;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  .fragpadded .anchor-link {
+    display: none;
+  }
 }
