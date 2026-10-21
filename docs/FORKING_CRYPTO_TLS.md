@@ -364,6 +364,12 @@ marked hunks, and applying that with `patch`. All but one applied with only
 line offsets; the `handshake_client.go` one was ported by hand because
 upstream's `supportedSignatureAlgorithms` now takes `(minVersion, maxVersion)`.
 
+For the 1.27.2 → 1.27.3 bump, `diff -rq` showed upstream `crypto/tls` and
+`crypto/internal/fips140/tls12` and `tls13` byte-identical, so there was
+nothing to port and no `tls1273` was made: `tls1272` stays, and only the Go
+version in `Dockerfile` and `go.mod` moved. When upstream hasn't touched the
+package, skip the three-PR re-fork entirely.
+
 Finish with the diff-verify step below either way.
 
 ## How to diff-verify a fork against upstream
