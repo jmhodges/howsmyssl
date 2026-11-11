@@ -21,7 +21,7 @@ func TestServer_CertificateAndRootCAs(t *testing.T) {
 	if srv.ClientTLSConfig().RootCAs != srv.RootCAs() {
 		t.Error("ClientTLSConfig().RootCAs != RootCAs()")
 	}
-	if srv.ClientTLS1272Config().RootCAs != srv.RootCAs() {
-		t.Error("ClientTLS1272Config().RootCAs != RootCAs()")
+	if srv.ClientTLS1274Config().RootCAs != srv.RootCAs() {
+		t.Error("ClientTLS1274Config().RootCAs != RootCAs()")
 	}
 }

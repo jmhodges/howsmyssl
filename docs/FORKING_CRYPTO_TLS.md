@@ -370,6 +370,16 @@ nothing to port and no `tls1273` was made: `tls1272` stays, and only the Go
 version in `Dockerfile` and `go.mod` moved. When upstream hasn't touched the
 package, skip the three-PR re-fork entirely.
 
+For the 1.27.3 → 1.27.4 bump, upstream changed `common.go` (ML-DSA dropped
+from `signature_algorithms_cert`, go.dev/issue/82536) and
+`crypto/internal/fips140/tls12/tls12.go` (a SHA-384 size typo in the FIPS
+service-indicator switch). The `tls12.go` fix lands inside the
+`RecordNonApproved` switch that **A4** deletes, so the vendored copy didn't
+change. `tls1274` was built by copying `tls1272`, reversing its Bucket B
+patch (`git show <PR 2 commit> -- tls1272/`, applied with `git apply -R`),
+renaming imports, and applying upstream's 1.27.3 → 1.27.4 `common.go` diff
+with `patch`; PR 2 then re-applied that same Bucket B patch forward, cleanly.
+
 Finish with the diff-verify step below either way.
 
 ## How to diff-verify a fork against upstream
