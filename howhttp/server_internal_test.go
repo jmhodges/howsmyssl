@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	tls "github.com/jmhodges/howsmyssl/tls1272"
+	tls "github.com/jmhodges/howsmyssl/tls1274"
 	"golang.org/x/net/http2"
 )
 
