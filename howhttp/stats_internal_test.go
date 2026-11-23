@@ -59,6 +59,15 @@ func TestListener_CleanRequestsAddNoHandshakeErrors(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// HTTP/1.x conns report their close here, so the test can wait
+			// for the server to be done reading each one. HTTP/2 conns
+			// don't pass through it.
+			closed := make(chan struct{}, 16)
+			srv.h1.ConnState = func(_ net.Conn, st http.ConnState) {
+				if st == http.StateClosed {
+					closed <- struct{}{}
+				}
+			}
 			serveDone := make(chan error, 1)
 			go func() { serveDone <- srv.Serve() }()
 			t.Cleanup(func() {
@@ -113,6 +122,17 @@ func TestListener_CleanRequestsAddNoHandshakeErrors(t *testing.T) {
 					t.Fatalf("server saw %d of %d client hang-ups after 5s", seen, n)
 				}
 				time.Sleep(10 * time.Millisecond)
+			}
+			if proto == "http/1.1" {
+				// The server may read a hang-up twice. Counting stops
+				// only once it has closed the conn.
+				for i := range n {
+					select {
+					case <-closed:
+					case <-time.After(5 * time.Second):
+						t.Fatalf("the server closed %d of %d conns after 5s", i, n)
+					}
+				}
 			}
 
 			if got := statValue(ns, "handshake", "successes"); got != n {
@@ -192,5 +212,203 @@ func TestListener_FailedHandshakesAreCounted(t *testing.T) {
 				t.Errorf("post_handshake %s = %d after only failed handshakes, want 0", kv.Key, v.Value())
 			}
 		})
+	}
+}
+
+// acceptedConn returns the server end of a real TLS connection over loopback,
+// wrapped by a Listener, after its handshake, and the client end.
+func acceptedConn(t *testing.T) (*Conn, *origtls.Conn, *connStats) {
+	t.Helper()
+	nl, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
+		Certificates: []tls.Certificate{selfSignedCert(t)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	li := NewListener(nl, new(expvar.Map).Init())
+	t.Cleanup(func() { li.Close() })
+
+	clientCh := make(chan *origtls.Conn, 1)
+	go func() {
+		c, err := origtls.Dial("tcp", li.Addr().String(), &origtls.Config{InsecureSkipVerify: true})
+		if err != nil {
+			t.Errorf("dial: %s", err)
+		}
+		clientCh <- c
+	}()
+	nc, err := li.Accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	conn := nc.(*Conn)
+	t.Cleanup(func() { conn.Close() })
+	if err := conn.Handshake(); err != nil {
+		t.Fatalf("server handshake: %s", err)
+	}
+	client := <-clientCh
+	if client == nil {
+		t.FailNow()
+	}
+	t.Cleanup(func() { client.Close() })
+	return conn, client, li.connStats
+}
+
+// TestConn_ReadErrorCountedOnce covers a read error that tls1274 keeps and
+// returns from every Read after it. That is one event, however many times
+// the conn is read afterwards, so it must count once. Timeouts aren't kept,
+// so each one is a new read and counts on its own.
+func TestConn_ReadErrorCountedOnce(t *testing.T) {
+	const reads = 3
+	b := make([]byte, 1)
+
+	t.Run("EOF", func(t *testing.T) {
+		conn, client, stats := acceptedConn(t)
+		client.Close()
+		for i := range reads {
+			if _, err := conn.Read(b); err != io.EOF {
+				t.Fatalf("Read #%d: err = %v, want io.EOF", i, err)
+			}
+		}
+		if got := stats.PostHandshakeErrs.EOFs.Value(); got != 1 {
+			t.Errorf("post_handshake eofs = %d after one hang-up read %d times, want 1", got, reads)
+		}
+		if got := stats.PostHandshakeErrs.Errs.Value(); got != 0 {
+			t.Errorf("post_handshake errors = %d, want 0", got)
+		}
+	})
+
+	t.Run("PeerReset", func(t *testing.T) {
+		conn, client, stats := acceptedConn(t)
+		// Linger 0 makes the close send a RST instead of a FIN.
+		if err := client.NetConn().(*net.TCPConn).SetLinger(0); err != nil {
+			t.Fatal(err)
+		}
+		client.NetConn().Close()
+		for i := range reads {
+			if _, err := conn.Read(b); err == nil {
+				t.Fatalf("Read #%d: err = nil after the peer reset", i)
+			}
+		}
+		if got := stats.PostHandshakeErrs.PeerResets.Value(); got != 1 {
+			t.Errorf("post_handshake peer_resets = %d after one reset read %d times, want 1", got, reads)
+		}
+		if got := stats.PostHandshakeErrs.Errs.Value(); got != 1 {
+			t.Errorf("post_handshake errors = %d after one reset, want 1", got)
+		}
+	})
+
+	t.Run("ReadTimeouts", func(t *testing.T) {
+		conn, client, stats := acceptedConn(t)
+		for i := range reads {
+			conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+			if _, err := conn.Read(b); !isTimeout(err) {
+				t.Fatalf("Read #%d: err = %v, want a timeout", i, err)
+			}
+		}
+		if got := stats.PostHandshakeErrs.ReadTimeouts.Value(); got != reads {
+			t.Errorf("post_handshake read_timeouts = %d after %d timed-out reads, want %d", got, reads, reads)
+		}
+		// A hang-up after the timeouts still counts, once.
+		conn.SetReadDeadline(time.Time{})
+		client.Close()
+		for i := range reads {
+			if _, err := conn.Read(b); err != io.EOF {
+				t.Fatalf("Read #%d after the hang-up: err = %v, want io.EOF", i, err)
+			}
+		}
+		if got := stats.PostHandshakeErrs.EOFs.Value(); got != 1 {
+			t.Errorf("post_handshake eofs = %d after one hang-up, want 1", got)
+		}
+	})
+}
+
+// TestListener_HangUpDuringRequestCountedOnce has each client hang up while
+// its request's handler is still running, so net/http's HTTP/1.x background
+// read is the one that sees the EOF. The server then reads the conn once more
+// for the next request and gets the same EOF from tls1274. That is still one
+// hang-up, and must count once. The handler waits until the background read
+// has seen the hang-up, and the test waits until the server has closed every
+// conn, so the second read has always happened before the counters are read.
+func TestListener_HangUpDuringRequestCountedOnce(t *testing.T) {
+	cert := selfSignedCert(t)
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	nl, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		NextProtos:   []string{"http/1.1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ns := new(expvar.Map).Init()
+	li := NewListener(nl, ns)
+	srv, err := NewServer(li, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A known length lets the client read the whole body, and hang
+		// up, before this handler returns.
+		w.Header().Set("Content-Length", "2")
+		io.WriteString(w, "ok")
+		w.(http.Flusher).Flush()
+		// The conn's context ends when the background read sees the
+		// hang-up.
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			t.Errorf("the server's background read didn't see the client hang up within 5s")
+		}
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := make(chan struct{}, 16)
+	srv.h1.ConnState = func(_ net.Conn, st http.ConnState) {
+		if st == http.StateClosed {
+			closed <- struct{}{}
+		}
+	}
+	serveDone := make(chan error, 1)
+	go func() { serveDone <- srv.Serve() }()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(ctx)
+		<-serveDone
+	})
+
+	roots := x509.NewCertPool()
+	roots.AddCert(leaf)
+	url := "https://" + li.Addr().String() + "/"
+
+	const n = 3
+	for i := range n {
+		tr := &http.Transport{TLSClientConfig: &origtls.Config{RootCAs: roots, ServerName: "localhost"}}
+		resp, err := (&http.Client{Transport: tr}).Get(url)
+		if err != nil {
+			t.Fatalf("request %d: %s", i, err)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.ProtoMajor != 1 {
+			t.Fatalf("request %d: got %s, want HTTP/1.1", i, resp.Proto)
+		}
+		tr.CloseIdleConnections()
+	}
+	for i := range n {
+		select {
+		case <-closed:
+		case <-time.After(5 * time.Second):
+			t.Fatalf("the server closed %d of %d conns after 5s", i, n)
+		}
+	}
+
+	if got := statValue(ns, "post_handshake", "eofs"); got != n {
+		t.Errorf("post_handshake eofs = %d after %d hang-ups, want %d", got, n, n)
+	}
+	if got := statValue(ns, "post_handshake", "errors"); got != 0 {
+		t.Errorf("post_handshake errors = %d, want 0", got)
+	}
+	if got := statValue(ns, "handshake", "errors"); got != 0 {
+		t.Errorf("handshake errors = %d, want 0", got)
 	}
 }

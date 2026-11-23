@@ -161,6 +161,14 @@ type Conn struct {
 	// real read timeout.
 	readDeadlinePassed atomic.Bool
 
+	// readErrCounted is set by the first Read that returns an error other
+	// than a timeout. tls1274 keeps such an error and returns it from every
+	// Read after it, and net/http's HTTP/1.x server can read again after
+	// one: when its background read sees the client hang up, the read for
+	// the next request sees the same EOF. Only the first is counted, so one
+	// hang-up (or reset, or close) counts once.
+	readErrCounted atomic.Bool
+
 	*connStats
 }
 
@@ -169,8 +177,18 @@ func (c *Conn) Read(b []byte) (int, error) {
 		return 0, err
 	}
 	size, err := c.Conn.Read(b)
+	if err != nil && !isTimeout(err) && c.readErrCounted.Swap(true) {
+		return size, err
+	}
 	c.PostHandshakeErrs.count(err, c.draining.Load(), c.readDeadlinePassed.Load())
 	return size, err
+}
+
+// isTimeout says whether err is a timeout. tls1274 doesn't keep those: the
+// next Read after one reads again, so each is its own event and counted.
+func isTimeout(err error) bool {
+	var ne net.Error
+	return errors.As(err, &ne) && ne.Timeout()
 }
 
 func (c *Conn) Write(b []byte) (int, error) {
