@@ -4,7 +4,8 @@ package main
 // TLS Supported Groups registry.
 // See https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
 //
-// This list was last updated on 2026-04-09.
+// This list was last updated on 2026-11-23, against the registry as IANA last
+// updated it on 2026-11-05.
 var allNamedGroups = map[uint16]string{
 	// SEC curves
 	0x0001: "sect163k1",
@@ -61,6 +62,11 @@ var allNamedGroups = map[uint16]string{
 	// curveSM2 (RFC 8998)
 	0x0029: "curveSM2",
 
+	// bign curves (draft-kalosha-stb-tls13)
+	0x002a: "bign-curve256v1",
+	0x002b: "bign-curve384v1",
+	0x002c: "bign-curve512v1",
+
 	// FFDHE groups (RFC 7919)
 	0x0100: "ffdhe2048",
 	0x0101: "ffdhe3072",
@@ -68,15 +74,34 @@ var allNamedGroups = map[uint16]string{
 	0x0103: "ffdhe6144",
 	0x0104: "ffdhe8192",
 
-	// ML-KEM hybrid post-quantum key agreement groups (draft-ietf-tls-ecdhe-mlkem-04)
+	// ML-KEM hybrid post-quantum key agreement groups (RFC 10024)
 	0x11eb: "SecP256r1MLKEM768",
 	0x11ec: "X25519MLKEM768",
 	0x11ed: "SecP384r1MLKEM1024",
 
-	// ML-KEM post-quantum key agreement groups (draft-ietf-tls-mlkem-07)
+	// Other ML-KEM hybrid groups, registered from individual drafts
+	// (draft-rosomakho-tls-ecdhe-mlkem512-00, draft-yang-tls-hybrid-sm2-mlkem-03
+	// and draft-preussmattsson-tls-mlkem1024-x448-01). These are in
+	// postQuantumGroups below.
+	0x11e9: "SecP256r1MLKEM512",
+	0x11ea: "MLKEM512X25519",
+	0x11ee: "curveSM2MLKEM768",
+	0x11ef: "MLKEM1024X448",
+
+	// Pre-standard Kyber hybrid groups. The registry marks both as obsolete,
+	// replaced by the ML-KEM hybrids of RFC 10024. These are named here but are
+	// not in postQuantumGroups below.
+	0x6399: "X25519Kyber768Draft00",
+	0x639a: "SecP256r1Kyber768Draft00",
+
+	// ML-KEM post-quantum key agreement groups (draft-ietf-tls-mlkem-10)
 	0x200: "MLKEM512",
 	0x201: "MLKEM768",
 	0x202: "MLKEM1024",
+
+	// Explicit curve parameters (RFC 8422)
+	0xff01: "arbitrary_explicit_prime_curves",
+	0xff02: "arbitrary_explicit_char2_curves",
 
 	// GREASE values
 	// See https://www.rfc-editor.org/rfc/rfc8701
@@ -99,11 +124,20 @@ var allNamedGroups = map[uint16]string{
 }
 
 // postQuantumGroups are the named groups that provide post-quantum key
-// agreement via ML-KEM hybrids.
+// agreement: ML-KEM on its own, and the ML-KEM hybrids. A client that lists
+// any of these gets PostQuantumKeyAgreement set, which the rating uses.
+//
+// The pre-standard Kyber hybrids (X25519Kyber768Draft00 and
+// SecP256r1Kyber768Draft00) are deliberately not in here. They are not ML-KEM
+// and the registry marks them obsolete.
 var postQuantumGroups = map[uint16]bool{
+	0x11e9: true, // SecP256r1MLKEM512
+	0x11ea: true, // MLKEM512X25519
 	0x11eb: true, // SecP256r1MLKEM768
 	0x11ec: true, // X25519MLKEM768
 	0x11ed: true, // SecP384r1MLKEM1024
+	0x11ee: true, // curveSM2MLKEM768
+	0x11ef: true, // MLKEM1024X448
 	0x200:  true, // MLKEM512
 	0x201:  true, // MLKEM768
 	0x202:  true, // MLKEM1024
