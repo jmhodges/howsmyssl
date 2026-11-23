@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - main
+  # Scan a merge queue's entries too, so the Analyze checks report there.
+  merge_group:
   schedule:
     - cron: "27 4 * * 1"
 

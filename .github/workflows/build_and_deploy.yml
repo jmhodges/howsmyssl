@@ -8,6 +8,11 @@ on:
   pull_request:
     branches:
       - main
+  # A merge queue tests each entry on a temporary branch named
+  # gh-readonly-queue/main/..., and reports the result under this event.
+  # Without it, the required "Build / Build" check never reports there and
+  # the queue waits forever.
+  merge_group:
 
 permissions:
   id-token: write # passed through to deploy.yml for Google OIDC
@@ -19,7 +24,12 @@ jobs:
     uses: ./.github/workflows/go.yml
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-')
+    # Only a push deploys. A pull_request run has a refs/pull/... ref and a
+    # merge_group run has a refs/heads/gh-readonly-queue/... ref, so neither
+    # matched the ref checks before, but the event check says so out loud:
+    # a merge queue's temporary branch must never deploy. The deploy happens
+    # on the push to main that the queue makes when an entry lands.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/test_deploy_') || startsWith(github.ref, 'refs/heads/test-deploy-'))
     name: Deploy
     concurrency: production
     uses: ./.github/workflows/deploy.yml
