@@ -87,12 +87,20 @@ var actualSupportedVersions = map[uint16]string{
 }
 
 func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
-	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
-
 	st := c.ConnectionState()
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")
 	}
+	return clientInfoFromState(st, now)
+}
+
+// clientInfoFromState builds the report from the forked ConnectionState. Every
+// slice in st comes from the client's ClientHello, so this must not trust their
+// contents or lengths. It's split out of pullClientInfo so the fuzz tests can
+// reach it with states from handshakes that never complete.
+func clientInfoFromState(st tls.ConnectionState, now time.Time) *clientInfo {
+	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
+
 	var sweet32Seen []string
 	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
