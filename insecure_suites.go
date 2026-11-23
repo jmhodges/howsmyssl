@@ -7,6 +7,8 @@ var (
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
 	rc4Reason      = "uses RC4 which has insecure biases in its output"
 	sweet32Reason  = "uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"
+
+	sweet32NoStrongerReason = "uses 3DES which is vulnerable to the Sweet32 attack and no stronger cipher suite was offered for it to be a fallback to"
 )
 
 // Cipher suites with less than 128-bit encryption.

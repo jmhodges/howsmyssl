@@ -93,7 +93,6 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")
 	}
-	var sweet32Seen []string
 	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
 		if found {
@@ -116,14 +115,6 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 			if rc4CipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], rc4Reason)
 			}
-			if sweet32CipherSuites[s] {
-				sweet32Seen = append(sweet32Seen, s)
-			} else if len(sweet32Seen) != 0 && !metaCipherSuites[ci] && !tls13Suites[ci] {
-				for _, seen := range sweet32Seen {
-					d.InsecureCipherSuites[seen] = append(d.InsecureCipherSuites[seen], sweet32Reason)
-				}
-				sweet32Seen = []string{}
-			}
 		} else {
 			w, found := weirdNSSSuites[ci]
 			if !found {
@@ -136,10 +127,18 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
+	tls13Offered := offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions)
+	notFallback, noStronger := sweet32Suites(st.ClientCipherSuites, tls13Offered)
+	for _, s := range notFallback {
+		d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], sweet32Reason)
+	}
+	for _, s := range noStronger {
+		d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], sweet32NoStrongerReason)
+	}
 	// TLS 1.3 cipher suite names carry no key exchange, so the "DHE_" check
 	// above never matches them. Every TLS 1.3 handshake a client can get
 	// from a server it has no pre-shared key with is (EC)DHE.
-	if offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions) {
+	if tls13Offered {
 		d.EphemeralKeysSupported = true
 	}
 	d.PostQuantumKeyAgreement = false
@@ -219,6 +218,61 @@ func offersTLS13Handshake(suites, versions []uint16) bool {
 		return false
 	}
 	return slices.ContainsFunc(suites, func(ci uint16) bool { return tls13Suites[ci] })
+}
+
+// sweet32Suites returns the names of the 3DES cipher suites in a ClientHello's
+// list that count against the client, split by why.
+//
+// 3DES is tolerated only as a last resort: listed after everything else the
+// client would rather use, so that a server picks it only when it has nothing
+// better. notFallback holds the 3DES suites that have some other real cipher
+// suite listed after them. Meta cipher suites and TLS 1.3 cipher suites don't
+// count as "after": clients append them wherever they like.
+//
+// A last resort needs something to be the last resort of. noStronger holds
+// the 3DES suites listed last by a client that offers nothing stronger (see
+// strongerThan3DES) at all. Such a client ends up on 3DES, or on something
+// worse, with every server.
+func sweet32Suites(suites []uint16, tls13Offered bool) (notFallback, noStronger []string) {
+	var last []string
+	strongerOffered := false
+	for _, ci := range suites {
+		s := allCipherSuites[ci]
+		if sweet32CipherSuites[s] {
+			last = append(last, s)
+			continue
+		}
+		if strongerThan3DES(ci, tls13Offered) {
+			strongerOffered = true
+		}
+		if len(last) != 0 && s != "" && !metaCipherSuites[ci] && !tls13Suites[ci] {
+			notFallback = append(notFallback, last...)
+			last = nil
+		}
+	}
+	if !strongerOffered {
+		noStronger = last
+	}
+	return notFallback, noStronger
+}
+
+// strongerThan3DES reports whether a server could pick the cipher suite ci
+// and leave the client better off than with a 3DES one. That rules out the
+// signalling values that are not cipher suites at all, the suites we don't
+// know, the ones insecure_suites.go lists, and the TLS 1.3 suites of a client
+// that isn't offering a TLS 1.3 handshake.
+func strongerThan3DES(ci uint16, tls13Offered bool) bool {
+	s, found := allCipherSuites[ci]
+	if !found || metaCipherSuites[ci] || ci == tlsFallbackSCSV {
+		return false
+	}
+	if sweet32CipherSuites[s] || fewBitCipherSuites[s] || nullCipherSuites[s] || nullAuthCipherSuites[s] || rc4CipherSuites[s] {
+		return false
+	}
+	if tls13Suites[ci] {
+		return tls13Offered
+	}
+	return true
 }
 
 // renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA
