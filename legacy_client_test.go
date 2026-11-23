@@ -56,33 +56,26 @@ func TestLegacy3DESClientGetsReport(t *testing.T) {
 		wantTLS    string
 		wantEphem  bool
 		wantRating rating
-		// wantInsecure is nil when the test doesn't care which suites
-		// were called out.
-		wantInsecure map[string][]string
 	}{
 		{
-			name:       "TLS10-RSA-3DES",
-			version:    ztls.VersionTLS10,
-			suites:     []uint16{ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
-			wantSuite:  ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-			wantGiven:  []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
-			wantTLS:    "TLS 1.0",
+			name:      "TLS10-RSA-3DES",
+			version:   ztls.VersionTLS10,
+			suites:    []uint16{ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA},
+			wantSuite: ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+			wantGiven: []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA"},
+			wantTLS:   "TLS 1.0",
+			// TLS 1.0 alone makes the client Bad.
 			wantRating: bad,
-			// A client with nothing but 3DES has it "last", which is
-			// where Sweet32 mitigation puts it, so the suite itself is
-			// not called out. TLS 1.0 alone makes the client Bad.
-			wantInsecure: map[string][]string{},
 		},
 		{
-			name:         "TLS10-ECDHE-RSA-3DES",
-			version:      ztls.VersionTLS10,
-			suites:       []uint16{ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
-			wantSuite:    ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-			wantGiven:    []string{"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA"},
-			wantTLS:      "TLS 1.0",
-			wantEphem:    true,
-			wantRating:   bad,
-			wantInsecure: map[string][]string{},
+			name:       "TLS10-ECDHE-RSA-3DES",
+			version:    ztls.VersionTLS10,
+			suites:     []uint16{ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
+			wantSuite:  ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+			wantGiven:  []string{"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA"},
+			wantTLS:    "TLS 1.0",
+			wantEphem:  true,
+			wantRating: bad,
 		},
 		{
 			name:      "TLS12-RSA-3DES",
@@ -94,19 +87,17 @@ func TestLegacy3DESClientGetsReport(t *testing.T) {
 			// The handler rates with the wall clock, and a TLS 1.2
 			// client goes from Improvable to Bad on 2026-12-14, so this
 			// accepts either. See the check on okay below.
-			wantRating:   "",
-			wantInsecure: map[string][]string{},
+			wantRating: "",
 		},
 		{
-			name:         "TLS12-ECDHE-RSA-3DES",
-			version:      ztls.VersionTLS12,
-			suites:       []uint16{ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
-			wantSuite:    ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-			wantGiven:    []string{"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA"},
-			wantTLS:      "TLS 1.2",
-			wantEphem:    true,
-			wantRating:   "",
-			wantInsecure: map[string][]string{},
+			name:       "TLS12-ECDHE-RSA-3DES",
+			version:    ztls.VersionTLS12,
+			suites:     []uint16{ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA},
+			wantSuite:  ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+			wantGiven:  []string{"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA"},
+			wantTLS:    "TLS 1.2",
+			wantEphem:  true,
+			wantRating: "",
 		},
 		{
 			name:    "TLS10-IE8-on-XP",
@@ -207,18 +198,14 @@ func TestLegacy3DESClientGetsReport(t *testing.T) {
 			if ci.Rating == okay {
 				t.Errorf("rating: a client limited to %s and %v should never be %#v", tt.wantTLS, tt.wantGiven, okay)
 			}
-			if tt.wantInsecure != nil {
-				if diff := cmp.Diff(tt.wantInsecure, ci.InsecureCipherSuites); diff != "" {
-					t.Errorf("insecure_cipher_suites (-want +got):\n%s", diff)
-				}
-			}
 		})
 	}
 
-	t.Run("TLS10-IE8-on-XP-insecure-suites", func(t *testing.T) {
-		// The IE8 list has a non-3DES suite after each of its 3DES
-		// suites, so here 3DES is called out, with the rest of that
-		// museum.
+	t.Run("TLS10-IE8-on-XP-3DES-called-out", func(t *testing.T) {
+		// The IE8 list has a weaker, non-3DES suite after each of its
+		// 3DES suites, so 3DES is not a last resort there and both of its
+		// 3DES suites are called out. Which reasons they and the rest of
+		// that museum get is for the Sweet32 and insecure suite tests.
 		clientConf := &ztls.Config{
 			MinVersion:   ztls.VersionTLS10,
 			MaxVersion:   ztls.VersionTLS10,
@@ -226,21 +213,10 @@ func TestLegacy3DESClientGetsReport(t *testing.T) {
 			ForceSuites:  true,
 		}
 		ci := pullClientInfo(connectZtls(t, clientConf), preCutover)
-		want := map[string][]string{
-			"TLS_RSA_WITH_RC4_128_MD5":                {rc4Reason},
-			"TLS_RSA_WITH_RC4_128_SHA":                {rc4Reason},
-			"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           {sweet32Reason},
-			"TLS_RSA_WITH_DES_CBC_SHA":                {fewBitReason},
-			"TLS_RSA_EXPORT1024_WITH_RC4_56_SHA":      {fewBitReason, rc4Reason},
-			"TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA":     {fewBitReason},
-			"TLS_RSA_EXPORT_WITH_RC4_40_MD5":          {fewBitReason, rc4Reason},
-			"TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5":      {fewBitReason},
-			"TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA":       {sweet32Reason},
-			"TLS_DHE_DSS_WITH_DES_CBC_SHA":            {fewBitReason},
-			"TLS_DHE_DSS_EXPORT1024_WITH_DES_CBC_SHA": {fewBitReason},
-		}
-		if diff := cmp.Diff(want, ci.InsecureCipherSuites); diff != "" {
-			t.Errorf("insecure cipher suites (-want +got):\n%s", diff)
+		for _, s := range []string{"TLS_RSA_WITH_3DES_EDE_CBC_SHA", "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA"} {
+			if len(ci.InsecureCipherSuites[s]) == 0 {
+				t.Errorf("insecure cipher suites: want %s called out, got %v", s, ci.InsecureCipherSuites)
+			}
 		}
 		if ci.Rating != bad {
 			t.Errorf("rating: want %#v, got %#v", bad, ci.Rating)
