@@ -39,6 +39,7 @@ type clientInfo struct {
 	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
 	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
+	DeprecatedKeyExchangeSuites    []string            `json:"deprecated_key_exchange_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
 	TLS12ImprovableCutoverPassed   bool                `json:"-"`
@@ -136,6 +137,8 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
+	// Report-only: offering these doesn't change the rating.
+	d.DeprecatedKeyExchangeSuites = deprecatedKeyExchangeSuitesOffered(st.ClientCipherSuites)
 	// TLS 1.3 cipher suite names carry no key exchange, so the "DHE_" check
 	// above never matches them. Every TLS 1.3 handshake a client can get
 	// from a server it has no pre-shared key with is (EC)DHE.

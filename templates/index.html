@@ -296,6 +296,13 @@
                 <li>{{.}}</li>
                 {{end}}
               </ul>
+              {{if .DeprecatedKeyExchangeSuites}}
+              <p id="deprecated-key-exchange">Of these, the ones with a TLS 1.2
+                key exchange that IANA's registry now marks as discouraged (RSA
+                key exchange, finite-field Diffie-Hellman, and static or
+                anonymous Diffie-Hellman) are: {{range $i, $s := .DeprecatedKeyExchangeSuites}}{{if $i}}, {{end}}{{$s}}{{end}}.
+                This doesn't change your rating.</p>
+              {{end}}
               <p><a href="/s/about.html/#given-cipher-suites">Learn More</a></p>
             </section>
             <section>
