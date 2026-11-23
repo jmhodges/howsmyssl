@@ -1,5 +1,36 @@
 name: CodeQL config
 
+# For Go, this list doesn't keep tls1274/ out of the analysis: CodeQL's Go
+# extractor takes the packages the build compiles and has no code that reads
+# paths-ignore. It skips vendor/ by a default of its own. So a rule that
+# shouldn't fire in tls1274/ needs its own handling, like
+# go/useless-expression below.
 paths-ignore:
   - vendor
   - tls1274
+
+# go/log-injection flags every log/slog call that has a client's value in it,
+# but slog's built-in text and JSON handlers, the only ones howsmyssl uses,
+# quote and escape those values. So we turn the stock query off and run our
+# copy of it, which is the same but for slog's calls. See
+# queries/LogInjectionOutsideSlog.ql for why and for what a hand-written slog
+# handler would mean for it.
+#
+# go/useless-expression ("Expression has no effect") flags the calls to
+# godebug's Value in our fork of crypto/tls, which do nothing there and which
+# we keep only to stay close to upstream. So we turn the stock query off and
+# run our copy of it, which is the same but for those calls. See
+# queries/ExprHasNoEffectButGodebugValue.ql.
+#
+# The query suite is named here and not in the workflow's "queries" input
+# because that input replaces this list instead of adding to it.
+queries:
+  - uses: security-and-quality
+  - uses: ./.github/codeql/queries/LogInjectionOutsideSlog.ql
+  - uses: ./.github/codeql/queries/ExprHasNoEffectButGodebugValue.ql
+
+query-filters:
+  - exclude:
+      id: go/log-injection
+  - exclude:
+      id: go/useless-expression

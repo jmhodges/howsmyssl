@@ -1,0 +1,6 @@
+name: howsmyssl/codeql-queries
+version: 0.0.1
+library: false
+extractor: go
+dependencies:
+  codeql/go-all: "*"
