@@ -29,6 +29,7 @@ var (
 
 type clientInfo struct {
 	GivenCipherSuites              []string            `json:"given_cipher_suites"`
+	GivenCipherSuiteDetails        []cipherSuiteDetail `json:"given_cipher_suite_details"`
 	GivenNamedGroups               []string            `json:"given_named_groups"`
 	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
 	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`
@@ -45,6 +46,21 @@ type clientInfo struct {
 	TLS12BadCutoverPassed          bool                `json:"-"`
 	NoPQImprovableCutoverPassed    bool                `json:"-"`
 	NoPQBadCutoverPassed           bool                `json:"-"`
+}
+
+// cipherSuiteDetail is one entry of GivenCipherSuites with the marks
+// howsmyssl gives it. The marks only report what the rating already used:
+// they never change it.
+type cipherSuiteDetail struct {
+	Name string `json:"name"`
+	// ForwardSecret is true for the suites that make EphemeralKeysSupported
+	// true: the ones with an ephemeral key exchange in their name, and the
+	// TLS 1.3 ones when the client can finish a TLS 1.3 handshake.
+	ForwardSecret bool `json:"forward_secret"`
+	// Weak is true when the suite is a key of InsecureCipherSuites, and
+	// WeakReasons is its value there.
+	Weak        bool     `json:"weak"`
+	WeakReasons []string `json:"weak_reasons"`
 }
 
 const (
@@ -87,7 +103,10 @@ var actualSupportedVersions = map[uint16]string{
 }
 
 func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
-	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
+	d := &clientInfo{
+		GivenCipherSuiteDetails: []cipherSuiteDetail{},
+		InsecureCipherSuites:    make(map[string][]string),
+	}
 
 	st := c.ConnectionState()
 	if !st.HandshakeComplete {
@@ -96,9 +115,11 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	var sweet32Seen []string
 	for _, ci := range st.ClientCipherSuites {
 		s, found := allCipherSuites[ci]
+		forwardSecret := false
 		if found {
 			if strings.Contains(s, "DHE_") {
 				d.EphemeralKeysSupported = true
+				forwardSecret = true
 			}
 			if cbcSuites[ci] && st.Version <= tls.VersionTLS10 {
 				d.BEASTVuln = !st.NMinusOneRecordSplittingDetected
@@ -135,12 +156,26 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 			}
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
+		d.GivenCipherSuiteDetails = append(d.GivenCipherSuiteDetails, cipherSuiteDetail{Name: s, ForwardSecret: forwardSecret})
 	}
 	// TLS 1.3 cipher suite names carry no key exchange, so the "DHE_" check
 	// above never matches them. Every TLS 1.3 handshake a client can get
 	// from a server it has no pre-shared key with is (EC)DHE.
 	if offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions) {
 		d.EphemeralKeysSupported = true
+		for i, ci := range st.ClientCipherSuites {
+			if tls13Suites[ci] {
+				d.GivenCipherSuiteDetails[i].ForwardSecret = true
+			}
+		}
+	}
+	// The weak marks are filled in after the loop because the Sweet32 reason
+	// depends on the suites that come after a 3DES one.
+	for i := range d.GivenCipherSuiteDetails {
+		detail := &d.GivenCipherSuiteDetails[i]
+		reasons, weak := d.InsecureCipherSuites[detail.Name]
+		detail.Weak = weak
+		detail.WeakReasons = append([]string{}, reasons...)
 	}
 	d.PostQuantumKeyAgreement = false
 	d.GivenNamedGroups = []string{}
