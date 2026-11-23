@@ -75,13 +75,29 @@ func generateCACert(dir string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	}
 
 	certOut, err := os.Create(filepath.Join(dir, "development_ca_cert.pem"))
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes})
-	certOut.Close()
+	if err != nil {
+		return nil, nil, fmt.Errorf("create ca cert pem failed: %s", err)
+	}
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes}); err != nil {
+		certOut.Close()
+		return nil, nil, fmt.Errorf("encode ca cert pem failed: %s", err)
+	}
+	if err := certOut.Close(); err != nil {
+		return nil, nil, fmt.Errorf("close ca cert pem failed: %s", err)
+	}
 	log.Println("written development_ca_cert.pem")
 
 	keyOut, err := os.OpenFile(filepath.Join(dir, "development_ca_key.pem"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	keyOut.Close()
+	if err != nil {
+		return nil, nil, fmt.Errorf("create ca key pem failed: %s", err)
+	}
+	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
+		keyOut.Close()
+		return nil, nil, fmt.Errorf("encode ca key pem failed: %s", err)
+	}
+	if err := keyOut.Close(); err != nil {
+		return nil, nil, fmt.Errorf("close ca key pem failed: %s", err)
+	}
 	log.Println("written development_ca_key.pem")
 
 	return caCert, priv, nil
