@@ -297,7 +297,9 @@ func namedGroupName(id uint16) string {
 
 // Limits on the lists below. Each is a list the client chooses the length
 // of, up to the 64KB a ClientHello extension can hold, and real clients send
-// two or three entries.
+// two or three entries. The fork's ConnectionState copies only the first 16
+// of the ALPN and key share lists (maxClientHelloListCopy in tls1274/conn.go),
+// so neither list limit can be raised past that without raising it there too.
 const (
 	maxGivenALPNProtocols  = 16
 	maxGivenALPNProtoBytes = 32

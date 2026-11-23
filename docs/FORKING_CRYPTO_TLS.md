@@ -192,15 +192,21 @@ parses it into `clientHelloMsg.pskModes`, so no parsing is added.
 The last four are likewise only what upstream already parses, as sent in the
 first ClientHello (not the one that answers a HelloRetryRequest):
 
-* `ALPNProtocols` is `clientHelloMsg.alpnProtocols`, the protocol names of
-  the ALPN extension (RFC 7301). They are bytes of the client's choosing, not
-  necessarily text.
+* `ALPNProtocols` is the first 16 of `clientHelloMsg.alpnProtocols`, the
+  protocol names of the ALPN extension (RFC 7301). They are bytes of the
+  client's choosing, not necessarily text.
 * `SecureRenegotiationSupported` is
   `clientHelloMsg.secureRenegotiationSupported`, true when the client sent the
   `renegotiation_info` extension or the `TLS_EMPTY_RENEGOTIATION_INFO_SCSV`
   cipher suite (RFC 5746).
-* `KeyShareGroups` is the group of each entry of `clientHelloMsg.keyShares`
-  (RFC 8446, Section 4.2.8), without the key material.
+* `KeyShareGroups` is the group of each of the first 16 entries of
+  `clientHelloMsg.keyShares` (RFC 8446, Section 4.2.8), without the key
+  material.
+
+Both lists are cut at 16 (`maxClientHelloListCopy` in `conn.go`) because the
+client chooses their length, up to tens of thousands of entries, and
+howsmyssl's report shows no more than 16 of either. Copying the rest cost
+memory for nothing.
 * `EncryptedClientHelloOffered` is true when
   `clientHelloMsg.encryptedClientHello` is not empty, which is upstream's own
   test for the `encrypted_client_hello` extension (RFC 9849) being there. It
@@ -259,9 +265,9 @@ SignatureAlgorithms []SignatureScheme
       state.SupportedCurves                = ... copy of c.clientHello.supportedCurves
       state.SupportedSignatureAlgorithms   = ... copy of c.clientHello.supportedSignatureAlgorithms
       state.PSKModes                       = ... copy of c.clientHello.pskModes
-      state.ALPNProtocols                  = ... copy of c.clientHello.alpnProtocols
+      state.ALPNProtocols                  = ... copy of the first 16 of c.clientHello.alpnProtocols
       state.SecureRenegotiationSupported   = c.clientHello.secureRenegotiationSupported
-      state.KeyShareGroups                 = ... the group of each of c.clientHello.keyShares
+      state.KeyShareGroups                 = ... the group of each of the first 16 of c.clientHello.keyShares
       state.EncryptedClientHelloOffered    = len(c.clientHello.encryptedClientHello) != 0
   }
   state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting

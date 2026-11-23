@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"slices"
@@ -575,5 +576,97 @@ func TestClientHelloSignalsOddInput(t *testing.T) {
 				t.Errorf("json.Marshal: %s", err)
 			}
 		})
+	}
+}
+
+// fragmentRecords splits a single TLS record, as rawClientHello makes, into
+// records of at most 2^14 bytes each, the most one may hold (RFC 8446,
+// Section 5.1). A ClientHello bigger than that has to go this way.
+func fragmentRecords(record []byte) []byte {
+	const maxRecord = 1 << 14
+	header, body := record[:3], record[5:]
+	var out []byte
+	for len(body) > 0 {
+		n := min(len(body), maxRecord)
+		out = append(out, header...)
+		out = append(out, byte(n>>8), byte(n))
+		out = append(out, body[:n]...)
+		body = body[n:]
+	}
+	return out
+}
+
+// TestClientHelloListCopiesCapped checks that the fork keeps only as many ALPN
+// names and key share groups as the report shows, however many the client
+// sends, and that the report is what it would be had the fork kept them all.
+func TestClientHelloListCopiesCapped(t *testing.T) {
+	const (
+		count          = 3000
+		suite13 uint16 = 0x1301 // TLS_AES_128_GCM_SHA256
+	)
+	protos := make([]string, count)
+	groups := make([]uint16, count)
+	for i := range count {
+		protos[i] = fmt.Sprintf("p%d", i)
+		// Every other one is unknown, so the names show the order kept.
+		groups[i] = uint16(0x1d)
+		if i%2 == 1 {
+			groups[i] = uint16(0x9000 + i)
+		}
+	}
+	hello := fragmentRecords(rawClientHello([]uint16{suite13}, []rawExt{
+		{rawExtSupportedVersions, u8Prefixed(0x03, 0x04)},
+		{rawExtALPN, rawALPN(protos...)},
+		{rawExtKeyShare, rawKeyShares(groups...)},
+	}))
+	if len(hello) < 2<<14 {
+		t.Fatalf("want a ClientHello over two records long, got %d bytes", len(hello))
+	}
+	st, serverErr, clientErr := serverSideState(t, serverConf, func(c net.Conn) error {
+		if _, err := c.Write(hello); err != nil {
+			return err
+		}
+		if err := c.(*net.TCPConn).CloseWrite(); err != nil {
+			return err
+		}
+		_, err := io.Copy(io.Discard, c)
+		return err
+	})
+	if clientErr != nil {
+		t.Fatalf("client: %s", clientErr)
+	}
+	if len(st.ClientCipherSuites) == 0 {
+		t.Fatalf("ClientHello didn't parse (server: %v)", serverErr)
+	}
+
+	if diff := cmp.Diff(protos[:maxGivenALPNProtocols], st.ALPNProtocols); diff != "" {
+		t.Errorf("ConnectionState.ALPNProtocols (-want +got):\n%s", diff)
+	}
+	var wantGroups []tls.CurveID
+	for _, g := range groups[:maxGivenKeyShareGroups] {
+		wantGroups = append(wantGroups, tls.CurveID(g))
+	}
+	if diff := cmp.Diff(wantGroups, st.KeyShareGroups); diff != "" {
+		t.Errorf("ConnectionState.KeyShareGroups (-want +got):\n%s", diff)
+	}
+
+	// The report from the capped state is the same as from the whole lists.
+	st.HandshakeComplete = true
+	whole := st
+	whole.ALPNProtocols = protos
+	whole.KeyShareGroups = nil
+	for _, g := range groups {
+		whole.KeyShareGroups = append(whole.KeyShareGroups, tls.CurveID(g))
+	}
+	got, err := json.Marshal(clientInfoFromState(st, preCutover))
+	if err != nil {
+		t.Fatalf("json.Marshal: %s", err)
+	}
+	want, err := json.Marshal(clientInfoFromState(whole, preCutover))
+	if err != nil {
+		t.Fatalf("json.Marshal: %s", err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("report from the capped lists differs from the whole lists:\ngot:  %s\nwant: %s", got, want)
 	}
 }
