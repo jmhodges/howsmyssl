@@ -59,6 +59,40 @@ func (w *gzipResponseWriter) WrappedWriter() http.ResponseWriter {
 	return w.ResponseWriter
 }
 
+// Unwrap returns the underlying http.ResponseWriter so that
+// http.ResponseController can reach its optional methods (deadlines, Hijack,
+// EnableFullDuplex) through this wrapper.
+func (w *gzipResponseWriter) Unwrap() http.ResponseWriter {
+	return w.ResponseWriter
+}
+
+// FlushError flushes the compressed bytes buffered in the gzip writer to the
+// underlying http.ResponseWriter, and then flushes that. Without it,
+// http.ResponseController would find Flush on the underlying writer through
+// Unwrap and skip the gzip writer's buffer, sending nothing new to the client.
+//
+// http.ResponseController prefers FlushError over Flush and Unwrap, so this
+// is what it calls.
+func (w *gzipResponseWriter) FlushError() error {
+	// Decide on compression before the headers go out with the flush, so
+	// they match the body that follows.
+	w.applyFilter()
+	if w.dogzip {
+		if f, ok := w.Writer.(interface{ Flush() error }); ok {
+			if err := f.Flush(); err != nil {
+				return err
+			}
+		}
+	}
+	return http.NewResponseController(w.ResponseWriter).Flush()
+}
+
+// Flush implements http.Flusher for callers that type assert for it instead
+// of using http.ResponseController. Use FlushError to see errors.
+func (w *gzipResponseWriter) Flush() {
+	_ = w.FlushError()
+}
+
 var (
 	defaultFilterTypes = [...]string{
 		"text",
