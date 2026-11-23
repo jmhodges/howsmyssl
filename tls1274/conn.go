@@ -1682,6 +1682,21 @@ func (c *Conn) connectionStateLocked() ConnectionState {
 		copy(state.SupportedSignatureAlgorithms, c.clientHello.supportedSignatureAlgorithms)
 		state.PSKModes = make([]uint8, len(c.clientHello.pskModes))
 		copy(state.PSKModes, c.clientHello.pskModes)
+		// The client picks the length of these two lists, up to what fits
+		// in a ClientHello, and howsmyssl reports only the first 16 of each
+		// (maxGivenALPNProtocols and maxGivenKeyShareGroups), so only those
+		// are copied.
+		const maxClientHelloListCopy = 16
+		alpnProtocols := c.clientHello.alpnProtocols[:min(len(c.clientHello.alpnProtocols), maxClientHelloListCopy)]
+		state.ALPNProtocols = make([]string, len(alpnProtocols))
+		copy(state.ALPNProtocols, alpnProtocols)
+		state.SecureRenegotiationSupported = c.clientHello.secureRenegotiationSupported
+		keyShares := c.clientHello.keyShares[:min(len(c.clientHello.keyShares), maxClientHelloListCopy)]
+		state.KeyShareGroups = make([]CurveID, len(keyShares))
+		for i, ks := range keyShares {
+			state.KeyShareGroups[i] = ks.group
+		}
+		state.EncryptedClientHelloOffered = len(c.clientHello.encryptedClientHello) != 0
 	}
 	state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
 	state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected

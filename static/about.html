@@ -361,6 +361,46 @@
             insecure. Clients supporting unknown cipher suites will be marked
             as <span class="label bad">Bad</span>.</p>
 
+          <h4 class="fragpadded" id="server-name-indication"><a class="anchor-link" href="#server-name-indication" aria-label="Link to Server Name Indication">#</a>Server Name Indication</h4>
+          <p>A client that
+            supports <a href="https://en.wikipedia.org/wiki/Server_Name_Indication">Server
+            Name Indication</a> (SNI) puts the name of the site it wants in
+            its ClientHello, so that a server hosting many sites on one
+            address knows which certificate to answer with. This section says
+            whether your client sent one. How's My SSL does not show the name,
+            since it is the one you used to get here. A client that connects
+            to an IP address instead of a name sends none, by design. No
+            rating will be given in this section.</p>
+
+          <h4 class="fragpadded" id="secure-renegotiation"><a class="anchor-link" href="#secure-renegotiation" aria-label="Link to Secure Renegotiation">#</a>Secure Renegotiation</h4>
+          <p>In 2009, TLS renegotiation was found to let an attacker splice
+            their own data onto the front of a
+            connection. <a href="https://www.rfc-editor.org/rfc/rfc5746">RFC
+            5746</a> fixed it, and a client says it has the fix in one of two
+            ways: the <code>renegotiation_info</code> extension, or
+            the <code>TLS_EMPTY_RENEGOTIATION_INFO_SCSV</code> signalling
+            cipher suite. This section says whether your client sent either.
+            It only matters for TLS 1.2 and earlier, as TLS 1.3 has no
+            renegotiation, and a client that offers only TLS 1.3 may leave the
+            signal out. No rating will be given in this section.</p>
+
+          <h4 class="fragpadded" id="encrypted-client-hello"><a class="anchor-link" href="#encrypted-client-hello" aria-label="Link to Encrypted Client Hello">#</a>Encrypted Client Hello</h4>
+          <p>Encrypted Client Hello
+            (ECH, <a href="https://www.rfc-editor.org/rfc/rfc9849">RFC
+            9849</a>) lets a client encrypt most of its ClientHello, the name
+            of the site it is visiting included, so that the network between
+            it and the server can't read it. This section says whether your
+            client sent the <code>encrypted_client_hello</code> extension.</p>
+          <p>"Offered" needs some care. A client that has no ECH
+            configuration for a site is asked by the RFC to send the
+            extension anyway, filled with random bytes (called GREASE), and
+            that placeholder is built to look the same as the real thing to
+            anyone without the site's ECH keys. How's My SSL does not publish
+            ECH keys, so it can't tell the two apart, and neither can it
+            decrypt a real one. What this section tells you is that your
+            client implements ECH, not that it used it. No rating will be
+            given in this section.</p>
+
           <h4 class="fragpadded" id="given-cipher-suites"><a class="anchor-link" href="#given-cipher-suites" aria-label="Link to Given Cipher Suites">#</a>Given Cipher Suites</h4>
           <p>This section is one of the most often needed by developers and was
           the original reason this webapp was made. It simply prints out the
@@ -377,6 +417,19 @@
           where the post-quantum key agreement algorithms are advertised. No
           rating will be given in this section.</p>
 
+          <h4 class="fragpadded" id="given-key-shares"><a class="anchor-link" href="#given-key-shares" aria-label="Link to Given Key Shares">#</a>Given Key Shares</h4>
+          <p>A TLS 1.3 client lists the named groups it supports, and it
+            also sends a key share for a few of them, guessing which the
+            server will pick. This section lists the groups your client sent a
+            key share for in its first ClientHello, in the order it sent
+            them. It is not the same list as
+            the <a href="#given-named-groups">Given Named Groups</a>: when a
+            server wants a group the client supports but sent no key share
+            for, the handshake takes an extra round trip. A client can
+            support a post-quantum group and still not send a key share for
+            it. Clients that don't offer TLS 1.3 send no key shares. At most
+            16 are shown. No rating will be given in this section.</p>
+
           <h4 class="fragpadded" id="given-signature-algorithms"><a class="anchor-link" href="#given-signature-algorithms" aria-label="Link to Given Signature Algorithms">#</a>Given Signature Algorithms</h4>
           <p>This section lists the signature algorithms the client says it
           supports, in the order the client sent them, drawn from the
@@ -392,6 +445,20 @@
           href="https://datatracker.ietf.org/doc/draft-ietf-tls-mldsa/">draft-ietf-tls-mldsa</a>)
           will appear here as clients begin to support them. No rating will be
           given in this section.</p>
+
+          <h4 class="fragpadded" id="given-alpn-protocols"><a class="anchor-link" href="#given-alpn-protocols" aria-label="Link to Given ALPN Protocols">#</a>Given ALPN Protocols</h4>
+          <p>This section lists the application protocols the client
+            offered with the Application-Layer Protocol Negotiation extension
+            (ALPN, <a href="https://www.rfc-editor.org/rfc/rfc7301">RFC
+            7301</a>), in the order the client sent them. ALPN is how a client
+            and server agree to speak HTTP/2 (<code>h2</code>) instead of
+            HTTP/1.1 (<code>http/1.1</code>) on a connection. Protocol names
+            are bytes the client chooses, so any byte that isn't an ASCII
+            letter, a digit, or one of <code>-._/+</code> is shown
+            as <code>\xNN</code>, its value in hexadecimal. At most 16
+            protocols are shown, and names longer than 32 bytes are cut short
+            and end in <code>&nbsp;(truncated)</code>. No rating will be given
+            in this section.</p>
 
           <hr />
 

@@ -84,10 +84,18 @@
         "rsa_pkcs1_sha1"
       ],
       "given_psk_key_exchange_modes": [],
+      "given_alpn_protocols": [
+        "h2",
+        "http/1.1"
+      ],
+      "given_key_share_groups": [],
       "post_quantum_key_agreement": false,
       "ephemeral_keys_supported": true,
       "session_ticket_supported": false,
       "psk_without_forward_secrecy_supported": false,
+      "server_name_sent": true,
+      "secure_renegotiation_supported": true,
+      "encrypted_client_hello_offered": false,
       "tls_compression_supported": false,
       "unknown_cipher_suite_supported": false,
       "beast_vuln": false,
@@ -129,6 +137,29 @@
             without forward secrecy. It does not affect <code>rating</code>.
             A client offering TLS 1.3 that lists either mode is reported
             with <code>session_ticket_supported</code> as true.
+
+          </p><p>Five of the keys report other things the client's
+            ClientHello says. None of them
+            affects <code>rating</code>. <code>server_name_sent</code> is true
+            when the client sent a server name (SNI); the name itself is not
+            returned. <code>given_alpn_protocols</code> lists the application
+            protocols the client offered with ALPN, in order. Any byte in a
+            protocol name that isn't an ASCII letter, a digit, or one
+            of <code>-._/+</code> is returned as <code>\xNN</code>, at most
+            16 protocols are returned, and names longer than 32 bytes are cut
+            short and end
+            in <code>&nbsp;(truncated)</code>. <code>secure_renegotiation_supported</code>
+            is true when the client sent the <code>renegotiation_info</code>
+            extension or
+            the <code>TLS_EMPTY_RENEGOTIATION_INFO_SCSV</code> cipher suite
+            (RFC 5746). <code>given_key_share_groups</code> lists the named
+            groups the client sent a TLS 1.3 key share for in its first
+            ClientHello, in order, at most 16 of them; it is empty for clients
+            that sent none. <code>encrypted_client_hello_offered</code> is
+            true when the client sent
+            the <code>encrypted_client_hello</code> extension (RFC 9849),
+            whether as a real offer or as the GREASE placeholder, which can't
+            be told apart from here.
 
           </p><p>Let me be a little more explicit. How's My SSL is Open Source
             software and can
