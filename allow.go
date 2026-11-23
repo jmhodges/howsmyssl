@@ -271,14 +271,64 @@ func loadAllowMaps(fp string) (*allowMaps, error) {
 	return am, nil
 }
 
-func reloadAllowMapsForever(allowListsFile string, ama *atomic.Pointer[allowMaps], tick *time.Ticker) {
-	for range tick.C {
-		am, err := loadAllowMaps(allowListsFile)
-		if err != nil {
-			log.Printf("unable to reload allowlists at %#v: %s", allowListsFile, err)
-		}
-		ama.Store(am)
+// allowReloadFailedLogMsg starts the line logged for every failed reload of the
+// allowlists file. Log-based metrics and alerts outside of this repository
+// match on this exact text, so changing it will silently break them.
+const allowReloadFailedLogMsg = "unable to reload allowlists"
+
+// allowReloadStats counts the reloads of the allowlists file. A failed reload
+// keeps serving the previously loaded lists, so these are the only signs that
+// the lists have gone stale.
+type allowReloadStats struct {
+	successes            *expvar.Int
+	failures             *expvar.Int
+	consecutiveFailures  *expvar.Int
+	lastSuccessEpochSecs *expvar.Int
+}
+
+func newAllowReloadStats(outer *expvar.Map) *allowReloadStats {
+	rs := &allowReloadStats{
+		successes:            &expvar.Int{},
+		failures:             &expvar.Int{},
+		consecutiveFailures:  &expvar.Int{},
+		lastSuccessEpochSecs: &expvar.Int{},
 	}
+	outer.Set("reload_successes", rs.successes)
+	outer.Set("reload_failures", rs.failures)
+	outer.Set("reload_consecutive_failures", rs.consecutiveFailures)
+	outer.Set("reload_last_success_epoch_secs", rs.lastSuccessEpochSecs)
+	return rs
+}
+
+func (rs *allowReloadStats) succeeded(now time.Time) {
+	rs.successes.Add(1)
+	rs.consecutiveFailures.Set(0)
+	rs.lastSuccessEpochSecs.Set(now.Unix())
+}
+
+func (rs *allowReloadStats) failed() {
+	rs.failures.Add(1)
+	rs.consecutiveFailures.Add(1)
+}
+
+func reloadAllowMapsForever(allowListsFile string, ama *atomic.Pointer[allowMaps], tick *time.Ticker, stats *allowReloadStats) {
+	for range tick.C {
+		reloadAllowMaps(allowListsFile, ama, stats)
+	}
+}
+
+// reloadAllowMaps loads the allowlists file and stores the result in ama. If
+// the load fails, the error is logged and counted in stats, and the previously
+// stored allowMaps is left in place.
+func reloadAllowMaps(allowListsFile string, ama *atomic.Pointer[allowMaps], stats *allowReloadStats) {
+	am, err := loadAllowMaps(allowListsFile)
+	if err != nil {
+		stats.failed()
+		log.Printf("%s at %#v, keeping the previously loaded ones: %s", allowReloadFailedLogMsg, allowListsFile, err)
+		return
+	}
+	ama.Store(am)
+	stats.succeeded(time.Now())
 }
 
 type rejectionReason string
