@@ -207,7 +207,7 @@ func TestClientHelloSignals(t *testing.T) {
 		st.EncryptedClientHelloOffered = true
 		st.KeyShareGroups = []tls.CurveID{0x1a1a, tls.X25519MLKEM768, tls.X25519, tls.X25519, 0x6399}
 		st.ALPNProtocols = nil
-		check(t, st, want{false, []string{}, false, []string{"GREASE_1A", "X25519MLKEM768", "x25519", "x25519", "Unknown named group: 0x6399"}, true})
+		check(t, st, want{false, []string{}, false, []string{"GREASE_1A", "X25519MLKEM768", "x25519", "x25519", namedGroupName(0x6399)}, true})
 
 		st.KeyShareGroups = nil
 		check(t, st, want{false, []string{}, false, []string{}, true})
