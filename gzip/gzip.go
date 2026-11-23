@@ -2,8 +2,10 @@ package gzip
 
 import (
 	"compress/gzip"
+	"errors"
 	"io"
 	"net/http"
+	"sync"
 )
 
 // Thanks to Andrew Gerrand for inspiration:
@@ -26,10 +28,52 @@ type gzipResponseWriter struct {
 	filterFn func(http.ResponseWriter, *http.Request) bool
 }
 
-// Make sure the filter function is applied.
+// gzipWriterPool holds gzip writers for reuse across responses. A
+// gzip.Writer allocates over a megabyte of compressor state, whatever the size
+// of the body it compresses, so making a new one per response dominates the
+// allocations of a small compressed response.
+var gzipWriterPool = sync.Pool{
+	New: func() any {
+		return gzip.NewWriter(io.Discard)
+	},
+}
+
+// getPooledGzipWriter returns a gzip writer from the pool that writes to w.
+// Reset gives it the same state as gzip.NewWriter(w), so its output is the
+// same.
+func getPooledGzipWriter(w io.Writer) *gzip.Writer {
+	gz := gzipWriterPool.Get().(*gzip.Writer)
+	gz.Reset(w)
+	return gz
+}
+
+// putPooledGzipWriter returns gz to the pool. Only call it once nothing can
+// write to gz anymore, that is, after the handler using it has returned and gz
+// has been closed. It drops gz's reference to the old destination first.
+func putPooledGzipWriter(gz *gzip.Writer) {
+	gz.Reset(io.Discard)
+	gzipWriterPool.Put(gz)
+}
+
+// errAfterReturnWriter takes the pooled gzip writer's place in a
+// gzipResponseWriter once the handler has returned, so a late Write fails, as
+// it would on a closed gzip writer, instead of reaching a writer that another
+// response may now be using.
+type errAfterReturnWriter struct{}
+
+func (errAfterReturnWriter) Write([]byte) (int, error) {
+	return 0, errWriteAfterReturn
+}
+
+var errWriteAfterReturn = errors.New("gzip: Write called after the handler returned")
+
+// Make sure the filter function is applied. The gzip writer is only taken from
+// the pool once the filter has said to compress, so responses that aren't
+// compressed don't hold one.
 func (w *gzipResponseWriter) applyFilter() {
 	if !w.filtered {
 		if w.dogzip = w.filterFn(w, w.r); w.dogzip {
+			w.Writer = getPooledGzipWriter(w.ResponseWriter)
 			setGzipHeaders(w.Header())
 		}
 		w.filtered = true
@@ -116,19 +160,24 @@ func GZIPHandler(h http.Handler, filterFn func(http.ResponseWriter, *http.Reques
 			return
 		}
 
-		// Prepare a gzip response container
-		gz := gzip.NewWriter(w)
+		// Prepare a gzip response container. Its gzip writer comes from the
+		// pool when the filter first decides to compress.
 		gzw := &gzipResponseWriter{
-			Writer:         gz,
 			ResponseWriter: w,
 			r:              r,
 			filterFn:       filterFn,
 		}
 		h.ServeHTTP(gzw, r)
 		// Iff the handler completed successfully (no panic) and GZIP was indeed used, close the gzip writer,
-		// which seems to generate a Write to the underlying writer.
+		// which seems to generate a Write to the underlying writer. The
+		// handler has returned, so nothing else writes to the gzip writer and
+		// it can go back to the pool. On a panic, it is left for the garbage
+		// collector instead.
 		if gzw.dogzip {
+			gz := gzw.Writer.(*gzip.Writer)
 			gz.Close()
+			gzw.Writer = errAfterReturnWriter{}
+			putPooledGzipWriter(gz)
 		}
 	}
 }
