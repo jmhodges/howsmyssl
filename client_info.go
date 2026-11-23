@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -135,6 +136,12 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 		}
 		d.GivenCipherSuites = append(d.GivenCipherSuites, s)
 	}
+	// TLS 1.3 cipher suite names carry no key exchange, so the "DHE_" check
+	// above never matches them. Every TLS 1.3 handshake a client can get
+	// from a server it has no pre-shared key with is (EC)DHE.
+	if offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions) {
+		d.EphemeralKeysSupported = true
+	}
 	d.PostQuantumKeyAgreement = false
 	d.GivenNamedGroups = []string{}
 	for _, gid := range st.SupportedCurves {
@@ -200,6 +207,18 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	}
 
 	return d
+}
+
+// offersTLS13Handshake reports whether a ClientHello with the given cipher
+// suites and supported_versions extension can be answered with a TLS 1.3
+// handshake. It needs both a TLS 1.3 cipher suite and the final TLS 1.3
+// version: a TLS 1.3 suite listed by a client that won't negotiate TLS 1.3 is
+// never used, and the draft versions are not finished by any server now.
+func offersTLS13Handshake(suites, versions []uint16) bool {
+	if !slices.Contains(versions, uint16(tls.VersionTLS13)) {
+		return false
+	}
+	return slices.ContainsFunc(suites, func(ci uint16) bool { return tls13Suites[ci] })
 }
 
 // renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA
