@@ -307,13 +307,16 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 
 		// We always disconnect folks after their request is done to ensure
 		// we don't keep our tls.Conn fork with it's extra large memory
-		// needs (including the `clientHelloMsg`) around for too long. It
-		// means each connection serves exactly one request. It does not
-		// prevent TLS resumption: a client holding a session ticket can
-		// still resume on its next connection. We do this on all requests
-		// to avoid races. This works on even HTTP/2 because the Go HTTP
-		// server will send a GOAWAY frame if it sees this header in the
-		// response.
+		// needs (including the `clientHelloMsg`) around for too long. Over
+		// HTTP/1.1, the connection is closed after its first response.
+		// Over HTTP/2, the Go HTTP server sends a GOAWAY frame when it
+		// sees this header in a response: requests it has already received
+		// on that connection are still served, later ones are not, and
+		// the connection is closed shortly after the last response. It
+		// does not prevent TLS resumption: a client holding a session
+		// ticket can still resume on its next connection (except at TLS
+		// 1.0, where our tls fork turns resumption off). We do this on all
+		// requests to avoid races.
 		w.Header().Set("Connection", "close")
 
 		gzippedM.ServeHTTP(w, r)
