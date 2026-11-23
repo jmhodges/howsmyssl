@@ -1,11 +1,14 @@
 package gzip
 
 import (
+	"bufio"
 	"compress/gzip"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 // Thanks to Andrew Gerrand for inspiration:
@@ -55,17 +58,34 @@ func putPooledGzipWriter(gz *gzip.Writer) {
 	gzipWriterPool.Put(gz)
 }
 
-// errAfterReturnWriter takes the pooled gzip writer's place in a
-// gzipResponseWriter once the handler has returned, so a late Write fails, as
-// it would on a closed gzip writer, instead of reaching a writer that another
-// response may now be using.
-type errAfterReturnWriter struct{}
+// returnedResponseWriter takes the place of both the pooled gzip writer and
+// the underlying http.ResponseWriter in a gzipResponseWriter once the handler
+// has returned. net/http doesn't allow using a ResponseWriter after its
+// handler returns, and the gzip writer may by then be serving another
+// response, so a late call fails here, reaching neither of them. It has the
+// optional methods that http.ResponseController looks for, so those fail too
+// instead of reporting that they aren't supported.
+type returnedResponseWriter struct{}
 
-func (errAfterReturnWriter) Write([]byte) (int, error) {
-	return 0, errWriteAfterReturn
+func (returnedResponseWriter) Header() http.Header { return http.Header{} }
+
+func (returnedResponseWriter) Write([]byte) (int, error) { return 0, errWriteAfterReturn }
+
+func (returnedResponseWriter) WriteHeader(int) {}
+
+func (returnedResponseWriter) FlushError() error { return errWriteAfterReturn }
+
+func (returnedResponseWriter) SetReadDeadline(time.Time) error { return errWriteAfterReturn }
+
+func (returnedResponseWriter) SetWriteDeadline(time.Time) error { return errWriteAfterReturn }
+
+func (returnedResponseWriter) EnableFullDuplex() error { return errWriteAfterReturn }
+
+func (returnedResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, errWriteAfterReturn
 }
 
-var errWriteAfterReturn = errors.New("gzip: Write called after the handler returned")
+var errWriteAfterReturn = errors.New("gzip: ResponseWriter used after the handler returned")
 
 // Make sure the filter function is applied. The gzip writer is only taken from
 // the pool once the filter has said to compress, so responses that aren't
@@ -176,9 +196,14 @@ func GZIPHandler(h http.Handler, filterFn func(http.ResponseWriter, *http.Reques
 		if gzw.dogzip {
 			gz := gzw.Writer.(*gzip.Writer)
 			gz.Close()
-			gzw.Writer = errAfterReturnWriter{}
+			gzw.Writer = returnedResponseWriter{}
 			putPooledGzipWriter(gz)
 		}
+		// Keep anything done through gzw from here on, like a Flush or a
+		// deadline through http.ResponseController, off the finished
+		// ResponseWriter, and from taking a gzip writer from the pool.
+		gzw.filtered = true
+		gzw.ResponseWriter = returnedResponseWriter{}
 	}
 }
 

@@ -1,16 +1,19 @@
 package gzip
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // testBody returns a compressible body of about n bytes that differs by seed.
@@ -227,6 +230,116 @@ func BenchmarkGZIPHandler(b *testing.B) {
 				clear(w.hdr)
 				h.ServeHTTP(w, r)
 			}
+		})
+	}
+}
+
+// finishedSpy is an http.ResponseWriter, with the optional methods that
+// http.ResponseController looks for, that fails the test if any of them is
+// called once the handler has returned.
+type finishedSpy struct {
+	*httptest.ResponseRecorder
+	t        *testing.T
+	finished bool
+}
+
+func (s *finishedSpy) check(method string) {
+	if s.finished {
+		s.t.Errorf("%s reached the underlying ResponseWriter after the handler returned", method)
+	}
+}
+
+func (s *finishedSpy) Header() http.Header {
+	s.check("Header")
+	return s.ResponseRecorder.Header()
+}
+
+func (s *finishedSpy) Write(b []byte) (int, error) {
+	s.check("Write")
+	return s.ResponseRecorder.Write(b)
+}
+
+func (s *finishedSpy) WriteHeader(code int) {
+	s.check("WriteHeader")
+	s.ResponseRecorder.WriteHeader(code)
+}
+
+func (s *finishedSpy) Flush() {
+	s.check("Flush")
+	s.ResponseRecorder.Flush()
+}
+
+func (s *finishedSpy) FlushError() error {
+	s.check("FlushError")
+	s.ResponseRecorder.Flush()
+	return nil
+}
+
+func (s *finishedSpy) SetReadDeadline(time.Time) error {
+	s.check("SetReadDeadline")
+	return nil
+}
+
+func (s *finishedSpy) SetWriteDeadline(time.Time) error {
+	s.check("SetWriteDeadline")
+	return nil
+}
+
+func (s *finishedSpy) EnableFullDuplex() error {
+	s.check("EnableFullDuplex")
+	return nil
+}
+
+func (s *finishedSpy) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	s.check("Hijack")
+	return nil, nil, errors.New("finishedSpy can't hijack")
+}
+
+// TestCallsAfterHandlerReturns checks that nothing done through the response
+// writer after the handler returned reaches the underlying ResponseWriter,
+// which net/http no longer lets anyone use by then, whether or not the
+// response was compressed.
+func TestCallsAfterHandlerReturns(t *testing.T) {
+	for _, contentType := range []string{"text/plain", "image/png"} {
+		t.Run(contentType, func(t *testing.T) {
+			var kept http.ResponseWriter
+			h := GZIPHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", contentType)
+				if _, err := w.Write([]byte("hello")); err != nil {
+					t.Errorf("Write: %s", err)
+				}
+				kept = w
+			}), nil)
+			spy := &finishedSpy{ResponseRecorder: httptest.NewRecorder(), t: t}
+			r := httptest.NewRequest("GET", "/", nil)
+			r.Header.Set("Accept-Encoding", "gzip")
+			h.ServeHTTP(spy, r)
+			spy.finished = true
+
+			rc := http.NewResponseController(kept)
+			if err := rc.Flush(); err == nil {
+				t.Errorf("late Flush returned no error")
+			}
+			if err := rc.SetReadDeadline(time.Now()); err == nil {
+				t.Errorf("late SetReadDeadline returned no error")
+			}
+			if err := rc.SetWriteDeadline(time.Now()); err == nil {
+				t.Errorf("late SetWriteDeadline returned no error")
+			}
+			if err := rc.EnableFullDuplex(); err == nil {
+				t.Errorf("late EnableFullDuplex returned no error")
+			}
+			if _, _, err := rc.Hijack(); err == nil {
+				t.Errorf("late Hijack returned no error")
+			}
+			if f, ok := kept.(http.Flusher); ok {
+				f.Flush()
+			}
+			if _, err := kept.Write([]byte("late")); err == nil {
+				t.Errorf("late Write returned no error")
+			}
+			kept.WriteHeader(http.StatusInternalServerError)
+			kept.Header().Set("X-Late", "1")
 		})
 	}
 }
