@@ -79,6 +79,13 @@ func (sw *statWriter) Header() http.Header {
 	return sw.w.Header()
 }
 
+// Unwrap returns the underlying http.ResponseWriter so that
+// http.ResponseController can reach its optional methods (Flush, deadlines,
+// EnableFullDuplex) through this wrapper.
+func (sw *statWriter) Unwrap() http.ResponseWriter {
+	return sw.w
+}
+
 func (sw *statWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := sw.w.(http.Hijacker)
 	if !ok {
