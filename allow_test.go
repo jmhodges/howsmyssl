@@ -1,13 +1,17 @@
 package main
 
 import (
+	"bytes"
 	"expvar"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 type oaTest struct {
@@ -144,7 +148,8 @@ func TestReloadAllowMapsKeepsPreviousOnFailure(t *testing.T) {
 	writeFile(`{"blocked_domains": ["example.com"]}`)
 
 	ama := &atomic.Pointer[allowMaps]{}
-	reloadAllowMaps(fp, ama)
+	stats := newAllowReloadStats(new(expvar.Map).Init())
+	reloadAllowMaps(fp, ama, stats)
 	if ama.Load() == nil {
 		t.Fatalf("allowMaps not stored after a successful load")
 	}
@@ -182,7 +187,7 @@ func TestReloadAllowMapsKeepsPreviousOnFailure(t *testing.T) {
 	// Referer header panic.
 	before := ama.Load()
 	writeFile(`{"blocked_domains": [`)
-	reloadAllowMaps(fp, ama)
+	reloadAllowMaps(fp, ama, stats)
 	if got := ama.Load(); got != before {
 		t.Fatalf("after an unparsable file: allowMaps changed from %p to %p", before, got)
 	}
@@ -191,7 +196,7 @@ func TestReloadAllowMapsKeepsPreviousOnFailure(t *testing.T) {
 	if err := os.Remove(fp); err != nil {
 		t.Fatalf("unable to remove allowlists file: %s", err)
 	}
-	reloadAllowMaps(fp, ama)
+	reloadAllowMaps(fp, ama, stats)
 	if got := ama.Load(); got != before {
 		t.Fatalf("after a missing file: allowMaps changed from %p to %p", before, got)
 	}
@@ -199,8 +204,86 @@ func TestReloadAllowMapsKeepsPreviousOnFailure(t *testing.T) {
 
 	// A later good reload is picked up again.
 	writeFile(`{"blocked_domains": ["notexample.com"]}`)
-	reloadAllowMaps(fp, ama)
+	reloadAllowMaps(fp, ama, stats)
 	if got := ama.Load(); got == before || !got.BlockedDomains["notexample.com"] || got.BlockedDomains["example.com"] {
 		t.Errorf("after a good reload: new lists were not stored, got %#v", got)
+	}
+}
+
+func TestReloadAllowMapsStats(t *testing.T) {
+	fp := filepath.Join(t.TempDir(), "allowlists.json")
+	writeFile := func(content string) {
+		t.Helper()
+		if err := os.WriteFile(fp, []byte(content), 0o600); err != nil {
+			t.Fatalf("unable to write allowlists file: %s", err)
+		}
+	}
+	logged := &bytes.Buffer{}
+	oldOutput := log.Writer()
+	log.SetOutput(logged)
+	t.Cleanup(func() { log.SetOutput(oldOutput) })
+
+	vars := new(expvar.Map).Init()
+	stats := newAllowReloadStats(vars)
+	ama := &atomic.Pointer[allowMaps]{}
+	intVar := func(name string) int64 {
+		t.Helper()
+		v, ok := vars.Get(name).(*expvar.Int)
+		if !ok {
+			t.Fatalf("expvar %#v is not published as an *expvar.Int: %#v", name, vars.Get(name))
+		}
+		return v.Value()
+	}
+	check := func(when string, successes, failures, consecutiveFailures int64) {
+		t.Helper()
+		if got := intVar("reload_successes"); got != successes {
+			t.Errorf("%s: reload_successes: want %d, got %d", when, successes, got)
+		}
+		if got := intVar("reload_failures"); got != failures {
+			t.Errorf("%s: reload_failures: want %d, got %d", when, failures, got)
+		}
+		if got := intVar("reload_consecutive_failures"); got != consecutiveFailures {
+			t.Errorf("%s: reload_consecutive_failures: want %d, got %d", when, consecutiveFailures, got)
+		}
+	}
+	check("before any reload", 0, 0, 0)
+	if got := intVar("reload_last_success_epoch_secs"); got != 0 {
+		t.Errorf("before any reload: reload_last_success_epoch_secs: want 0, got %d", got)
+	}
+
+	writeFile(`{"blocked_domains": ["example.com"]}`)
+	before := time.Now().Unix()
+	reloadAllowMaps(fp, ama, stats)
+	check("after a good reload", 1, 0, 0)
+	firstSuccess := intVar("reload_last_success_epoch_secs")
+	if firstSuccess < before || firstSuccess > time.Now().Unix() {
+		t.Errorf("after a good reload: reload_last_success_epoch_secs: want between %d and now, got %d", before, firstSuccess)
+	}
+	if strings.Contains(logged.String(), allowReloadFailedLogMsg) {
+		t.Errorf("after a good reload: unexpected failure log line: %s", logged.String())
+	}
+
+	writeFile(`{"blocked_domains": [`)
+	reloadAllowMaps(fp, ama, stats)
+	check("after an unparsable file", 1, 1, 1)
+	if err := os.Remove(fp); err != nil {
+		t.Fatalf("unable to remove allowlists file: %s", err)
+	}
+	reloadAllowMaps(fp, ama, stats)
+	check("after a missing file", 1, 2, 2)
+	if got := intVar("reload_last_success_epoch_secs"); got != firstSuccess {
+		t.Errorf("after failed reloads: reload_last_success_epoch_secs moved from %d to %d", firstSuccess, got)
+	}
+	// Alerting outside of this repository counts these lines, one per failure.
+	if got := strings.Count(logged.String(), allowReloadFailedLogMsg); got != 2 {
+		t.Errorf("after 2 failed reloads: want 2 log lines containing %#v, got %d: %s", allowReloadFailedLogMsg, got, logged.String())
+	}
+
+	stats.lastSuccessEpochSecs.Set(1)
+	writeFile(`{"blocked_domains": ["notexample.com"]}`)
+	reloadAllowMaps(fp, ama, stats)
+	check("after a later good reload", 2, 2, 0)
+	if got := intVar("reload_last_success_epoch_secs"); got < before {
+		t.Errorf("after a later good reload: reload_last_success_epoch_secs: want at least %d, got %d", before, got)
 	}
 }
