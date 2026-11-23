@@ -183,6 +183,48 @@ func TestSweet32(t *testing.T) {
 	}
 }
 
+// TestRegisteredSuitesAreKnown checks that cipher suites IANA has registered
+// are named by allCipherSuites. A registered suite missing from that table is
+// reported as "Some unknown cipher suite", which alone rates the client Bad.
+func TestRegisteredSuitesAreKnown(t *testing.T) {
+	tests := []struct {
+		suite uint16
+		name  string
+	}{
+		{0x0072, "TLS_BELT_CHE256_BELT_HASH"},
+		{0x0073, "TLS_BASH_PRG_AE2561_BASH256"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// ForceSuites makes the zcrypto client send the suite even
+			// though it can't negotiate it. The ECDHE suite is there so the
+			// handshake completes and ephemeral keys are seen.
+			clientConf := &ztls.Config{
+				MaxVersion:   ztls.VersionTLS12,
+				CipherSuites: []uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tc.suite},
+				ForceSuites:  true,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if ci.UnknownCipherSuiteSupported {
+				t.Errorf("UnknownCipherSuiteSupported: want false, got true")
+			}
+			want := []string{"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256", tc.name}
+			if !cmp.Equal(want, ci.GivenCipherSuites) {
+				t.Errorf("GivenCipherSuites: want %v, got %v", want, ci.GivenCipherSuites)
+			}
+			if len(ci.InsecureCipherSuites) != 0 {
+				t.Errorf("InsecureCipherSuites: want none, got %v", ci.InsecureCipherSuites)
+			}
+			if ci.Rating != okay {
+				t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+			}
+		})
+	}
+}
+
 func TestPostQuantumDetection(t *testing.T) {
 	t.Run("WithMLKEM", func(t *testing.T) {
 		// We've had to reorder the CurvePreferences because crypto/tls (which
@@ -207,6 +249,30 @@ func TestPostQuantumDetection(t *testing.T) {
 		}
 		if ci.GivenNamedGroups[1] != "x25519" {
 			t.Errorf("GivenNamedGroups[1]: want x25519, got %s", ci.GivenNamedGroups[1])
+		}
+	})
+
+	// The ML-KEM hybrids registered from individual drafts and the obsolete
+	// Kyber draft groups are named, but only the groups in postQuantumGroups
+	// count as post-quantum key agreement.
+	t.Run("NamedButNotCounted", func(t *testing.T) {
+		clientConf := &ztls.Config{
+			// The zcrypto client can't make a TLS 1.3 key share for groups
+			// it doesn't implement, so keep it to TLS 1.2, where it only
+			// lists them.
+			MaxVersion:       ztls.VersionTLS12,
+			CurvePreferences: []ztls.CurveID{0x11e9, 0x11ea, 0x11ee, 0x11ef, 0x6399, 0x639a, 0x002a, ztls.X25519},
+		}
+		c := connectZtls(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+
+		if ci.PostQuantumKeyAgreement {
+			t.Errorf("PostQuantumKeyAgreement: want false, got true")
+		}
+		want := []string{"SecP256r1MLKEM512", "MLKEM512X25519", "curveSM2MLKEM768", "MLKEM1024X448", "X25519Kyber768Draft00", "SecP256r1Kyber768Draft00", "bign-curve256v1", "x25519"}
+		if !cmp.Equal(want, ci.GivenNamedGroups) {
+			t.Errorf("GivenNamedGroups: want %v, got %v", want, ci.GivenNamedGroups)
 		}
 	})
 
@@ -352,12 +418,15 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		}
 	})
 
-	t.Run("UnknownFallback", func(t *testing.T) {
+	t.Run("NewlyRegisteredRender", func(t *testing.T) {
 		clientConf := &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			MaxVersion: tls.VersionTLS12,
 			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0420),
 				tls.SignatureScheme(0x0710),
+				tls.SignatureScheme(0x0911),
+				tls.SignatureScheme(0x091c),
 				tls.PKCS1WithSHA256,
 			},
 		}
@@ -365,7 +434,27 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
-		want := []string{"Unknown signature scheme: 0x0710", "rsa_pkcs1_sha256"}
+		want := []string{"rsa_pkcs1_sha256_legacy", "bign-with-hbelt", "slhdsa_sha2_128s", "slhdsa_shake_256f", "rsa_pkcs1_sha256"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+
+	t.Run("UnknownFallback", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				// 0x07ff is in a range the registry has not assigned.
+				tls.SignatureScheme(0x07ff),
+				tls.PKCS1WithSHA256,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+
+		want := []string{"Unknown signature scheme: 0x07ff", "rsa_pkcs1_sha256"}
 		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
 			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
 		}

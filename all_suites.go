@@ -8,7 +8,8 @@ package main
 // Plus appending a few ones that were asked for in #56 and the quantum
 // resistant ones that Chrome is testing.
 //
-// The curl command was last used to update this list on 2026-04-09.
+// This list was last updated on 2026-11-23, by hand, against the registry as
+// IANA last updated it on 2026-11-05.
 var allCipherSuites = map[uint16]string{
 	0x0000: "TLS_NULL_WITH_NULL_NULL",
 	0x0001: "TLS_RSA_WITH_NULL_MD5",
@@ -90,6 +91,8 @@ var allCipherSuites = map[uint16]string{
 	0x006F: "TLS_ASCONAEAD128_SHA256",
 	0x0070: "TLS_AES_128_GCM_ASCONHASH256",
 	0x0071: "TLS_AES_128_CCM_ASCONHASH256",
+	0x0072: "TLS_BELT_CHE256_BELT_HASH",
+	0x0073: "TLS_BASH_PRG_AE2561_BASH256",
 	0x0084: "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA",
 	0x0085: "TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA",
 	0x0086: "TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA",
