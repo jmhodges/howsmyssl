@@ -39,6 +39,10 @@ type clientInfo struct {
 	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
 	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
+	SHA1OrMD5SignatureAlgorithms   []string            `json:"sha1_or_md5_signature_algorithms"`
+	RetiredKyberDraftGroups        []string            `json:"retired_kyber_draft_groups"`
+	PostQuantumSignatureAlgorithms []string            `json:"post_quantum_signature_algorithms"`
+	TrustAnchorIDsOffered          bool                `json:"trust_anchor_ids_offered"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
 	TLS12ImprovableCutoverPassed   bool                `json:"-"`
@@ -157,6 +161,12 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	}
 
 	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
+
+	// Report-only: none of these change the rating.
+	d.SHA1OrMD5SignatureAlgorithms = signatureSchemesOffered(sha1OrMD5SignatureSchemes, st.SupportedSignatureAlgorithms, st.SupportedSignatureAlgorithmsCert)
+	d.RetiredKyberDraftGroups = retiredKyberDraftGroupsOffered(st.SupportedCurves)
+	d.PostQuantumSignatureAlgorithms = signatureSchemesOffered(postQuantumSignatureSchemes, st.SupportedSignatureAlgorithms, st.SupportedSignatureAlgorithmsCert)
+	d.TrustAnchorIDsOffered = trustAnchorIDsOffered(st.ClientExtensions)
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported
 

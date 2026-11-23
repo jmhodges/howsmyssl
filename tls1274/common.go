@@ -325,6 +325,8 @@ type ConnectionState struct {
 	SupportedVersions                []uint16
 	SupportedCurves                  []CurveID
 	SupportedSignatureAlgorithms     []SignatureScheme
+	SupportedSignatureAlgorithmsCert []SignatureScheme
+	ClientExtensions                 []uint16
 
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the
