@@ -1,13 +1,13 @@
 # Forking Go's `crypto/tls` for howsmyssl
 
-This document records exactly what was changed to turn Go 1.26.2's standard
-`crypto/tls` package into the vendored `./tls1262/` package, so that future
+This document records exactly what was changed to turn Go 1.27.4's standard
+`crypto/tls` package into the vendored `./tls1274/` package, so that future
 versions of Go can be forked the same way.
 
-The naming convention is `tls<goversion>`: Go **1.26.2** → package directory
-`tls1262`. A future fork of Go 1.27.0 would live in `tls1270`, of 1.26.3 in
-`tls1263`, and so on. The import path everywhere is
-`github.com/jmhodges/howsmyssl/tls1262` (rename the last path element to match
+The naming convention is `tls<goversion>`: Go **1.27.4** → package directory
+`tls1274`. A future fork of Go 1.28.0 would live in `tls1280`, of 1.27.5 in
+`tls1275`, and so on. The import path everywhere is
+`github.com/jmhodges/howsmyssl/tls1274` (rename the last path element to match
 the new directory).
 
 ## Why the fork exists

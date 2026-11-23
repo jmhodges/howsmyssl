@@ -75,8 +75,8 @@
             if any of the following are true:</p>
           <ul>
             <li>They do not support ephemeral key cipher suites.</li>
-            <li>They do not support session tickets.</li>
-            <li>They are using TLS 1.1 and the current date is before June 14th, 2026 10 AM PT.</li>
+            <li>They are using TLS 1.1 and the current time is before
+            December 14th, 2026 10 AM PT.</li>
             <li>Their highest supported TLS version is TLS 1.2 and the current
             time is after June 14th, 2026 10 AM PT.</li>
             <li>They do not support post-quantum key agreement and the current
@@ -99,8 +99,8 @@
             <li>It is susceptible to the
               <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
                 attack</a>.</li>
-            <li>Their highest supported TLS version is TLS 1.2 and the current
-            time is after December 14th, 2026 10 AM PT.</li>
+            <li>Their highest supported TLS version is TLS 1.1 or TLS 1.2 and
+            the current time is after December 14th, 2026 10 AM PT.</li>
             <li>They do not support post-quantum key agreement and the current
             time is after December 14th, 2026 10 AM PT.</li>
           </ul>
@@ -245,10 +245,9 @@
             for a security engineer team. Of course, another alternative is for
             the website to simply turn off support for session tickets and
             enable support for ephemeral keys.</p>
-          <p>How's My SSL will rate clients with session ticket
-            support as <span class="label okay">Probably Okay</span>,
-            but not having it will only have it defaulted to
-            <span class="label improvable">Improvable</span>.</p>
+          <p>How's My SSL reports whether a client supports session
+            tickets, but session ticket support no longer affects the
+            client's overall rating.</p>
 
           <h4 class="fragpadded" id="tls-compression"><a class="anchor-link" href="#tls-compression" aria-label="Link to TLS Compression">#</a>TLS Compression</h4>
           <p>TLS compression was a specification of a way to make the data in
