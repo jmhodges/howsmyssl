@@ -81,8 +81,8 @@ var allNamedGroups = map[uint16]string{
 
 	// Other ML-KEM hybrid groups, registered from individual drafts
 	// (draft-rosomakho-tls-ecdhe-mlkem512-00, draft-yang-tls-hybrid-sm2-mlkem-03
-	// and draft-preussmattsson-tls-mlkem1024-x448-01). These are named here but
-	// are not in postQuantumGroups below.
+	// and draft-preussmattsson-tls-mlkem1024-x448-01). These are in
+	// postQuantumGroups below.
 	0x11e9: "SecP256r1MLKEM512",
 	0x11ea: "MLKEM512X25519",
 	0x11ee: "curveSM2MLKEM768",
@@ -124,11 +124,20 @@ var allNamedGroups = map[uint16]string{
 }
 
 // postQuantumGroups are the named groups that provide post-quantum key
-// agreement via ML-KEM hybrids.
+// agreement: ML-KEM on its own, and the ML-KEM hybrids. A client that lists
+// any of these gets PostQuantumKeyAgreement set, which the rating uses.
+//
+// The pre-standard Kyber hybrids (X25519Kyber768Draft00 and
+// SecP256r1Kyber768Draft00) are deliberately not in here. They are not ML-KEM
+// and the registry marks them obsolete.
 var postQuantumGroups = map[uint16]bool{
+	0x11e9: true, // SecP256r1MLKEM512
+	0x11ea: true, // MLKEM512X25519
 	0x11eb: true, // SecP256r1MLKEM768
 	0x11ec: true, // X25519MLKEM768
 	0x11ed: true, // SecP384r1MLKEM1024
+	0x11ee: true, // curveSM2MLKEM768
+	0x11ef: true, // MLKEM1024X448
 	0x200:  true, // MLKEM512
 	0x201:  true, // MLKEM768
 	0x202:  true, // MLKEM1024

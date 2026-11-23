@@ -294,6 +294,18 @@ func TestRegisteredSuitesAreKnown(t *testing.T) {
 	}
 }
 
+// newerMLKEMHybrids are the ML-KEM hybrid groups registered from individual
+// drafts, after the three of RFC 10024.
+var newerMLKEMHybrids = []struct {
+	name string
+	id   ztls.CurveID
+}{
+	{"SecP256r1MLKEM512", 0x11e9},
+	{"MLKEM512X25519", 0x11ea},
+	{"curveSM2MLKEM768", 0x11ee},
+	{"MLKEM1024X448", 0x11ef},
+}
+
 func TestPostQuantumDetection(t *testing.T) {
 	t.Run("WithMLKEM", func(t *testing.T) {
 		// We've had to reorder the CurvePreferences because crypto/tls (which
@@ -321,29 +333,57 @@ func TestPostQuantumDetection(t *testing.T) {
 		}
 	})
 
-	// The ML-KEM hybrids registered from individual drafts and the obsolete
-	// Kyber draft groups are named, but only the groups in postQuantumGroups
-	// count as post-quantum key agreement.
-	t.Run("NamedButNotCounted", func(t *testing.T) {
-		clientConf := &ztls.Config{
+	// The ML-KEM hybrids registered from individual drafts each count as
+	// post-quantum key agreement on their own.
+	for _, tc := range newerMLKEMHybrids {
+		t.Run("With"+tc.name, func(t *testing.T) {
 			// The zcrypto client can't make a TLS 1.3 key share for groups
-			// it doesn't implement, so keep it to TLS 1.2, where it only
-			// lists them.
-			MaxVersion:       ztls.VersionTLS12,
-			CurvePreferences: []ztls.CurveID{0x11e9, 0x11ea, 0x11ee, 0x11ef, 0x6399, 0x639a, 0x002a, ztls.X25519},
-		}
-		c := connectZtls(t, clientConf)
-		ci := pullClientInfo(c, preCutover)
-		t.Logf("%#v", ci)
+			// it doesn't implement, so x25519 goes first to be the key
+			// share, and the hybrid is only listed.
+			clientConf := &ztls.Config{
+				CurvePreferences: []ztls.CurveID{ztls.X25519, tc.id},
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
 
-		if ci.PostQuantumKeyAgreement {
-			t.Errorf("PostQuantumKeyAgreement: want false, got true")
-		}
-		want := []string{"SecP256r1MLKEM512", "MLKEM512X25519", "curveSM2MLKEM768", "MLKEM1024X448", "X25519Kyber768Draft00", "SecP256r1Kyber768Draft00", "bign-curve256v1", "x25519"}
-		if !cmp.Equal(want, ci.GivenNamedGroups) {
-			t.Errorf("GivenNamedGroups: want %v, got %v", want, ci.GivenNamedGroups)
-		}
-	})
+			if !ci.PostQuantumKeyAgreement {
+				t.Errorf("PostQuantumKeyAgreement: want true, got false")
+			}
+			want := []string{"x25519", tc.name}
+			if !cmp.Equal(want, ci.GivenNamedGroups) {
+				t.Errorf("GivenNamedGroups: want %v, got %v", want, ci.GivenNamedGroups)
+			}
+		})
+	}
+
+	// The obsolete, pre-standard Kyber draft groups are named, but do not
+	// count as post-quantum key agreement, alone or together.
+	for _, tc := range []struct {
+		name   string
+		groups []ztls.CurveID
+		want   []string
+	}{
+		{"X25519Kyber768Draft00", []ztls.CurveID{ztls.X25519, 0x6399}, []string{"x25519", "X25519Kyber768Draft00"}},
+		{"SecP256r1Kyber768Draft00", []ztls.CurveID{ztls.X25519, 0x639a}, []string{"x25519", "SecP256r1Kyber768Draft00"}},
+		{"BothKyberDrafts", []ztls.CurveID{ztls.X25519, 0x6399, 0x639a}, []string{"x25519", "X25519Kyber768Draft00", "SecP256r1Kyber768Draft00"}},
+	} {
+		t.Run("NotCounted"+tc.name, func(t *testing.T) {
+			clientConf := &ztls.Config{
+				CurvePreferences: tc.groups,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if ci.PostQuantumKeyAgreement {
+				t.Errorf("PostQuantumKeyAgreement: want false, got true")
+			}
+			if !cmp.Equal(tc.want, ci.GivenNamedGroups) {
+				t.Errorf("GivenNamedGroups: want %v, got %v", tc.want, ci.GivenNamedGroups)
+			}
+		})
+	}
 
 	t.Run("WithoutMLKEM", func(t *testing.T) {
 		clientConf := &tls.Config{
@@ -702,6 +742,70 @@ func TestRatingCutovers(t *testing.T) {
 		}
 		if ci.Rating != okay {
 			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+		}
+	})
+
+	// A TLS 1.3 client whose only post-quantum group is one of the newer
+	// ML-KEM hybrids is rated exactly as one with the standard
+	// X25519MLKEM768 is, at every cutover.
+	standardHybrid := connectZtls(t, &ztls.Config{
+		CurvePreferences: []ztls.CurveID{ztls.X25519, 0x11ec},
+	})
+	for _, h := range newerMLKEMHybrids {
+		t.Run("TLS13With"+h.name, func(t *testing.T) {
+			c := connectZtls(t, &ztls.Config{
+				CurvePreferences: []ztls.CurveID{ztls.X25519, h.id},
+			})
+			for _, tc := range []struct {
+				name string
+				now  time.Time
+			}{
+				{"BeforeImprovable", beforeImprovable},
+				{"AtImprovable", atImprovable},
+				{"AtBad", atBad},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					ci := pullClientInfo(c, tc.now)
+					if !ci.PostQuantumKeyAgreement {
+						t.Errorf("PostQuantumKeyAgreement: want true, got false")
+					}
+					if ci.Rating != okay {
+						t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+					}
+					std := pullClientInfo(standardHybrid, tc.now)
+					if ci.Rating != std.Rating {
+						t.Errorf("Rating: want the standard hybrid's %s, got %s", std.Rating, ci.Rating)
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("TLS13OnlyKyberDrafts", func(t *testing.T) {
+		// TLS 1.3 client whose only would-be post-quantum groups are the
+		// obsolete Kyber drafts. It is rated as a client with none.
+		c := connectZtls(t, &ztls.Config{
+			CurvePreferences: []ztls.CurveID{ztls.X25519, 0x6399, 0x639a},
+		})
+
+		for _, tc := range []struct {
+			name       string
+			now        time.Time
+			wantRating rating
+		}{
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.PostQuantumKeyAgreement {
+					t.Errorf("PostQuantumKeyAgreement: want false, got true")
+				}
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
+				}
+			})
 		}
 	})
 
