@@ -13,7 +13,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -105,10 +104,8 @@ func execSecurityRoots() (*CertPool, error) {
 	// The hope is that we only call verify-cert when the user has
 	// tweaked their trust policy. These 4 goroutines are only
 	// defensive in the pathological case of many trust edits.
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 4 {
+		wg.Go(func() {
 			for block := range blockCh {
 				cert, err := ParseCertificate(block.Bytes)
 				if err != nil {
@@ -132,7 +129,7 @@ func execSecurityRoots() (*CertPool, error) {
 				}
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 	for len(data) > 0 {
 		var block *pem.Block
@@ -160,7 +157,7 @@ func execSecurityRoots() (*CertPool, error) {
 func verifyCertWithSystem(block *pem.Block, cert *Certificate) bool {
 	data := pem.EncodeToMemory(block)
 
-	f, err := ioutil.TempFile("", "cert")
+	f, err := os.CreateTemp("", "cert")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "can't create temporary file for cert: %v", err)
 		return false
@@ -199,7 +196,7 @@ func verifyCertWithSystem(block *pem.Block, cert *Certificate) bool {
 // settings. This code is only used for cgo-disabled builds.
 func getCertsWithTrustPolicy() (map[string]bool, error) {
 	set := map[string]bool{}
-	td, err := ioutil.TempDir("", "x509trustpolicy")
+	td, err := os.MkdirTemp("", "x509trustpolicy")
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,6 @@
 package tls
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -216,7 +215,7 @@ func (e *SupportedCurvesExtension) WriteToConfig(c *Config) error {
 func (e *SupportedCurvesExtension) CheckImplemented() error {
 	for _, curve := range e.Curves {
 		found := false
-		for _, supported := range defaultCurvePreferences {
+		for _, supported := range supportedCurvePreferences {
 			if curve == supported {
 				found = true
 			}
@@ -309,17 +308,22 @@ func (e *SignatureAlgorithmExtension) WriteToConfig(c *Config) error {
 }
 
 func (e *SignatureAlgorithmExtension) CheckImplemented() error {
-	for _, algs := range e.getStructuredAlgorithms() {
-		found := false
-		for _, supported := range supportedSKXSignatureAlgorithms {
-			if algs.Hash == supported.Hash && algs.Signature == supported.Signature {
-				found = true
-				break
-			}
+	for _, raw := range e.SignatureAndHashes {
+		algs := SigAndHash{
+			Hash:      uint8(raw >> 8),
+			Signature: uint8(raw),
 		}
-		if !found {
-			return errors.New(fmt.Sprintf("Unsupported Hash and Signature Algorithm (%d, %d)", algs.Hash, algs.Signature))
+
+		if isSupportedSignatureAndHash(algs, supportedSKXSignatureAlgorithms) {
+			continue
 		}
+
+		if isSupportedSignatureAlgorithm(SignatureScheme(raw), supportedSignatureAlgorithms) {
+			continue
+		}
+
+		return fmt.Errorf(
+			"unsupported signature scheme 0x%04x", raw)
 	}
 	return nil
 }

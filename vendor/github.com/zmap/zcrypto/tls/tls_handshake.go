@@ -38,6 +38,7 @@ type ClientHello struct {
 	Scts                 bool                `json:"scts"`
 	SupportedCurves      []CurveID           `json:"supported_curves,omitempty"`
 	SupportedPoints      []PointFormat       `json:"supported_point_formats,omitempty"`
+	SupportedVersions    []TLSVersion        `json:"supported_versions,omitempty"`
 	SessionTicket        *SessionTicket      `json:"session_ticket,omitempty"`
 	SignatureAndHashes   []SignatureAndHash  `json:"signature_and_hashes,omitempty"`
 	SctEnabled           bool                `json:"sct_enabled"`
@@ -276,7 +277,7 @@ func (c *Conn) GetHandshakeLog() *ServerHandshake {
 	return c.handshakeLog
 }
 
-func (c *Conn) InCipher() (cipher interface{}) {
+func (c *Conn) InCipher() (cipher any) {
 	return c.in.cipher
 }
 
@@ -284,7 +285,7 @@ func (c *Conn) InSeq() []byte {
 	return c.in.seq[:]
 }
 
-func (c *Conn) OutCipher() (cipher interface{}) {
+func (c *Conn) OutCipher() (cipher any) {
 	return c.out.cipher
 }
 
@@ -326,6 +327,12 @@ func (m *clientHelloMsg) MakeLog() *ClientHello {
 	ch.SupportedPoints = make([]PointFormat, len(m.supportedPoints))
 	for i, aFormat := range m.supportedPoints {
 		ch.SupportedPoints[i] = PointFormat(aFormat)
+	}
+	if len(m.supportedVersions) > 0 {
+		ch.SupportedVersions = make([]TLSVersion, 0, len(m.supportedVersions))
+		for _, aVersion := range m.supportedVersions {
+			ch.SupportedVersions = append(ch.SupportedVersions, TLSVersion(aVersion))
+		}
 	}
 
 	if len(m.sessionTicket) > 0 {

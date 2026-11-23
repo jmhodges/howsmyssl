@@ -28,6 +28,9 @@ func init() {
 	signatureNames[signatureRSAPSS] = "rsapss"
 	signatureNames[signatureECDSA] = "ecdsa"
 	signatureNames[signatureEd25519] = "ed25519"
+	signatureNames[signatureMLDSA44] = "mldsa44"
+	signatureNames[signatureMLDSA65] = "mldsa65"
+	signatureNames[signatureMLDSA87] = "mldsa87"
 
 	// RFC 5246 7.4.1.4.1
 	// https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-18
@@ -446,8 +449,12 @@ func init() {
 	curveNames[258] = "ffdhe4096"
 	curveNames[259] = "ffdhe6144"
 	curveNames[260] = "ffdhe8192"
+	curveNames[512] = "mlkem512"
+	curveNames[513] = "mlkem768"
+	curveNames[514] = "mlkem1024"
 	curveNames[4587] = "secp256r1mlkem768"
 	curveNames[4588] = "x25519mlkem768"
+	curveNames[4589] = "secp384r1mlkem1024"
 	curveNames[65281] = "arbitrary_explicit_prime_curves"
 	curveNames[65282] = "arbitrary_explicit_char2_curves"
 
@@ -479,6 +486,9 @@ func init() {
 	signatureSchemeNames[uint16(ECDSAWithP521AndSHA512)] = "ecdsa_secp521r1_sha512"
 	signatureSchemeNames[uint16(EdDSAWithEd25519)] = "ed25519"
 	signatureSchemeNames[uint16(EdDSAWithEd448)] = "ed448"
+	signatureSchemeNames[uint16(MLDSA44Sig)] = "mldsa44"
+	signatureSchemeNames[uint16(MLDSA65Sig)] = "mldsa65"
+	signatureSchemeNames[uint16(MLDSA87Sig)] = "mldsa87"
 }
 
 func nameForSignature(s uint8) string {

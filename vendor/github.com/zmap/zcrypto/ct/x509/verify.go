@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -246,11 +247,9 @@ func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err e
 	}
 
 	// If any key usage is acceptable then we're done.
-	for _, usage := range keyUsages {
-		if usage == ExtKeyUsageAny {
-			chains = candidateChains
-			return
-		}
+	if slices.Contains(keyUsages, ExtKeyUsageAny) {
+		chains = candidateChains
+		return
 	}
 
 	for _, candidate := range candidateChains {
@@ -390,10 +389,8 @@ func (c *Certificate) VerifyHostname(h string) error {
 	if ip := net.ParseIP(candidateIP); ip != nil {
 		// We only match IP addresses against IP SANs.
 		// https://tools.ietf.org/html/rfc6125#appendix-B.2
-		for _, candidate := range c.IPAddresses {
-			if ip.Equal(candidate) {
-				return nil
-			}
+		if slices.ContainsFunc(c.IPAddresses, ip.Equal) {
+			return nil
 		}
 		return HostnameError{c, candidateIP}
 	}
@@ -428,8 +425,8 @@ func checkChainForKeyUsage(chain []*Certificate, keyUsages []ExtKeyUsage) bool {
 	// by each certificate. If we cross out all the usages, then the chain
 	// is unacceptable.
 
-	for i := len(chain) - 1; i >= 0; i-- {
-		cert := chain[i]
+	for _, cert := range slices.Backward(chain) {
+
 		if len(cert.ExtKeyUsage) == 0 && len(cert.UnknownExtKeyUsage) == 0 {
 			// The certificate doesn't have any extended key usage specified.
 			continue

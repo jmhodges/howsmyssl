@@ -85,7 +85,7 @@ type fieldParameters struct {
 // parseFieldParameters will parse it into a fieldParameters structure,
 // ignoring unknown parts of the string.
 func parseFieldParameters(str string) (ret fieldParameters) {
-	for _, part := range strings.Split(str, ",") {
+	for part := range strings.SplitSeq(str, ",") {
 		switch {
 		case part == "optional":
 			ret.optional = true

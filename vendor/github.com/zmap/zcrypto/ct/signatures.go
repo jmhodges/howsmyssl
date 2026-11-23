@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/asn1"
@@ -14,6 +13,10 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+
+	// START CT CHANGES
+	"github.com/zmap/zcrypto/rsa"
+	// END CT CHANGES
 )
 
 var allowVerificationWithNonCompliantKeys = false //flag.Bool("allow_verification_with_non_compliant_keys", false,

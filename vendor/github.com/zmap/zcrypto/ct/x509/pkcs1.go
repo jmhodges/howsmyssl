@@ -5,9 +5,9 @@
 package x509
 
 import (
-	"crypto/rsa"
 	// START CT CHANGES
 	"github.com/zmap/zcrypto/ct/asn1"
+	"github.com/zmap/zcrypto/rsa"
 	// END CT CHANGES
 	"errors"
 	"math/big"
@@ -17,7 +17,7 @@ import (
 type pkcs1PrivateKey struct {
 	Version int
 	N       *big.Int
-	E       int
+	E       *big.Int // ZCrypto - use bigint to capture large exponents
 	D       *big.Int
 	P       *big.Int
 	Q       *big.Int
@@ -120,5 +120,5 @@ func MarshalPKCS1PrivateKey(key *rsa.PrivateKey) []byte {
 // rsaPublicKey reflects the ASN.1 structure of a PKCS#1 public key.
 type rsaPublicKey struct {
 	N *big.Int
-	E int
+	E *big.Int
 }

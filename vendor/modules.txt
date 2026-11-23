@@ -42,6 +42,16 @@ cloud.google.com/go/longrunning/internal
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
+# github.com/cloudflare/circl v1.6.4
+## explicit; go 1.24.0
+github.com/cloudflare/circl/internal/sha3
+github.com/cloudflare/circl/kem
+github.com/cloudflare/circl/kem/mlkem/mlkem512
+github.com/cloudflare/circl/pke/kyber/internal/common
+github.com/cloudflare/circl/pke/kyber/internal/common/params
+github.com/cloudflare/circl/pke/kyber/kyber512
+github.com/cloudflare/circl/pke/kyber/kyber512/internal
+github.com/cloudflare/circl/simd/keccakf1600
 # github.com/dgryski/go-sip13 v0.0.0-20200911182023-62edffca9245
 ## explicit
 github.com/dgryski/go-sip13
@@ -103,11 +113,11 @@ github.com/googleapis/gax-go/v2/internallog
 github.com/googleapis/gax-go/v2/internallog/grpclog
 github.com/googleapis/gax-go/v2/internallog/internal
 github.com/googleapis/gax-go/v2/iterator
-# github.com/weppos/publicsuffix-go v0.50.3
+# github.com/weppos/publicsuffix-go v0.50.4-0.20261109160800-8c84761b913c
 ## explicit; go 1.24.0
 github.com/weppos/publicsuffix-go/publicsuffix
-# github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16 => github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b
-## explicit; go 1.25.0
+# github.com/zmap/zcrypto v0.0.0-20261121201429-2f4b44a7a06d
+## explicit; go 1.27.0
 github.com/zmap/zcrypto/cryptobyte
 github.com/zmap/zcrypto/cryptobyte/asn1
 github.com/zmap/zcrypto/ct
@@ -119,6 +129,7 @@ github.com/zmap/zcrypto/encoding/asn1
 github.com/zmap/zcrypto/internal/cpu
 github.com/zmap/zcrypto/internal/randutil
 github.com/zmap/zcrypto/json
+github.com/zmap/zcrypto/rsa
 github.com/zmap/zcrypto/tls
 github.com/zmap/zcrypto/util
 github.com/zmap/zcrypto/x509
@@ -375,4 +386,3 @@ google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
-# github.com/zmap/zcrypto => github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b

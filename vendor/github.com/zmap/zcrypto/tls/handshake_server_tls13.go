@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/hmac"
-	"crypto/rsa"
 	"errors"
 	"hash"
 	"io"
+	"slices"
 	"sync/atomic"
 	"time"
+
+	"github.com/zmap/zcrypto/rsa"
 )
 
 // maxClientPSKIdentities is the number of client PSK identities the server will
@@ -235,13 +237,7 @@ func (hs *serverHandshakeStateTLS13) checkForResumption() error {
 		return nil
 	}
 
-	modeOK := false
-	for _, mode := range hs.clientHello.pskModes {
-		if mode == pskModeDHE {
-			modeOK = true
-			break
-		}
-	}
+	modeOK := slices.Contains(hs.clientHello.pskModes, pskModeDHE)
 	if !modeOK {
 		return nil
 	}
@@ -700,12 +696,7 @@ func (hs *serverHandshakeStateTLS13) shouldSendSessionTickets() bool {
 	}
 
 	// Don't send tickets the client wouldn't use. See RFC 8446, Section 4.2.9.
-	for _, pskMode := range hs.clientHello.pskModes {
-		if pskMode == pskModeDHE {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(hs.clientHello.pskModes, pskModeDHE)
 }
 
 func (hs *serverHandshakeStateTLS13) sendSessionTickets() error {

@@ -437,9 +437,35 @@ func TestRatingCutovers(t *testing.T) {
 		// TLS 1.2 max client that also advertises an ML-KEM group. The
 		// version cutover still drives the overall rating to bad even
 		// though the PQ signal is healthy.
+		//
+		// zcrypto drops the ML-KEM groups from CurvePreferences when the
+		// client's highest version is TLS 1.2, so we spell the ClientHello
+		// out with a ClientFingerprintConfiguration, which puts the groups
+		// on the wire exactly as given. That code path in zcrypto panics
+		// when a ClientSessionCache is in use (connectZtls sets one), so
+		// session tickets are off for this client.
 		clientConf := &ztls.Config{
-			MaxVersion:       ztls.VersionTLS12,
-			CurvePreferences: []ztls.CurveID{0x11ec, ztls.X25519},
+			MaxVersion:             ztls.VersionTLS12,
+			SessionTicketsDisabled: true,
+			ClientFingerprintConfiguration: &ztls.ClientFingerprintConfiguration{
+				HandshakeVersion: ztls.VersionTLS12,
+				CipherSuites: []uint16{
+					ztls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+					ztls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+				},
+				CompressionMethods: []uint8{0},
+				Extensions: []ztls.ClientExtension{
+					&ztls.SNIExtension{Autopopulate: true},
+					&ztls.SupportedCurvesExtension{Curves: []ztls.CurveID{0x11ec, ztls.X25519}},
+					&ztls.PointFormatExtension{Formats: []uint8{0}},
+					&ztls.SignatureAlgorithmExtension{SignatureAndHashes: []uint16{
+						uint16(ztls.PSSWithSHA256),
+						uint16(ztls.ECDSAWithP256AndSHA256),
+						uint16(ztls.PKCS1WithSHA256),
+					}},
+					&ztls.SecureRenegotiationExtension{},
+				},
+			},
 		}
 		c := connectZtls(t, clientConf)
 

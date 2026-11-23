@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Use non-cgo on Darwin to prevent duplicate symbols on cgo
+// macOS arm and arm64 with cgo use the embedded roots in root_darwin_armx.go.
+// Every other macOS build, including arm64 with cgo disabled, uses execSecurityRoots.
+// iOS keeps the previous split: cgo uses the embedded roots, and this file stays out.
 
-//go:build !arm && !arm64 && !ios
-// +build !arm,!arm64,!ios
+//go:build !ios && (!cgo || (!arm && !arm64))
+// +build !ios
+// +build !cgo !arm,!arm64
 
 package x509
 
