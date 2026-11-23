@@ -136,7 +136,11 @@ func TestServer_HTTP2ConnWithNoRequestIsClosed(t *testing.T) {
 
 		// net.Pipe has no buffer, so reads have to be running before the
 		// client writes anything: the server writes its session tickets and
-		// SETTINGS before it reads the client's preface.
+		// SETTINGS before it reads the client's preface. But the reader
+		// answers the server's SETTINGS with a write of its own, and nothing
+		// may go out ahead of the preface, or the server rejects it as a
+		// bogus greeting. So wmu is taken here, before the reader starts, and
+		// held until the preface and SETTINGS are written.
 		var (
 			wmu       sync.Mutex // guards writes to c
 			fr        = http2.NewFramer(c, c)
@@ -146,6 +150,7 @@ func TestServer_HTTP2ConnWithNoRequestIsClosed(t *testing.T) {
 			closedAt  time.Time
 			readsDone = make(chan struct{})
 		)
+		wmu.Lock()
 		go func() {
 			defer close(readsDone)
 			for {
@@ -175,7 +180,6 @@ func TestServer_HTTP2ConnWithNoRequestIsClosed(t *testing.T) {
 			}
 		}()
 
-		wmu.Lock()
 		_, err = io.WriteString(c, http2.ClientPreface)
 		if err == nil {
 			err = fr.WriteSettings()
