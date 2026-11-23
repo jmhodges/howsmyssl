@@ -138,12 +138,12 @@ func TestListener_CleanRequestsAddNoHandshakeErrors(t *testing.T) {
 			if got := statValue(ns, "handshake", "successes"); got != n {
 				t.Errorf("handshake successes = %d, want %d", got, n)
 			}
-			for _, key := range []string{"errors", "eofs", "read_timeouts", "write_timeouts", "unknown_timeouts", "intentional_closes", "peer_resets"} {
+			for _, key := range []string{"errors", "eofs", "read_timeouts", "write_timeouts", "unknown_timeouts", "intentional_closes", "peer_resets", "unknown_errors"} {
 				if got := statValue(ns, "handshake", key); got != 0 {
 					t.Errorf("handshake %s = %d after %d clean requests, want 0", key, got, n)
 				}
 			}
-			for _, key := range []string{"errors", "read_timeouts", "write_timeouts", "unknown_timeouts", "peer_resets"} {
+			for _, key := range []string{"errors", "read_timeouts", "write_timeouts", "unknown_timeouts", "peer_resets", "unknown_errors"} {
 				if got := statValue(ns, "post_handshake", key); got != 0 {
 					t.Errorf("post_handshake %s = %d after %d clean requests, want 0", key, got, n)
 				}

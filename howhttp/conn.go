@@ -61,6 +61,10 @@ type errStats struct {
 	EOFs              *expvar.Int
 	IntentionalCloses *expvar.Int
 	PeerResets        *expvar.Int
+	// UnknownErrs counts the errors of no kind above. They are in Errs,
+	// and each is also logged as "unknown tls error", but only as many as
+	// unknownLog lets through, so this is the exact count.
+	UnknownErrs *expvar.Int
 	// ReadAborts counts reads that stopped because the read deadline was
 	// set in the past on purpose, which is how net/http's HTTP/1.x server
 	// ends its background read after every request. Not an error, and not
@@ -72,6 +76,11 @@ type errStats struct {
 	// failed; false after a handshake, where both are the normal end of a
 	// connection.
 	cleanEndsAreErrs bool
+
+	// unknownLog caps the "unknown tls error" log lines. A public TLS port
+	// sees scanners and broken clients fail handshakes all day, and each
+	// of those is an unknown error.
+	unknownLog *logLimiter
 }
 
 func newConnStats(ns *expvar.Map) *connStats {
@@ -98,8 +107,10 @@ func newErrStats(ns *expvar.Map, cleanEndsAreErrs bool) *errStats {
 		EOFs:              &expvar.Int{},
 		IntentionalCloses: &expvar.Int{},
 		PeerResets:        &expvar.Int{},
+		UnknownErrs:       &expvar.Int{},
 		ReadAborts:        &expvar.Int{},
 		cleanEndsAreErrs:  cleanEndsAreErrs,
+		unknownLog:        newLogLimiter("unknown tls error", unknownErrLogsPerWindow, unknownErrLogWindow),
 	}
 	ns.Set("errors", s.Errs)
 	ns.Set("read_timeouts", s.ReadTimeouts)
@@ -108,6 +119,7 @@ func newErrStats(ns *expvar.Map, cleanEndsAreErrs bool) *errStats {
 	ns.Set("eofs", s.EOFs)
 	ns.Set("intentional_closes", s.IntentionalCloses)
 	ns.Set("peer_resets", s.PeerResets)
+	ns.Set("unknown_errors", s.UnknownErrs)
 	if !cleanEndsAreErrs {
 		ns.Set("read_aborts", s.ReadAborts)
 	}
@@ -346,5 +358,61 @@ func (s *errStats) count(err error, draining, readDeadlinePassed bool) {
 		s.PeerResets.Add(1)
 		return
 	}
-	log.Printf("unknown tls error: %s", err)
+	s.UnknownErrs.Add(1)
+	s.unknownLog.printf("%s", err)
+}
+
+// At most unknownErrLogsPerWindow "unknown tls error" lines are logged per
+// unknownErrLogWindow, for each of the "handshake" and "post_handshake"
+// groups. The unknown_errors counter has the exact number.
+const (
+	unknownErrLogsPerWindow = 10
+	unknownErrLogWindow     = time.Minute
+)
+
+// logLimiter logs at most max lines per window, each starting with
+// prefix. The first line of a new window after one that dropped lines
+// says how many it dropped. A window starts with the first line after the
+// last window ended, so a quiet spell costs nothing.
+type logLimiter struct {
+	prefix string
+	max    int
+	window time.Duration
+	now    func() time.Time
+	logf   func(format string, args ...any)
+
+	mu         sync.Mutex
+	start      time.Time
+	logged     int
+	suppressed int
+}
+
+func newLogLimiter(prefix string, max int, window time.Duration) *logLimiter {
+	return &logLimiter{
+		prefix: prefix,
+		max:    max,
+		window: window,
+		now:    time.Now,
+		logf:   log.Printf,
+	}
+}
+
+func (l *logLimiter) printf(format string, args ...any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.now()
+	if l.start.IsZero() || now.Sub(l.start) >= l.window {
+		if l.suppressed > 0 {
+			l.logf("%s: %d more not logged since %s", l.prefix, l.suppressed, l.start.UTC().Format(time.RFC3339))
+		}
+		l.start = now
+		l.logged = 0
+		l.suppressed = 0
+	}
+	if l.logged >= l.max {
+		l.suppressed++
+		return
+	}
+	l.logged++
+	l.logf(l.prefix+": "+format, args...)
 }
