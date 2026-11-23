@@ -252,6 +252,60 @@ func TestSweet32(t *testing.T) {
 	}
 }
 
+// TestRegisteredSuitesAreKnown checks that cipher suites IANA has registered
+// are named by allCipherSuites. A registered suite missing from that table is
+// reported as "Some unknown cipher suite", which alone rates the client Bad.
+func TestRegisteredSuitesAreKnown(t *testing.T) {
+	tests := []struct {
+		suite uint16
+		name  string
+	}{
+		{0x0072, "TLS_BELT_CHE256_BELT_HASH"},
+		{0x0073, "TLS_BASH_PRG_AE2561_BASH256"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// ForceSuites makes the zcrypto client send the suite even
+			// though it can't negotiate it. The ECDHE suite is there so the
+			// handshake completes and ephemeral keys are seen.
+			clientConf := &ztls.Config{
+				MaxVersion:   ztls.VersionTLS12,
+				CipherSuites: []uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tc.suite},
+				ForceSuites:  true,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if ci.UnknownCipherSuiteSupported {
+				t.Errorf("UnknownCipherSuiteSupported: want false, got true")
+			}
+			want := []string{"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256", tc.name}
+			if !cmp.Equal(want, ci.GivenCipherSuites) {
+				t.Errorf("GivenCipherSuites: want %v, got %v", want, ci.GivenCipherSuites)
+			}
+			if len(ci.InsecureCipherSuites) != 0 {
+				t.Errorf("InsecureCipherSuites: want none, got %v", ci.InsecureCipherSuites)
+			}
+			if ci.Rating != okay {
+				t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+			}
+		})
+	}
+}
+
+// newerMLKEMHybrids are the ML-KEM hybrid groups registered from individual
+// drafts, after the three of RFC 10024.
+var newerMLKEMHybrids = []struct {
+	name string
+	id   ztls.CurveID
+}{
+	{"SecP256r1MLKEM512", 0x11e9},
+	{"MLKEM512X25519", 0x11ea},
+	{"curveSM2MLKEM768", 0x11ee},
+	{"MLKEM1024X448", 0x11ef},
+}
+
 func TestPostQuantumDetection(t *testing.T) {
 	t.Run("WithMLKEM", func(t *testing.T) {
 		// We've had to reorder the CurvePreferences because crypto/tls (which
@@ -278,6 +332,58 @@ func TestPostQuantumDetection(t *testing.T) {
 			t.Errorf("GivenNamedGroups[1]: want x25519, got %s", ci.GivenNamedGroups[1])
 		}
 	})
+
+	// The ML-KEM hybrids registered from individual drafts each count as
+	// post-quantum key agreement on their own.
+	for _, tc := range newerMLKEMHybrids {
+		t.Run("With"+tc.name, func(t *testing.T) {
+			// The zcrypto client can't make a TLS 1.3 key share for groups
+			// it doesn't implement, so x25519 goes first to be the key
+			// share, and the hybrid is only listed.
+			clientConf := &ztls.Config{
+				CurvePreferences: []ztls.CurveID{ztls.X25519, tc.id},
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if !ci.PostQuantumKeyAgreement {
+				t.Errorf("PostQuantumKeyAgreement: want true, got false")
+			}
+			want := []string{"x25519", tc.name}
+			if !cmp.Equal(want, ci.GivenNamedGroups) {
+				t.Errorf("GivenNamedGroups: want %v, got %v", want, ci.GivenNamedGroups)
+			}
+		})
+	}
+
+	// The obsolete, pre-standard Kyber draft groups are named, but do not
+	// count as post-quantum key agreement, alone or together.
+	for _, tc := range []struct {
+		name   string
+		groups []ztls.CurveID
+		want   []string
+	}{
+		{"X25519Kyber768Draft00", []ztls.CurveID{ztls.X25519, 0x6399}, []string{"x25519", "X25519Kyber768Draft00"}},
+		{"SecP256r1Kyber768Draft00", []ztls.CurveID{ztls.X25519, 0x639a}, []string{"x25519", "SecP256r1Kyber768Draft00"}},
+		{"BothKyberDrafts", []ztls.CurveID{ztls.X25519, 0x6399, 0x639a}, []string{"x25519", "X25519Kyber768Draft00", "SecP256r1Kyber768Draft00"}},
+	} {
+		t.Run("NotCounted"+tc.name, func(t *testing.T) {
+			clientConf := &ztls.Config{
+				CurvePreferences: tc.groups,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if ci.PostQuantumKeyAgreement {
+				t.Errorf("PostQuantumKeyAgreement: want false, got true")
+			}
+			if !cmp.Equal(tc.want, ci.GivenNamedGroups) {
+				t.Errorf("GivenNamedGroups: want %v, got %v", tc.want, ci.GivenNamedGroups)
+			}
+		})
+	}
 
 	t.Run("WithoutMLKEM", func(t *testing.T) {
 		clientConf := &tls.Config{
@@ -421,12 +527,15 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		}
 	})
 
-	t.Run("UnknownFallback", func(t *testing.T) {
+	t.Run("NewlyRegisteredRender", func(t *testing.T) {
 		clientConf := &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			MaxVersion: tls.VersionTLS12,
 			SignatureAlgorithms: []tls.SignatureScheme{
+				tls.SignatureScheme(0x0420),
 				tls.SignatureScheme(0x0710),
+				tls.SignatureScheme(0x0911),
+				tls.SignatureScheme(0x091c),
 				tls.PKCS1WithSHA256,
 			},
 		}
@@ -434,11 +543,83 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 		ci := pullClientInfo(c, preCutover)
 		t.Logf("%#v", ci)
 
-		want := []string{"Unknown signature scheme: 0x0710", "rsa_pkcs1_sha256"}
+		want := []string{"rsa_pkcs1_sha256_legacy", "bign-with-hbelt", "slhdsa_sha2_128s", "slhdsa_shake_256f", "rsa_pkcs1_sha256"}
 		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
 			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
 		}
 	})
+
+	t.Run("UnknownFallback", func(t *testing.T) {
+		clientConf := &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS12,
+			SignatureAlgorithms: []tls.SignatureScheme{
+				// 0x07ff is in a range the registry has not assigned.
+				tls.SignatureScheme(0x07ff),
+				tls.PKCS1WithSHA256,
+			},
+		}
+		c := connect(t, clientConf)
+		ci := pullClientInfo(c, preCutover)
+		t.Logf("%#v", ci)
+
+		want := []string{"Unknown signature scheme: 0x07ff", "rsa_pkcs1_sha256"}
+		if !cmp.Equal(want, ci.GivenSignatureAlgorithms) {
+			t.Errorf("GivenSignatureAlgorithms: want %v, got %v", want, ci.GivenSignatureAlgorithms)
+		}
+	})
+}
+
+// RFC 9150's TLS 1.3 suites authenticate records but don't encrypt them, and
+// their names carry no "NULL", so the grep that made nullCipherSuites missed
+// them.
+func TestIntegrityOnlyTLS13Suites(t *testing.T) {
+	tests := []struct {
+		suite uint16
+		name  string
+	}{
+		{0xC0B4, "TLS_SHA256_SHA256"},
+		{0xC0B5, "TLS_SHA384_SHA384"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// ForceSuites makes the zcrypto/tls client offer a suite it
+			// doesn't implement. The server picks the first one.
+			clientConf := &ztls.Config{
+				MaxVersion:   ztls.VersionTLS12,
+				CipherSuites: []uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tc.suite},
+				ForceSuites:  true,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+
+			want := map[string][]string{tc.name: {nullReason}}
+			if !cmp.Equal(want, ci.InsecureCipherSuites) {
+				t.Errorf("insecure cipher suites: want %v, got %v", want, ci.InsecureCipherSuites)
+			}
+			if ci.Rating != bad {
+				t.Errorf("rating: want %s, got %s", bad, ci.Rating)
+			}
+		})
+	}
+}
+
+// Every suite named with NULL in allCipherSuites has no encryption, and every
+// name in nullCipherSuites has to match one in allCipherSuites, or it's never
+// looked up.
+func TestNullCipherSuitesMatchesAllCipherSuites(t *testing.T) {
+	names := make(map[string]bool)
+	for ci, name := range allCipherSuites {
+		names[name] = true
+		if strings.Contains(name, "NULL") && !nullCipherSuites[name] {
+			t.Errorf("%#04x %s: named NULL, but not in nullCipherSuites", ci, name)
+		}
+	}
+	for name := range nullCipherSuites {
+		if !names[name] {
+			t.Errorf("%s: in nullCipherSuites, but not in allCipherSuites", name)
+		}
+	}
 }
 
 func TestRatingCutovers(t *testing.T) {
@@ -561,6 +742,70 @@ func TestRatingCutovers(t *testing.T) {
 		}
 		if ci.Rating != okay {
 			t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+		}
+	})
+
+	// A TLS 1.3 client whose only post-quantum group is one of the newer
+	// ML-KEM hybrids is rated exactly as one with the standard
+	// X25519MLKEM768 is, at every cutover.
+	standardHybrid := connectZtls(t, &ztls.Config{
+		CurvePreferences: []ztls.CurveID{ztls.X25519, 0x11ec},
+	})
+	for _, h := range newerMLKEMHybrids {
+		t.Run("TLS13With"+h.name, func(t *testing.T) {
+			c := connectZtls(t, &ztls.Config{
+				CurvePreferences: []ztls.CurveID{ztls.X25519, h.id},
+			})
+			for _, tc := range []struct {
+				name string
+				now  time.Time
+			}{
+				{"BeforeImprovable", beforeImprovable},
+				{"AtImprovable", atImprovable},
+				{"AtBad", atBad},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					ci := pullClientInfo(c, tc.now)
+					if !ci.PostQuantumKeyAgreement {
+						t.Errorf("PostQuantumKeyAgreement: want true, got false")
+					}
+					if ci.Rating != okay {
+						t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+					}
+					std := pullClientInfo(standardHybrid, tc.now)
+					if ci.Rating != std.Rating {
+						t.Errorf("Rating: want the standard hybrid's %s, got %s", std.Rating, ci.Rating)
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("TLS13OnlyKyberDrafts", func(t *testing.T) {
+		// TLS 1.3 client whose only would-be post-quantum groups are the
+		// obsolete Kyber drafts. It is rated as a client with none.
+		c := connectZtls(t, &ztls.Config{
+			CurvePreferences: []ztls.CurveID{ztls.X25519, 0x6399, 0x639a},
+		})
+
+		for _, tc := range []struct {
+			name       string
+			now        time.Time
+			wantRating rating
+		}{
+			{"BeforeImprovable", beforeImprovable, okay},
+			{"AtImprovable", atImprovable, improvable},
+			{"AtBad", atBad, bad},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				ci := pullClientInfo(c, tc.now)
+				if ci.PostQuantumKeyAgreement {
+					t.Errorf("PostQuantumKeyAgreement: want false, got true")
+				}
+				if ci.Rating != tc.wantRating {
+					t.Errorf("Rating: want %s, got %s", tc.wantRating, ci.Rating)
+				}
+			})
 		}
 	})
 

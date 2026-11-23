@@ -8,7 +8,8 @@ package main
 // Plus appending a few ones that were asked for in #56 and the quantum
 // resistant ones that Chrome is testing.
 //
-// The curl command was last used to update this list on 2026-04-09.
+// The curl command was last used to update this list on 2026-11-23, on the
+// registry as IANA last updated it on 2026-11-05.
 var allCipherSuites = map[uint16]string{
 	0x0000: "TLS_NULL_WITH_NULL_NULL",
 	0x0001: "TLS_RSA_WITH_NULL_MD5",
@@ -90,6 +91,8 @@ var allCipherSuites = map[uint16]string{
 	0x006F: "TLS_ASCONAEAD128_SHA256",
 	0x0070: "TLS_AES_128_GCM_ASCONHASH256",
 	0x0071: "TLS_AES_128_CCM_ASCONHASH256",
+	0x0072: "TLS_BELT_CHE256_BELT_HASH",
+	0x0073: "TLS_BASH_PRG_AE2561_BASH256",
 	0x0084: "TLS_RSA_WITH_CAMELLIA_256_CBC_SHA",
 	0x0085: "TLS_DH_DSS_WITH_CAMELLIA_256_CBC_SHA",
 	0x0086: "TLS_DH_RSA_WITH_CAMELLIA_256_CBC_SHA",
@@ -368,7 +371,16 @@ var allCipherSuites = map[uint16]string{
 	0xD005: "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256",
 
 	// old ciphers
+	//
+	// The GOST names here are OpenSSL's own cipher names with "TLS_" in front.
+	// IANA's registry lists 0x0080 to 0x0083 as unassigned, and 0xFF85 is in
+	// its private use range. OpenSSL 1.0.x named all four of 0x0080 to 0x0083
+	// in ssl/s3_lib.c.
+	// OpenSSL 1.1.0 dropped the two GOST94 ones, 0x0080 and 0x0082.
+	0x0080: "TLS_GOST94-GOST89-GOST89",
 	0x0081: "TLS_GOST2001-GOST89-GOST89",
+	0x0082: "TLS_GOST94-NULL-GOST94",   // no encryption, see nullCipherSuites
+	0x0083: "TLS_GOST2001-NULL-GOST94", // no encryption, see nullCipherSuites
 	0xCC13: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD",
 	0xCC14: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256_OLD",
 	0xCC15: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD",

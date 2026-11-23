@@ -73,6 +73,9 @@ var fewBitCipherSuites = map[string]bool{
 // with the enable-ssl-trace option):
 //
 //	./openssl ciphers -v -stdname NULL | awk '{ print "\""$1"\": true," }' | sed 's/SSL/TLS/' | sort
+//
+// The two GOST ones are OpenSSL's names for 0x0082 and 0x0083, which its
+// ssl/s3_lib.c marks SSL_eNULL.
 var nullCipherSuites = map[string]bool{
 	"TLS_DHE_PSK_WITH_NULL_SHA":      true,
 	"TLS_DHE_PSK_WITH_NULL_SHA256":   true,
@@ -85,6 +88,8 @@ var nullCipherSuites = map[string]bool{
 	"TLS_ECDH_ECDSA_WITH_NULL_SHA":   true,
 	"TLS_ECDH_RSA_WITH_NULL_SHA":     true,
 	"TLS_ECDH_anon_WITH_NULL_SHA":    true,
+	"TLS_GOST2001-NULL-GOST94":       true,
+	"TLS_GOST94-NULL-GOST94":         true,
 	"TLS_NULL_WITH_NULL_NULL":        true,
 	"TLS_PSK_WITH_NULL_SHA":          true,
 	"TLS_PSK_WITH_NULL_SHA256":       true,
@@ -95,6 +100,8 @@ var nullCipherSuites = map[string]bool{
 	"TLS_RSA_WITH_NULL_MD5":          true,
 	"TLS_RSA_WITH_NULL_SHA":          true,
 	"TLS_RSA_WITH_NULL_SHA256":       true,
+	"TLS_SHA256_SHA256":              true, // RFC 9150, integrity only: no NULL in the name
+	"TLS_SHA384_SHA384":              true, // RFC 9150, integrity only: no NULL in the name
 }
 
 // Cipher suites that offer encryption, but no authentication, opening them up
