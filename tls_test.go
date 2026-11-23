@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -98,6 +99,74 @@ func TestGoDefaultIsOkay(t *testing.T) {
 	}
 	if !ci.SessionTicketsSupported {
 		t.Errorf("SessionTicketsSupported was false but we set that in connect explicitly")
+	}
+}
+
+// A client that only offers TLS 1.3 has no (EC)DHE_ cipher suite names to
+// find, but every handshake it can complete uses an ephemeral key exchange.
+func TestTLS13OnlyIsEphemeral(t *testing.T) {
+	clientConf := &tls.Config{MinVersion: tls.VersionTLS13}
+	c := connect(t, clientConf)
+	ci := pullClientInfo(c, preCutover)
+	t.Logf("%#v", ci)
+
+	for _, s := range ci.GivenCipherSuites {
+		if strings.Contains(s, "DHE_") {
+			t.Fatalf("test client offered %s, so it isn't exercising the TLS 1.3-only path", s)
+		}
+	}
+	if ci.TLSVersion != "TLS 1.3" {
+		t.Errorf("TLSVersion: want TLS 1.3, got %s", ci.TLSVersion)
+	}
+	if !ci.PostQuantumKeyAgreement {
+		t.Errorf("PostQuantumKeyAgreement: want true, got false")
+	}
+	if !ci.EphemeralKeysSupported {
+		t.Errorf("EphemeralKeysSupported: want true, got false")
+	}
+	if ci.Rating != okay {
+		t.Errorf("Rating: want %s, got %s", okay, ci.Rating)
+	}
+	// The TLS 1.2 and post-quantum cutovers must not touch this client.
+	atBad := time.Date(2026, 12, 14, 18, 0, 0, 0, time.UTC)
+	if ci := pullClientInfo(c, atBad); ci.Rating != okay {
+		t.Errorf("Rating after the cutovers: want %s, got %s", okay, ci.Rating)
+	}
+}
+
+func TestOffersTLS13Handshake(t *testing.T) {
+	const (
+		aes128GCM       = 0x1301 // TLS_AES_128_GCM_SHA256
+		rsaAES128GCM    = 0x009C // TLS_RSA_WITH_AES_128_GCM_SHA256
+		greaseSuite     = 0x0A0A
+		greaseVersion   = 0x1A1A
+		emptyRenegoSCSV = 0x00FF
+	)
+	tests := []struct {
+		name     string
+		suites   []uint16
+		versions []uint16
+		want     bool
+	}{
+		{"TLS13SuiteAndVersion", []uint16{aes128GCM}, []uint16{tls.VersionTLS13}, true},
+		{"TLS13AmongOthers", []uint16{greaseSuite, rsaAES128GCM, aes128GCM}, []uint16{greaseVersion, tls.VersionTLS13, tls.VersionTLS12}, true},
+		// A TLS 1.3 suite in the list means nothing if the client won't
+		// negotiate TLS 1.3: it would get a static RSA handshake here.
+		{"TLS13SuiteNoSupportedVersions", []uint16{aes128GCM, rsaAES128GCM}, nil, false},
+		{"TLS13SuiteOnlyTLS12Version", []uint16{aes128GCM, rsaAES128GCM}, []uint16{tls.VersionTLS12}, false},
+		// Nor does a draft version: no server finishes a draft handshake
+		// any more.
+		{"TLS13SuiteOnlyDraftVersion", []uint16{aes128GCM, rsaAES128GCM}, []uint16{versionTLS13Draft28, tls.VersionTLS12}, false},
+		// And TLS 1.3 can't be negotiated without a TLS 1.3 suite.
+		{"TLS13VersionNoSuite", []uint16{rsaAES128GCM, emptyRenegoSCSV}, []uint16{tls.VersionTLS13, tls.VersionTLS12}, false},
+		{"Nothing", nil, nil, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := offersTLS13Handshake(tc.suites, tc.versions); got != tc.want {
+				t.Errorf("offersTLS13Handshake(%#04x, %#04x): want %t, got %t", tc.suites, tc.versions, tc.want, got)
+			}
+		})
 	}
 }
 
