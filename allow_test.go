@@ -4,6 +4,8 @@ import (
 	"expvar"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 )
@@ -129,4 +131,76 @@ func TestOriginAllowerNoLocalhost(t *testing.T) {
 		})
 	}
 
+}
+
+func TestReloadAllowMapsKeepsPreviousOnFailure(t *testing.T) {
+	fp := filepath.Join(t.TempDir(), "allowlists.json")
+	writeFile := func(content string) {
+		t.Helper()
+		if err := os.WriteFile(fp, []byte(content), 0o600); err != nil {
+			t.Fatalf("unable to write allowlists file: %s", err)
+		}
+	}
+	writeFile(`{"blocked_domains": ["example.com"]}`)
+
+	ama := &atomic.Pointer[allowMaps]{}
+	reloadAllowMaps(fp, ama)
+	if ama.Load() == nil {
+		t.Fatalf("allowMaps not stored after a successful load")
+	}
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
+
+	check := func(when string) {
+		t.Helper()
+		tests := []oaTest{
+			{"https://example.com", "", "example.com", false},
+			{"", "https://example.com/foo", "example.com", false},
+			{"https://notexample.com", "", "notexample.com", true},
+		}
+		for _, d := range tests {
+			r, err := http.NewRequest("GET", "/", nil)
+			if err != nil {
+				t.Fatalf("%s: unable to make request: %s", when, err)
+			}
+			r.RemoteAddr = "127.0.0.1:1234"
+			if d.origin != "" {
+				r.Header.Set("Origin", d.origin)
+			}
+			if d.referrer != "" {
+				r.Header.Set("Referer", d.referrer)
+			}
+			domain, ok := oa.Allow(r)
+			if domain != d.detectedDomain || ok != d.ok {
+				t.Errorf("%s: Origin %#v, Referer %#v: want domain %#v, ok %t; got domain %#v, ok %t", when, d.origin, d.referrer, d.detectedDomain, d.ok, domain, ok)
+			}
+		}
+	}
+	check("after the first load")
+
+	// A reload that fails must leave the previously loaded lists in place.
+	// Storing its nil result would make the next request with an Origin or
+	// Referer header panic.
+	before := ama.Load()
+	writeFile(`{"blocked_domains": [`)
+	reloadAllowMaps(fp, ama)
+	if got := ama.Load(); got != before {
+		t.Fatalf("after an unparsable file: allowMaps changed from %p to %p", before, got)
+	}
+	check("after an unparsable file")
+
+	if err := os.Remove(fp); err != nil {
+		t.Fatalf("unable to remove allowlists file: %s", err)
+	}
+	reloadAllowMaps(fp, ama)
+	if got := ama.Load(); got != before {
+		t.Fatalf("after a missing file: allowMaps changed from %p to %p", before, got)
+	}
+	check("after a missing file")
+
+	// A later good reload is picked up again.
+	writeFile(`{"blocked_domains": ["notexample.com"]}`)
+	reloadAllowMaps(fp, ama)
+	if got := ama.Load(); got == before || !got.BlockedDomains["notexample.com"] || got.BlockedDomains["example.com"] {
+		t.Errorf("after a good reload: new lists were not stored, got %#v", got)
+	}
 }

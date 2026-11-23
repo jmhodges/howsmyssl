@@ -273,12 +273,20 @@ func loadAllowMaps(fp string) (*allowMaps, error) {
 
 func reloadAllowMapsForever(allowListsFile string, ama *atomic.Pointer[allowMaps], tick *time.Ticker) {
 	for range tick.C {
-		am, err := loadAllowMaps(allowListsFile)
-		if err != nil {
-			log.Printf("unable to reload allowlists at %#v: %s", allowListsFile, err)
-		}
-		ama.Store(am)
+		reloadAllowMaps(allowListsFile, ama)
 	}
+}
+
+// reloadAllowMaps loads the allowlists file and stores the result in ama. If
+// the load fails, the error is logged and the previously stored allowMaps is
+// left in place.
+func reloadAllowMaps(allowListsFile string, ama *atomic.Pointer[allowMaps]) {
+	am, err := loadAllowMaps(allowListsFile)
+	if err != nil {
+		log.Printf("unable to reload allowlists at %#v, keeping the previously loaded ones: %s", allowListsFile, err)
+		return
+	}
+	ama.Store(am)
 }
 
 type rejectionReason string
