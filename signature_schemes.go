@@ -7,7 +7,8 @@ package main
 // (extension 50) draw values from this same registry, so a single map could
 // serve both.
 //
-// This list was last updated on 2026-05-21.
+// This list was last updated on 2026-11-23, against the registry as IANA last
+// updated it on 2026-11-05.
 var allSignatureSchemes = map[uint16]string{
 	// RSASSA-PKCS1-v1_5 algorithms.
 	0x0201: "rsa_pkcs1_sha1",
@@ -20,6 +21,34 @@ var allSignatureSchemes = map[uint16]string{
 	0x0403: "ecdsa_secp256r1_sha256",
 	0x0503: "ecdsa_secp384r1_sha384",
 	0x0603: "ecdsa_secp521r1_sha512",
+
+	// Legacy RSASSA-PKCS1-v1_5 code points for TLS 1.3 (RFC 9963).
+	0x0420: "rsa_pkcs1_sha256_legacy",
+	0x0520: "rsa_pkcs1_sha384_legacy",
+	0x0620: "rsa_pkcs1_sha512_legacy",
+
+	// Identity-based signatures (draft-wang-tls-raw-public-key-with-ibc-02).
+	0x0704: "eccsi_sha256",
+	0x0705: "iso_ibs1",
+	0x0706: "iso_ibs2",
+	0x0707: "iso_chinese_ibs",
+
+	// SM2 (RFC 8998).
+	0x0708: "sm2sig_sm3",
+
+	// GOST R 34.10-2012 (RFC 9367).
+	0x0709: "gostr34102012_256a",
+	0x070a: "gostr34102012_256b",
+	0x070b: "gostr34102012_256c",
+	0x070c: "gostr34102012_256d",
+	0x070d: "gostr34102012_512a",
+	0x070e: "gostr34102012_512b",
+	0x070f: "gostr34102012_512c",
+
+	// bign (draft-kalosha-stb-tls13).
+	0x0710: "bign-with-hbelt",
+	0x0711: "bign-with-bash384",
+	0x0712: "bign-with-bash512",
 
 	// RSASSA-PSS algorithms with public key OID rsaEncryption.
 	0x0804: "rsa_pss_rsae_sha256",
@@ -45,6 +74,20 @@ var allSignatureSchemes = map[uint16]string{
 	0x0904: "mldsa44",
 	0x0905: "mldsa65",
 	0x0906: "mldsa87",
+
+	// SLH-DSA (FIPS 205), per draft-reddy-tls-slhdsa-01.
+	0x0911: "slhdsa_sha2_128s",
+	0x0912: "slhdsa_sha2_128f",
+	0x0913: "slhdsa_sha2_192s",
+	0x0914: "slhdsa_sha2_192f",
+	0x0915: "slhdsa_sha2_256s",
+	0x0916: "slhdsa_sha2_256f",
+	0x0917: "slhdsa_shake_128s",
+	0x0918: "slhdsa_shake_128f",
+	0x0919: "slhdsa_shake_192s",
+	0x091a: "slhdsa_shake_192f",
+	0x091b: "slhdsa_shake_256s",
+	0x091c: "slhdsa_shake_256f",
 
 	// GREASE values (RFC 8701).
 	0x0a0a: "GREASE_0A",
