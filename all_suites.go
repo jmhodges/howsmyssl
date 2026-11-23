@@ -450,6 +450,9 @@ var metaCipherSuites = map[uint16]bool{
 
 	// TLS_EMPTY_RENEGOTIATION_INFO_SCSV
 	0x00FF: true,
+
+	// TLS_FALLBACK_SCSV (RFC 7507)
+	0x5600: true,
 }
 
 // TLS 1.3 cipher suites
