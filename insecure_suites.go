@@ -2,6 +2,7 @@ package main
 
 var (
 	fewBitReason   = "uses keys smaller than 128 bits in its encryption"
+	ideaReason     = "uses IDEA which has a 64-bit block size and is vulnerable to the Sweet32 attack"
 	nullReason     = "specifies no encryption at all for the connection"
 	nullAuthReason = "is open to man-in-the-middle attacks because it does not authenticate the server"
 	weirdNSSReason = "was meant to die with SSL 3.0 and is of unknown safety"
@@ -18,6 +19,8 @@ var (
 //
 //	TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5	 40-bit encryption, export grade
 //	TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA	 40-bit encryption, export grade
+//	TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5	 40-bit encryption, export grade
+//	TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA	 40-bit encryption, export grade
 //	TLS_KRB5_EXPORT_WITH_RC4_40_MD5	     40-bit encryption, export grade
 //	TLS_KRB5_EXPORT_WITH_RC4_40_SHA	     40-bit encryption, export grade
 //	TLS_KRB5_WITH_DES_CBC_MD5	             56-bit encryption
@@ -52,6 +55,8 @@ var fewBitCipherSuites = map[string]bool{
 	"TLS_RSA_WITH_DES_CBC_SHA":                true,
 	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_MD5":     true,
 	"TLS_KRB5_EXPORT_WITH_DES_CBC_40_SHA":     true,
+	"TLS_KRB5_EXPORT_WITH_RC2_CBC_40_MD5":     true,
+	"TLS_KRB5_EXPORT_WITH_RC2_CBC_40_SHA":     true,
 	"TLS_KRB5_EXPORT_WITH_RC4_40_MD5":         true,
 	"TLS_KRB5_EXPORT_WITH_RC4_40_SHA":         true,
 	"TLS_KRB5_WITH_DES_CBC_MD5":               true,
@@ -62,6 +67,24 @@ var fewBitCipherSuites = map[string]bool{
 	"TLS_DHE_DSS_EXPORT1024_WITH_RC4_56_SHA":  true,
 	"TLS_RSA_EXPORT1024_WITH_RC4_56_MD5":      true,
 	"TLS_RSA_EXPORT1024_WITH_RC2_CBC_56_MD5":  true,
+}
+
+// Cipher suites that use IDEA in CBC mode. IDEA has a 128-bit key but a
+// 64-bit block, so the Sweet32 attack on 3DES works on it as well. See
+// https://sweet32.info/
+//
+// Unlike the 3DES ones in sweet32CipherSuites, these count against a client
+// wherever they are in its list. 3DES is tolerated as a last resort because
+// TLS 1.0 and 1.1 made it mandatory to implement, so some servers have nothing
+// else. IDEA was never mandatory, and RFC 5469 removed it from TLS in 2009.
+//
+// Generated with:
+//
+//	grep IDEA all_suites.go
+var ideaCipherSuites = map[string]bool{
+	"TLS_RSA_WITH_IDEA_CBC_SHA":  true,
+	"TLS_KRB5_WITH_IDEA_CBC_SHA": true,
+	"TLS_KRB5_WITH_IDEA_CBC_MD5": true,
 }
 
 // Cipher suites that offer no encryption.

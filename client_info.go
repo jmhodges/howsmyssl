@@ -107,6 +107,9 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 			if fewBitCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], fewBitReason)
 			}
+			if ideaCipherSuites[s] {
+				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], ideaReason)
+			}
 			if nullCipherSuites[s] {
 				d.InsecureCipherSuites[s] = append(d.InsecureCipherSuites[s], nullReason)
 			}
