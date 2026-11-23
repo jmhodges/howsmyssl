@@ -406,6 +406,10 @@ func (ah *apiHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handleTLSClientInfo(w, r, apiStatuses, renderJSON)
 }
 
+// ratingClock is the clock that handleTLSClientInfo rates clients by. Tests
+// swap it to check the dated rating cutovers through the real handlers.
+var ratingClock = time.Now
+
 func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statusStats, render func(*http.Request, *clientInfo) ([]byte, int, string, error)) {
 	// Instead of using w.(http.Hijacker).Hijack to pull the underlying
 	// connection, we grab the one we smuggled into the context for this
@@ -419,7 +423,7 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 		response500(w, r)
 		return
 	}
-	data := pullClientInfo(tc, time.Now())
+	data := pullClientInfo(tc, ratingClock())
 	bs, status, contentType, err := render(r, data)
 	if err != nil {
 		log.Printf("handleTLSClientInfo: unable to execute render: %s\n", err)
