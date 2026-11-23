@@ -90,13 +90,26 @@ type Server struct {
 	inShutdown atomic.Bool
 }
 
+// noRequestTimeout is how long a connection may stay open without a request
+// on it, on either protocol. Each connection pins the memory of its TLS state,
+// including the whole ClientHello that tls1274 keeps for the report (up to
+// 64KB, chosen by the client), so a connection that isn't asking for anything
+// shouldn't get to hold that for long.
+//
+// For HTTP/1.x this is the time allowed to send the request headers. For
+// HTTP/2 it is the idle timeout, so it also applies between requests. That is
+// fine for howsmyssl, where every response asks the client to close the
+// connection, but would be short for a server that wanted HTTP/2 connections
+// reused.
+const noRequestTimeout = 10 * time.Second
+
 // NewServer creates a new Server with the given listener and handler. The
 // listener is expected to be a *Listener, or, at least, a listener created
 // with tls1274.Listen.
 func NewServer(listener net.Listener, handler http.Handler) (*Server, error) {
 	h1 := &http.Server{
 		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: noRequestTimeout,
 		ReadTimeout:       20 * time.Second,
 		WriteTimeout:      20 * time.Second,
 		IdleTimeout:       2 * time.Minute,
@@ -104,7 +117,12 @@ func NewServer(listener net.Listener, handler http.Handler) (*Server, error) {
 		ConnContext: addTLSConnToContext, // Also performed in the http2.ServeConnOpts
 	}
 	h2 := &http2.Server{
-		IdleTimeout: 2 * time.Minute,
+		// An HTTP/2 connection is idle whenever it has no open stream, which
+		// includes the time before its first request. ReadHeaderTimeout
+		// doesn't apply to HTTP/2 and a client that answers pings never trips
+		// PingTimeout, so this is the only limit on a client that finishes
+		// the handshake and then never makes a request. See noRequestTimeout.
+		IdleTimeout: noRequestTimeout,
 
 		// Server-side keepalive ping (Go 1.24+). Detects half-open conns
 		// through NLBs/proxies that silently drop state.
