@@ -29,8 +29,8 @@ func TestServeH2BailsWhenShuttingDown(t *testing.T) {
 	defer clientPipe.Close()
 
 	conn := &Conn{
-		Conn:           tls.Server(serverPipe, &tls.Config{}),
-		handshakeStats: newHandshakeStats(new(expvar.Map).Init()),
+		Conn:      tls.Server(serverPipe, &tls.Config{}),
+		connStats: newConnStats(new(expvar.Map).Init()),
 	}
 
 	done := make(chan struct{})
