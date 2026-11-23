@@ -66,6 +66,7 @@ var (
 	staticStatuses  = newStatusStats(staticVars)
 	webStatuses     = newStatusStats(webVars)
 	commonRedirects = expvar.NewInt("common_redirects")
+	allowReloads    = newAllowReloadStats(expvar.NewMap("allowlists"))
 
 	nonAlphaNumeric = regexp.MustCompile("[^[:alnum:]]")
 
@@ -125,8 +126,9 @@ func main() {
 			log.Fatal(err)
 		}
 		ama.Store(am)
+		allowReloads.succeeded(time.Now())
 		alTick := time.NewTicker(20 * time.Second)
-		go reloadAllowMapsForever(*allowListsFile, ama, alTick)
+		go reloadAllowMapsForever(*allowListsFile, ama, alTick, allowReloads)
 	}
 
 	hostname, err := os.Hostname()
