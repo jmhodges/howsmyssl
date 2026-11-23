@@ -10,7 +10,11 @@ paths-ignore:
 # copy of it, which is the same but for slog's calls. See
 # queries/LogInjectionOutsideSlog.ql for why and for what a hand-written slog
 # handler would mean for it.
+#
+# The query suite is named here and not in the workflow's "queries" input
+# because that input replaces this list instead of adding to it.
 queries:
+  - uses: security-and-quality
   - uses: ./.github/codeql/queries/LogInjectionOutsideSlog.ql
 
 query-filters:
