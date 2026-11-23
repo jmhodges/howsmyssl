@@ -95,6 +95,8 @@ var nullCipherSuites = map[string]bool{
 	"TLS_RSA_WITH_NULL_MD5":          true,
 	"TLS_RSA_WITH_NULL_SHA":          true,
 	"TLS_RSA_WITH_NULL_SHA256":       true,
+	"TLS_SHA256_SHA256":              true, // RFC 9150, integrity only: no NULL in the name
+	"TLS_SHA384_SHA384":              true, // RFC 9150, integrity only: no NULL in the name
 }
 
 // Cipher suites that offer encryption, but no authentication, opening them up
