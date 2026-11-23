@@ -441,6 +441,58 @@ func TestGivenSignatureAlgorithms(t *testing.T) {
 	})
 }
 
+// RFC 9150's TLS 1.3 suites authenticate records but don't encrypt them, and
+// their names carry no "NULL", so the grep that made nullCipherSuites missed
+// them.
+func TestIntegrityOnlyTLS13Suites(t *testing.T) {
+	tests := []struct {
+		suite uint16
+		name  string
+	}{
+		{0xC0B4, "TLS_SHA256_SHA256"},
+		{0xC0B5, "TLS_SHA384_SHA384"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// ForceSuites makes the zcrypto/tls client offer a suite it
+			// doesn't implement. The server picks the first one.
+			clientConf := &ztls.Config{
+				MaxVersion:   ztls.VersionTLS12,
+				CipherSuites: []uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, tc.suite},
+				ForceSuites:  true,
+			}
+			c := connectZtls(t, clientConf)
+			ci := pullClientInfo(c, preCutover)
+
+			want := map[string][]string{tc.name: {nullReason}}
+			if !cmp.Equal(want, ci.InsecureCipherSuites) {
+				t.Errorf("insecure cipher suites: want %v, got %v", want, ci.InsecureCipherSuites)
+			}
+			if ci.Rating != bad {
+				t.Errorf("rating: want %s, got %s", bad, ci.Rating)
+			}
+		})
+	}
+}
+
+// Every suite named with NULL in allCipherSuites has no encryption, and every
+// name in nullCipherSuites has to match one in allCipherSuites, or it's never
+// looked up.
+func TestNullCipherSuitesMatchesAllCipherSuites(t *testing.T) {
+	names := make(map[string]bool)
+	for ci, name := range allCipherSuites {
+		names[name] = true
+		if strings.Contains(name, "NULL") && !nullCipherSuites[name] {
+			t.Errorf("%#04x %s: named NULL, but not in nullCipherSuites", ci, name)
+		}
+	}
+	for name := range nullCipherSuites {
+		if !names[name] {
+			t.Errorf("%s: in nullCipherSuites, but not in allCipherSuites", name)
+		}
+	}
+}
+
 func TestRatingCutovers(t *testing.T) {
 	// Reference instants. These match the constants in client_info.go.
 	beforeImprovable := time.Date(2026, 6, 13, 23, 59, 0, 0, time.UTC)
