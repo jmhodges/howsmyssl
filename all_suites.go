@@ -457,35 +457,39 @@ var metaCipherSuites = map[uint16]bool{
 // can't use one, so where a client lists them says nothing about its TLS 1.2
 // preferences.
 //
+// Checked against the IANA TLS Cipher Suites registry as last updated on
+// 2026-11-05. The references are the registry's.
+//
 // TestTLS13SuitesHasEveryTLS13ShapedName fails when allCipherSuites gains a
 // name of that shape that isn't here.
 var tls13Suites = map[uint16]bool{
-	// RFC 8446
+	// RFC 9846 (formerly RFC 8446)
 	0x1301: true, // TLS_AES_128_GCM_SHA256
 	0x1302: true, // TLS_AES_256_GCM_SHA384
 	0x1303: true, // TLS_CHACHA20_POLY1305_SHA256
 	0x1304: true, // TLS_AES_128_CCM_SHA256
 	0x1305: true, // TLS_AES_128_CCM_8_SHA256
 
-	// AEGIS
+	// draft-denis-tls-aegis-07
 	0x1306: true, // TLS_AEGIS_256_SHA512
 	0x1307: true, // TLS_AEGIS_128L_SHA256
 
-	// Ascon
+	// Ascon: NIST SP 800-232, and RFC 9846 for all but 0x006E. They name no
+	// key exchange, so TLS 1.2 can't use them.
 	0x006E: true, // TLS_ASCONAEAD128_ASCONHASH256
 	0x006F: true, // TLS_ASCONAEAD128_SHA256
 	0x0070: true, // TLS_AES_128_GCM_ASCONHASH256
 	0x0071: true, // TLS_AES_128_CCM_ASCONHASH256
 
-	// The Belarusian suites. allCipherSuites doesn't name them yet.
+	// draft-kalosha-stb-tls13-01, marked "For TLS 1.3 or later".
 	0x0072: true, // TLS_BELT_CHE256_BELT_HASH
 	0x0073: true, // TLS_BASH_PRG_AE2561_BASH256
 
-	// RFC 8998, the ShangMi suites
+	// RFC 8998
 	0x00C6: true, // TLS_SM4_GCM_SM3
 	0x00C7: true, // TLS_SM4_CCM_SM3
 
-	// RFC 9150, integrity only
+	// RFC 9150, integrity only, no encryption
 	0xC0B4: true, // TLS_SHA256_SHA256
 	0xC0B5: true, // TLS_SHA384_SHA384
 
