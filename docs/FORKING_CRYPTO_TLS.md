@@ -15,7 +15,7 @@ the new directory).
 howsmyssl needs data about the client's TLS handshake that the standard library
 does not expose: the raw ClientHello (offered cipher suites, compression
 methods, supported versions/curves/signature algorithms, session-ticket
-support) and a heuristic for whether the client performs BEAST
+support, PSK key exchange modes) and a heuristic for whether the client performs BEAST
 (1/n-1 record splitting) mitigation. It also needs to *drive* client behavior in
 tests (override the `signature_algorithms` extension). None of this is reachable
 through the public API, so the package is copied wholesale and edited in place.
@@ -176,7 +176,12 @@ SessionTicketsSupported          bool
 SupportedVersions                []uint16
 SupportedCurves                  []CurveID
 SupportedSignatureAlgorithms     []SignatureScheme
+PSKModes                         []uint8
 ```
+
+`PSKModes` is the client's `psk_key_exchange_modes` extension (RFC 8446,
+Section 4.2.9), as sent: 0 is `psk_ke`, 1 is `psk_dhe_ke`. Upstream already
+parses it into `clientHelloMsg.pskModes`, so no parsing is added.
 
 ### B2. Add a client-side `signature_algorithms` override (`common.go`)
 
@@ -227,6 +232,7 @@ SignatureAlgorithms []SignatureScheme
       state.SupportedVersions              = c.clientHello.supportedVersions
       state.SupportedCurves                = ... copy of c.clientHello.supportedCurves
       state.SupportedSignatureAlgorithms   = ... copy of c.clientHello.supportedSignatureAlgorithms
+      state.PSKModes                       = ... copy of c.clientHello.pskModes
   }
   state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
   state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected
