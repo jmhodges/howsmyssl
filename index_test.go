@@ -465,6 +465,12 @@ func TestJSONAPI(t *testing.T) {
 		contentType string
 		body        string
 	}
+	// The one thing in the body that differs between the clients below is
+	// the protocols they offer: net/http offers HTTP/1.1 after HTTP/2.
+	expectedJSONBodyH2 := strings.Replace(expectedJSONBody, `"given_alpn_protocols":["http/1.1"]`, `"given_alpn_protocols":["h2","http/1.1"]`, 1)
+	if expectedJSONBodyH2 == expectedJSONBody {
+		t.Fatalf("expectedJSONBody has no given_alpn_protocols to replace")
+	}
 	tests := []apiTest{
 		{
 			path:        "/a/check",
@@ -495,6 +501,9 @@ func TestJSONAPI(t *testing.T) {
 	}
 	run := func(t *testing.T, c *http.Client, wantProtoMajor int, wantConnClose bool) {
 		for i, at := range tests {
+			if wantProtoMajor == 2 {
+				at.body = strings.Replace(at.body, expectedJSONBody, expectedJSONBodyH2, 1)
+			}
 			t.Run(fmt.Sprintf("%d-%s", i, at.path), func(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 				defer cancel()
@@ -611,6 +620,142 @@ func TestIndexGoldenPath(t *testing.T) {
 	}
 }
 
+// expectedJSONBody is what the API says of Go's own client when it offers
+// HTTP/1.1 alone and connects to an IP address, and so sends no server name.
 const (
-	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_AES_128_GCM_SHA256","TLS_AES_256_GCM_SHA384","TLS_CHACHA20_POLY1305_SHA256"],"given_named_groups":["X25519MLKEM768","SecP256r1MLKEM768","SecP384r1MLKEM1024","x25519","secp256r1","secp384r1","secp521r1"],"given_signature_algorithms":["mldsa44","mldsa65","mldsa87","rsa_pss_rsae_sha256","ecdsa_secp256r1_sha256","ed25519","rsa_pss_rsae_sha384","rsa_pss_rsae_sha512","rsa_pkcs1_sha256","rsa_pkcs1_sha384","rsa_pkcs1_sha512","ecdsa_secp384r1_sha384","ecdsa_secp521r1_sha512"],"given_psk_key_exchange_modes":[],"post_quantum_key_agreement":true,"ephemeral_keys_supported":true,"session_ticket_supported":false,"psk_without_forward_secrecy_supported":false,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.3","rating":"Probably Okay"}`
+	expectedJSONBody = `{"given_cipher_suites":["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256","TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA","TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA","TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA","TLS_AES_128_GCM_SHA256","TLS_AES_256_GCM_SHA384","TLS_CHACHA20_POLY1305_SHA256"],"given_named_groups":["X25519MLKEM768","SecP256r1MLKEM768","SecP384r1MLKEM1024","x25519","secp256r1","secp384r1","secp521r1"],"given_signature_algorithms":["mldsa44","mldsa65","mldsa87","rsa_pss_rsae_sha256","ecdsa_secp256r1_sha256","ed25519","rsa_pss_rsae_sha384","rsa_pss_rsae_sha512","rsa_pkcs1_sha256","rsa_pkcs1_sha384","rsa_pkcs1_sha512","ecdsa_secp384r1_sha384","ecdsa_secp521r1_sha512"],"given_psk_key_exchange_modes":[],"given_alpn_protocols":["http/1.1"],"given_key_share_groups":["X25519MLKEM768","x25519"],"post_quantum_key_agreement":true,"ephemeral_keys_supported":true,"session_ticket_supported":false,"psk_without_forward_secrecy_supported":false,"server_name_sent":false,"secure_renegotiation_supported":true,"encrypted_client_hello_offered":false,"tls_compression_supported":false,"unknown_cipher_suite_supported":false,"beast_vuln":false,"able_to_detect_n_minus_one_splitting":false,"insecure_cipher_suites":{},"tls_version":"TLS 1.3","rating":"Probably Okay"}`
 )
+
+// TestClientHelloSignalsRendered sends ALPN protocol names written to break
+// out of HTML, JavaScript and JSON, and checks that the page, the API and its
+// JSONP form show them without letting any of it through.
+func TestClientHelloSignalsRendered(t *testing.T) {
+	index = loadIndex()
+
+	stats := newStatusStats(new(expvar.Map).Init())
+	staticHandler := makeStaticHandler(stats)
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    make(map[string]bool),
+	}
+	ama := &atomic.Pointer[allowMaps]{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
+	tm := tlsMux("", "www.howsmyssl.com", "www.howsmyssl.com", staticHandler, handleWeb, oa, newTestLogger(t), newTestLogger(t))
+
+	srv := howhttptest.NewServer(tm)
+	defer srv.Close()
+
+	sent := []string{
+		"http/1.1",
+		"<script>alert(1)</script>",
+		`");alert('x');//`,
+		"</pre>\u2028\xff\x00\\",
+		"<!--",
+	}
+	want := []string{
+		"http/1.1",
+		`\x3cscript\x3ealert\x281\x29\x3c/script\x3e`,
+		`\x22\x29\x3balert\x28\x27x\x27\x29\x3b//`,
+		`\x3c/pre\x3e\xe2\x80\xa8\xff\x00\x5c`,
+		`\x3c\x21--`,
+	}
+	tlsConf := srv.ClientTLSConfig()
+	tlsConf.NextProtos = sent
+	c := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConf}}
+
+	get := func(t *testing.T, path string) string {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		r, err := http.NewRequestWithContext(ctx, "GET", srv.URL+path, nil)
+		if err != nil {
+			t.Fatalf("NewRequest: %s", err)
+		}
+		resp, err := c.Do(r)
+		if err != nil {
+			t.Fatalf("Get: %s", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("status code, want: %d, got: %d", http.StatusOK, resp.StatusCode)
+		}
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatalf("ReadAll: %s", err)
+		}
+		return string(b)
+	}
+	// Nothing the client sent may come back as it was, other than the
+	// protocol name that is only letters, digits and "/.".
+	checkNoneRaw := func(t *testing.T, body string) {
+		t.Helper()
+		for _, s := range sent[1:] {
+			if strings.Contains(body, s) {
+				t.Errorf("body has the client's %q in it as sent", s)
+			}
+		}
+		for _, s := range []string{"<script>alert", "alert(", "\xff", "\x00", "\u2028", "<!--\n"} {
+			if strings.Contains(body, s) {
+				t.Errorf("body has %q in it", s)
+			}
+		}
+	}
+
+	t.Run("page", func(t *testing.T) {
+		body := get(t, "/")
+		checkNoneRaw(t, body)
+		// html/template has nothing to escape in the rendered names but
+		// "+", which isn't in these.
+		for _, w := range want {
+			if li := "<li>" + w + "</li>"; !strings.Contains(body, li) {
+				t.Errorf("page doesn't have %q in it", li)
+			}
+		}
+		for _, h := range []string{"Server Name Indication", "Secure Renegotiation", "Encrypted Client Hello", "Given Key Shares", "Given ALPN Protocols"} {
+			if !strings.Contains(body, "<h2>"+h+"</h2>") {
+				t.Errorf("page has no %q section", h)
+			}
+		}
+		if !strings.Contains(body, "<li>X25519MLKEM768</li>\n                \n                <li>x25519</li>\n                \n              </ul>\n              \n              <p><a href=\"/s/about.html/#given-key-shares\">") {
+			t.Errorf("page doesn't list the key shares of Go's client, X25519MLKEM768 then x25519")
+		}
+	})
+
+	checkJSON := func(t *testing.T, body string) {
+		t.Helper()
+		var got struct {
+			ALPN []string `json:"given_alpn_protocols"`
+		}
+		if err := json.Unmarshal([]byte(body), &got); err != nil {
+			t.Fatalf("json.Unmarshal: %s", err)
+		}
+		if diff := cmp.Diff(want, got.ALPN); diff != "" {
+			t.Errorf("given_alpn_protocols (-want +got):\n%s", diff)
+		}
+	}
+	t.Run("json", func(t *testing.T) {
+		body := get(t, "/a/check")
+		checkNoneRaw(t, body)
+		checkJSON(t, body)
+	})
+	t.Run("jsonp", func(t *testing.T) {
+		body := get(t, "/a/check?callback=cb")
+		checkNoneRaw(t, body)
+		inner, ok := strings.CutPrefix(body, "cb(")
+		if !ok {
+			t.Fatalf("body doesn't start with the callback: %q", body)
+		}
+		inner, ok = strings.CutSuffix(inner, ");")
+		if !ok {
+			t.Fatalf("body doesn't end the callback: %q", body)
+		}
+		checkJSON(t, inner)
+		// The only places a quote may be in the JavaScript are around
+		// JSON's own strings, so a name can't end one early.
+		if strings.Contains(inner, `\"`) {
+			t.Errorf("body has an escaped quote in it, which no value should need: %q", body)
+		}
+	})
+}

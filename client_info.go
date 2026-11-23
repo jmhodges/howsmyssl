@@ -32,10 +32,15 @@ type clientInfo struct {
 	GivenNamedGroups                  []string            `json:"given_named_groups"`
 	GivenSignatureAlgorithms          []string            `json:"given_signature_algorithms"`
 	GivenPSKKeyExchangeModes          []string            `json:"given_psk_key_exchange_modes"`
+	GivenALPNProtocols                []string            `json:"given_alpn_protocols"`
+	GivenKeyShareGroups               []string            `json:"given_key_share_groups"`
 	PostQuantumKeyAgreement           bool                `json:"post_quantum_key_agreement"`
 	EphemeralKeysSupported            bool                `json:"ephemeral_keys_supported"`              // good if true
 	SessionTicketsSupported           bool                `json:"session_ticket_supported"`              // good if true
 	PSKWithoutForwardSecrecySupported bool                `json:"psk_without_forward_secrecy_supported"` // neutral, for now
+	ServerNameSent                    bool                `json:"server_name_sent"`                      // neutral
+	SecureRenegotiationSupported      bool                `json:"secure_renegotiation_supported"`        // neutral
+	EncryptedClientHelloOffered       bool                `json:"encrypted_client_hello_offered"`        // neutral
 	TLSCompressionSupported           bool                `json:"tls_compression_supported"`             // bad if true
 	UnknownCipherSuiteSupported       bool                `json:"unknown_cipher_suite_supported"`        // bad if true
 	BEASTVuln                         bool                `json:"beast_vuln"`                            // bad if true
@@ -154,14 +159,10 @@ func clientInfoFromState(st tls.ConnectionState, now time.Time) *clientInfo {
 	d.GivenNamedGroups = []string{}
 	for _, gid := range st.SupportedCurves {
 		id := uint16(gid)
-		name, found := allNamedGroups[id]
-		if !found {
-			name = fmt.Sprintf("Unknown named group: %#04x", id)
-		}
 		if postQuantumGroups[id] {
 			d.PostQuantumKeyAgreement = true
 		}
-		d.GivenNamedGroups = append(d.GivenNamedGroups, name)
+		d.GivenNamedGroups = append(d.GivenNamedGroups, namedGroupName(id))
 	}
 
 	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
@@ -183,6 +184,18 @@ func clientInfoFromState(st tls.ConnectionState, now time.Time) *clientInfo {
 		// keys come from the ticket alone, so it has no forward secrecy.
 		d.PSKWithoutForwardSecrecySupported = slices.Contains(st.PSKModes, pskModeKE)
 	}
+
+	// The rest of what the ClientHello says is reported and nothing more:
+	// none of it is looked at by the rating below.
+	//
+	// The server name itself is not shown. It is the name the client used to
+	// get here, so it tells the client nothing, and leaving it out means one
+	// fewer string of the client's choosing in the page and the API.
+	d.ServerNameSent = st.ServerName != ""
+	d.GivenALPNProtocols = renderALPNProtocols(st.ALPNProtocols)
+	d.SecureRenegotiationSupported = st.SecureRenegotiationSupported
+	d.GivenKeyShareGroups = renderKeyShareGroups(st.KeyShareGroups)
+	d.EncryptedClientHelloOffered = st.EncryptedClientHelloOffered
 
 	for _, cm := range st.CompressionMethods {
 		if cm != 0x0 {
@@ -270,6 +283,109 @@ func renderPSKKeyExchangeModes(modes []uint8) []string {
 		out = append(out, name)
 	}
 	return out
+}
+
+// namedGroupName maps a TLS Supported Groups codepoint to its IANA registry
+// name, falling back to a hex string for unknown values.
+func namedGroupName(id uint16) string {
+	name, found := allNamedGroups[id]
+	if !found {
+		name = fmt.Sprintf("Unknown named group: %#04x", id)
+	}
+	return name
+}
+
+// Limits on the lists below. Each is a list the client chooses the length
+// of, up to the 64KB a ClientHello extension can hold, and real clients send
+// two or three entries.
+const (
+	maxGivenALPNProtocols  = 16
+	maxGivenALPNProtoBytes = 32
+	maxGivenKeyShareGroups = 16
+)
+
+// renderKeyShareGroups maps the groups of a key_share extension (RFC 8446,
+// Section 4.2.8) to their names, in the order sent and repeats included. Only
+// the first maxGivenKeyShareGroups are returned. It always returns a non-nil
+// slice so JSON output renders [] rather than null.
+func renderKeyShareGroups(groups []tls.CurveID) []string {
+	groups = groups[:min(len(groups), maxGivenKeyShareGroups)]
+	out := make([]string, 0, len(groups))
+	for _, gid := range groups {
+		out = append(out, namedGroupName(uint16(gid)))
+	}
+	return out
+}
+
+// renderALPNProtocols makes the protocol names of an
+// application_layer_protocol_negotiation extension (RFC 7301) safe to show,
+// in the order sent and repeats included. Only the first
+// maxGivenALPNProtocols are returned. It always returns a non-nil slice so
+// JSON output renders [] rather than null.
+func renderALPNProtocols(protos []string) []string {
+	protos = protos[:min(len(protos), maxGivenALPNProtocols)]
+	out := make([]string, 0, len(protos))
+	for _, p := range protos {
+		out = append(out, renderALPNProtocol(p))
+	}
+	return out
+}
+
+// alpnTruncated ends a protocol name that was cut short. A space and
+// parentheses are never in a rendered name otherwise, so it can't be mistaken
+// for part of one.
+const alpnTruncated = " (truncated)"
+
+// renderALPNProtocol returns an ALPN protocol name with every byte that is
+// not an ASCII letter, a digit or one of "-._/+" written as \xNN. A protocol
+// name is 1 to 255 bytes of the client's choosing and need not be text, so
+// the result is ASCII that means nothing to HTML, JavaScript or JSON,
+// whatever was sent. A backslash is itself escaped, so the bytes sent can be
+// read back out. Names longer than maxGivenALPNProtoBytes are cut to that
+// many bytes and marked.
+func renderALPNProtocol(p string) string {
+	truncated := len(p) > maxGivenALPNProtoBytes
+	if truncated {
+		p = p[:maxGivenALPNProtoBytes]
+	}
+	plain := true
+	for i := 0; i < len(p); i++ {
+		if !isPlainALPNByte(p[i]) {
+			plain = false
+			break
+		}
+	}
+	if plain && !truncated {
+		// What every registered protocol name looks like, without an
+		// allocation.
+		return p
+	}
+	const hexDigits = "0123456789abcdef"
+	b := make([]byte, 0, 4*len(p)+len(alpnTruncated))
+	for i := 0; i < len(p); i++ {
+		c := p[i]
+		if isPlainALPNByte(c) {
+			b = append(b, c)
+			continue
+		}
+		b = append(b, '\\', 'x', hexDigits[c>>4], hexDigits[c&0xf])
+	}
+	if truncated {
+		b = append(b, alpnTruncated...)
+	}
+	return string(b)
+}
+
+func isPlainALPNByte(c byte) bool {
+	switch {
+	case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':
+		return true
+	}
+	switch c {
+	case '-', '.', '_', '/', '+':
+		return true
+	}
+	return false
 }
 
 // renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA

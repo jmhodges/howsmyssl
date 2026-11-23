@@ -326,6 +326,10 @@ type ConnectionState struct {
 	SupportedCurves                  []CurveID
 	SupportedSignatureAlgorithms     []SignatureScheme
 	PSKModes                         []uint8
+	ALPNProtocols                    []string
+	SecureRenegotiationSupported     bool
+	KeyShareGroups                   []CurveID
+	EncryptedClientHelloOffered      bool
 
 	// ECHAccepted indicates if Encrypted Client Hello was offered by the client
 	// and accepted by the server. Currently, ECH is supported only on the

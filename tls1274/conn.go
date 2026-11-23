@@ -1682,6 +1682,14 @@ func (c *Conn) connectionStateLocked() ConnectionState {
 		copy(state.SupportedSignatureAlgorithms, c.clientHello.supportedSignatureAlgorithms)
 		state.PSKModes = make([]uint8, len(c.clientHello.pskModes))
 		copy(state.PSKModes, c.clientHello.pskModes)
+		state.ALPNProtocols = make([]string, len(c.clientHello.alpnProtocols))
+		copy(state.ALPNProtocols, c.clientHello.alpnProtocols)
+		state.SecureRenegotiationSupported = c.clientHello.secureRenegotiationSupported
+		state.KeyShareGroups = make([]CurveID, len(c.clientHello.keyShares))
+		for i, ks := range c.clientHello.keyShares {
+			state.KeyShareGroups[i] = ks.group
+		}
+		state.EncryptedClientHelloOffered = len(c.clientHello.encryptedClientHello) != 0
 	}
 	state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
 	state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected

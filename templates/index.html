@@ -290,6 +290,53 @@
             </section>
           </div>
           <div class="findings">
+            <section>
+              <h2>Server Name Indication</h2>
+              {{if .ServerNameSent}}
+              <p>Your client sent the name of this site in its handshake (SNI),
+                so servers that host many sites on one address know which
+                certificate to give it.</p>
+              {{else}}
+              <p>Your client did not send a server name in its handshake (SNI).
+                Servers that host many sites on one address can't tell which
+                site it wants. Clients connecting to an IP address leave the
+                name out on purpose.</p>
+              {{end}}
+              <p>This doesn't change your client's rating.</p>
+              <p><a href="/s/about.html/#server-name-indication">Learn More</a></p>
+            </section>
+            <section>
+              <h2>Secure Renegotiation</h2>
+              {{if .SecureRenegotiationSupported}}
+              <p>Your client said it supports secure renegotiation
+                (<a href="https://www.rfc-editor.org/rfc/rfc5746">RFC 5746</a>).
+              {{else}}
+              <p>Your client did not say it supports secure renegotiation
+                (<a href="https://www.rfc-editor.org/rfc/rfc5746">RFC 5746</a>).
+              {{end}}
+                That matters for TLS 1.2 and earlier. TLS 1.3 has no
+                renegotiation. This doesn't change your client's rating.</p>
+              <p><a href="/s/about.html/#secure-renegotiation">Learn More</a></p>
+            </section>
+            <section>
+              <h2>Encrypted Client Hello</h2>
+              {{if .EncryptedClientHelloOffered}}
+              <p>Your client sent the Encrypted Client Hello extension
+                (<a href="https://www.rfc-editor.org/rfc/rfc9849">RFC 9849</a>),
+                so it knows how to hide the name of the site it is visiting
+                from the network. How's My SSL can't tell whether it would have
+                done so here or sent a placeholder.
+              {{else}}
+              <p>Your client did not send the Encrypted Client Hello extension
+                (<a href="https://www.rfc-editor.org/rfc/rfc9849">RFC 9849</a>),
+                which lets a client hide the name of the site it is visiting
+                from the network.
+              {{end}}
+                This doesn't change your client's rating.</p>
+              <p><a href="/s/about.html/#encrypted-client-hello">Learn More</a></p>
+            </section>
+          </div>
+          <div class="findings">
             {{if .UnknownCipherSuiteSupported}}
             <section>
               <h2>Unknown Cipher Suites Supported</h2>
@@ -322,6 +369,21 @@
               <p><a href="/s/about.html/#given-named-groups">Learn More</a></p>
             </section>
             <section>
+              <h2>Given Key Shares</h2>
+              {{if .GivenKeyShareGroups}}
+              <p>The named groups your client sent a TLS 1.3 key share for, in
+              the order it sent them, are:</p>
+              <ul>
+                {{range .GivenKeyShareGroups}}
+                <li>{{.}}</li>
+                {{end}}
+              </ul>
+              {{else}}
+              <p>Your client didn't send any TLS 1.3 key shares.</p>
+              {{end}}
+              <p><a href="/s/about.html/#given-key-shares">Learn More</a></p>
+            </section>
+            <section>
               <h2>Given Signature Algorithms</h2>
               {{if .GivenSignatureAlgorithms}}
               <p>The signature algorithms your client said it supports, in the
@@ -335,6 +397,21 @@
               <p>Your client didn't send any signature algorithms.</p>
               {{end}}
               <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
+            </section>
+            <section>
+              <h2>Given ALPN Protocols</h2>
+              {{if .GivenALPNProtocols}}
+              <p>The application protocols your client offered (ALPN), in the
+              order it sent them, are:</p>
+              <ul>
+                {{range .GivenALPNProtocols}}
+                <li>{{.}}</li>
+                {{end}}
+              </ul>
+              {{else}}
+              <p>Your client didn't offer any application protocols (ALPN).</p>
+              {{end}}
+              <p><a href="/s/about.html/#given-alpn-protocols">Learn More</a></p>
             </section>
           </div>
       </main>
