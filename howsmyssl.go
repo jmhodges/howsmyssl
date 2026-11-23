@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
+	"net/url"
 	"os"
 	"os/signal"
 	"regexp"
@@ -601,10 +602,23 @@ type logHandler struct {
 	proto         string
 }
 
-// TODO(#537): use a real logging handler. This simple writer was made because
-// the Hijack we previously had in our handlers wouldn't let us use the typical
-// logging ones.
+// ServeHTTP runs the inner handler and then logs the request once, so that the
+// log line can include the response's status, size, and how long it took.
 func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	lw := &logResponseWriter{ResponseWriter: w}
+	// Handlers are allowed to change r.URL (commonRedirect does), so we copy
+	// it to log the URL that was actually requested.
+	requestURL := *r.URL
+	// The logging is deferred so that a request whose handler panics still
+	// gets a log line. We don't recover the panic; net/http handles that.
+	defer h.log(lw, r, &requestURL, start)
+	h.inner.ServeHTTP(lw, r)
+	lw.finished = true
+}
+
+func (h logHandler) log(lw *logResponseWriter, r *http.Request, requestURL *url.URL, start time.Time) {
+	duration := time.Since(start)
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = "0.0.0.0"
@@ -631,8 +645,56 @@ func (h logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		version := tlsConn.ConnectionState().Version
 		tlsVersion = actualSupportedVersions[version]
 	}
-	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", r.URL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto)
-	h.inner.ServeHTTP(w, r)
+	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", requestURL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto, "status", lw.loggedStatus(), "bytes", lw.bytes, "duration", duration)
+}
+
+// logResponseWriter records the status code and the number of body bytes the
+// handlers wrote so that logHandler can log them after the request is done.
+//
+// It deliberately implements only http.ResponseWriter and Unwrap. Code that
+// needs the optional interfaces of the underlying ResponseWriter (flushing,
+// deadlines, and so on) should use http.NewResponseController, which finds them
+// through Unwrap on both HTTP/1.1 and HTTP/2.
+type logResponseWriter struct {
+	http.ResponseWriter
+	status   int   // the first non-informational status code written, or 0
+	bytes    int64 // body bytes the handlers wrote (after gzip, if any)
+	finished bool  // the inner handler returned instead of panicking
+}
+
+func (lw *logResponseWriter) WriteHeader(statusCode int) {
+	// Informational (1xx) headers can be sent many times before the real
+	// status, except for 101 Switching Protocols which is final.
+	informational := statusCode >= 100 && statusCode <= 199 && statusCode != http.StatusSwitchingProtocols
+	if lw.status == 0 && !informational {
+		lw.status = statusCode
+	}
+	lw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (lw *logResponseWriter) Write(bs []byte) (int, error) {
+	if lw.status == 0 {
+		lw.status = http.StatusOK
+	}
+	n, err := lw.ResponseWriter.Write(bs)
+	lw.bytes += int64(n)
+	return n, err
+}
+
+// Unwrap returns the underlying http.ResponseWriter for the benefit of
+// http.ResponseController.
+func (lw *logResponseWriter) Unwrap() http.ResponseWriter {
+	return lw.ResponseWriter
+}
+
+// loggedStatus returns the status code to log. A handler that returns without
+// writing anything gets an implicit 200 from net/http. A handler that panics
+// before writing anything gets no response at all, which we log as 0.
+func (lw *logResponseWriter) loggedStatus() int {
+	if lw.status == 0 && lw.finished {
+		return http.StatusOK
+	}
+	return lw.status
 }
 
 // acmeRedirect is a string that represents the base URL (e.g.
