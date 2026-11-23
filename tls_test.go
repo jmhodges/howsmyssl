@@ -239,11 +239,18 @@ func TestSweet32(t *testing.T) {
 		0xC0B4, // TLS_SHA256_SHA256
 		0xC103, // TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L
 	} {
-		tests = append(tests, sweetTest{
+		st := sweetTest{
 			okay,
 			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls13CS, greaseCS},
 			map[string][]string{},
-		})
+		}
+		// An integrity-only suite has no encryption, which rates Bad on its
+		// own, but 3DES is still not flagged for Sweet32.
+		if tls13CS == 0xC0B4 {
+			st.rating = bad
+			st.expected = map[string][]string{"TLS_SHA256_SHA256": {nullReason}}
+		}
+		tests = append(tests, st)
 	}
 	// The GOST suites of RFC 9189 are TLS 1.2 suites, so 3DES before one of
 	// them is not last.
@@ -345,7 +352,10 @@ var newerMLKEMHybrids = []struct {
 func TestTLS13SuitesHasEveryTLS13ShapedName(t *testing.T) {
 	// Names with no "_WITH_" that are not TLS 1.3 suites.
 	notTLS13 := map[uint16]bool{
+		0x0080: true, // TLS_GOST94-GOST89-GOST89
 		0x0081: true, // TLS_GOST2001-GOST89-GOST89
+		0x0082: true, // TLS_GOST94-NULL-GOST94
+		0x0083: true, // TLS_GOST2001-NULL-GOST94
 		0xFF85: true, // TLS_GOST2012256-GOST89-GOST89
 		// A signal, not a suite. The server refuses a ClientHello that
 		// carries it below TLS 1.3, so it never reaches the Sweet32 check
