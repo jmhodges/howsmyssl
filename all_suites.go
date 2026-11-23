@@ -452,11 +452,47 @@ var metaCipherSuites = map[uint16]bool{
 	0x00FF: true,
 }
 
-// TLS 1.3 cipher suites
+// tls13Suites are the TLS 1.3 cipher suites: an AEAD and a hash, with the key
+// exchange and the authentication negotiated elsewhere. A TLS 1.2 handshake
+// can't use one, so where a client lists them says nothing about its TLS 1.2
+// preferences.
+//
+// TestTLS13SuitesHasEveryTLS13ShapedName fails when allCipherSuites gains a
+// name of that shape that isn't here.
 var tls13Suites = map[uint16]bool{
-	0x1301: true,
-	0x1302: true,
-	0x1303: true,
-	0x1304: true,
-	0x1305: true,
+	// RFC 8446
+	0x1301: true, // TLS_AES_128_GCM_SHA256
+	0x1302: true, // TLS_AES_256_GCM_SHA384
+	0x1303: true, // TLS_CHACHA20_POLY1305_SHA256
+	0x1304: true, // TLS_AES_128_CCM_SHA256
+	0x1305: true, // TLS_AES_128_CCM_8_SHA256
+
+	// AEGIS
+	0x1306: true, // TLS_AEGIS_256_SHA512
+	0x1307: true, // TLS_AEGIS_128L_SHA256
+
+	// Ascon
+	0x006E: true, // TLS_ASCONAEAD128_ASCONHASH256
+	0x006F: true, // TLS_ASCONAEAD128_SHA256
+	0x0070: true, // TLS_AES_128_GCM_ASCONHASH256
+	0x0071: true, // TLS_AES_128_CCM_ASCONHASH256
+
+	// The Belarusian suites. allCipherSuites doesn't name them yet.
+	0x0072: true, // TLS_BELT_CHE256_BELT_HASH
+	0x0073: true, // TLS_BASH_PRG_AE2561_BASH256
+
+	// RFC 8998, the ShangMi suites
+	0x00C6: true, // TLS_SM4_GCM_SM3
+	0x00C7: true, // TLS_SM4_CCM_SM3
+
+	// RFC 9150, integrity only
+	0xC0B4: true, // TLS_SHA256_SHA256
+	0xC0B5: true, // TLS_SHA384_SHA384
+
+	// RFC 9367, the GOST suites for TLS 1.3. 0xC100 to 0xC102 are RFC 9189's,
+	// for TLS 1.2.
+	0xC103: true, // TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L
+	0xC104: true, // TLS_GOSTR341112_256_WITH_MAGMA_MGM_L
+	0xC105: true, // TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_S
+	0xC106: true, // TLS_GOSTR341112_256_WITH_MAGMA_MGM_S
 }
