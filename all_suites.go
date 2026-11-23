@@ -368,7 +368,16 @@ var allCipherSuites = map[uint16]string{
 	0xD005: "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256",
 
 	// old ciphers
+	//
+	// The GOST names here are OpenSSL's own cipher names with "TLS_" in front.
+	// IANA's registry lists 0x0080 to 0x0083 as unassigned, and 0xFF85 is in
+	// its private use range. OpenSSL 1.0.x named all four of 0x0080 to 0x0083
+	// in ssl/s3_lib.c.
+	// OpenSSL 1.1.0 dropped the two GOST94 ones, 0x0080 and 0x0082.
+	0x0080: "TLS_GOST94-GOST89-GOST89",
 	0x0081: "TLS_GOST2001-GOST89-GOST89",
+	0x0082: "TLS_GOST94-NULL-GOST94",   // no encryption, see nullCipherSuites
+	0x0083: "TLS_GOST2001-NULL-GOST94", // no encryption, see nullCipherSuites
 	0xCC13: "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD",
 	0xCC14: "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256_OLD",
 	0xCC15: "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256_OLD",
