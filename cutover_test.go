@@ -195,9 +195,9 @@ func TestDecemberCutoverHandlers(t *testing.T) {
 				rating: bad,
 				want: []string{
 					`<span class="label bad">Bad</span> Your client does not support post-quantum key agreement.`,
-					`As of December 14th, 2026 at 10 AM PT, clients without post-quantum key agreement are marked as Bad.`,
+					`attacks. Clients without post-quantum key agreement are marked as Bad.`,
 				},
-				notWant: []string{`will be marked as Bad`, `will be marked as Improvable`},
+				notWant: []string{`will be marked as Bad`, `will be marked as Improvable`, `As of December 14th`},
 			},
 		},
 		{
@@ -217,9 +217,9 @@ func TestDecemberCutoverHandlers(t *testing.T) {
 				want: []string{
 					`<span class="label bad">Bad</span> Your client is using TLS 1.2.`,
 					`<span class="label bad">Bad</span> Your client does not support post-quantum key agreement.`,
-					`As of December 14th, 2026 at 10 AM PT, clients without post-quantum key agreement are marked as Bad.`,
+					`attacks. Clients without post-quantum key agreement are marked as Bad.`,
 				},
-				notWant: []string{`will be marked as Bad`, `will be marked as Improvable`},
+				notWant: []string{`will be marked as Bad`, `will be marked as Improvable`, `As of December 14th`},
 			},
 		},
 	}
