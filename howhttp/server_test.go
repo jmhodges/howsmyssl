@@ -252,7 +252,7 @@ func TestServer_FatalAcceptClosesRealListener(t *testing.T) {
 func TestServer_CloseForcesH2(t *testing.T) {
 	// Handler that blocks until the request context is cancelled — i.e.
 	// until the underlying h2 conn is torn down.
-	handlerEntered := make(chan struct{})
+	handlerEntered := make(chan struct{}, 1)
 	srv := howhttptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		select {
 		case handlerEntered <- struct{}{}:
