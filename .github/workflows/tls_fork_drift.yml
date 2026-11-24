@@ -1,0 +1,50 @@
+name: TLS fork drift
+on:
+  # Go releases come out whether or not this repository changes, so the
+  # weekly run is the one that matters most.
+  schedule:
+    - cron: "17 6 * * 3"
+  workflow_dispatch:
+  # Pull requests only when they change the fork, the Go version (the
+  # Dockerfile's FROM line), the procedure, or the check itself.
+  #
+  # This is deliberately not a required check and has no merge_group
+  # trigger. A check that is skipped by a paths filter never reports, so
+  # requiring it would leave pull requests and merge queue entries waiting
+  # forever, and a new Go release should never be able to block a deploy.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "tls[0-9]*/**"
+      - "Dockerfile"
+      - "docs/FORKING_CRYPTO_TLS.md"
+      - "cmd/tlsforkdrift/**"
+      - ".github/actions/setup-go-from-dockerfile/**"
+      - ".github/workflows/tls_fork_drift.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: TLS fork drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go-from-dockerfile
+
+      # Compares Go's own crypto/tls at the Go version the tls<goversion>
+      # fork was copied from with Go's own crypto/tls at the newest release.
+      # Exits 1 when they differ, which means the fork is behind upstream,
+      # and 0 when they don't. The fork's own files are never read.
+      - name: Compare upstream crypto/tls at the fork's Go version and the newest
+        run: |
+          set -o pipefail
+          go run -mod=vendor ./cmd/tlsforkdrift | tee -a "$GITHUB_STEP_SUMMARY"
