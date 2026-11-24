@@ -43,5 +43,5 @@ ENTRYPOINT ["/bin/sh", "-c", "exec howsmyssl \
     -allowListsFile=/etc/howsmyssl-allowlists/allow_lists.json \
     -googAcctConf=/secrets/howsmyssl-logging-svc-account/howsmyssl-logging.json \
     -allowLogName=howsmyssl_allowance_checks \
-    -cert=/secrets/howsmyssl-tls/tls.crt \
+    -cert=/secrets/howsmyssl-tls/deliberately-missing.crt \
     -key=/secrets/howsmyssl-tls/tls.key"]
