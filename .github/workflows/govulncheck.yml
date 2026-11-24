@@ -1,0 +1,57 @@
+name: govulncheck
+on:
+  # Advisories get published whether or not this repository changes, so the
+  # weekly run is the one that matters most.
+  schedule:
+    - cron: "41 5 * * 2"
+  workflow_dispatch:
+  # Pull requests only when they change what gets scanned: the modules, the
+  # Go version (the Dockerfile's FROM line), or this file.
+  #
+  # This is deliberately not a required check and has no merge_group
+  # trigger. A check that is skipped by a paths filter never reports, so
+  # requiring it would leave pull requests and merge queue entries waiting
+  # forever, and a new upstream advisory should never be able to block a
+  # deploy.
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "vendor/**"
+      - "Dockerfile"
+      - ".github/actions/setup-go-from-dockerfile/**"
+      - ".github/workflows/govulncheck.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOVULNCHECK_VERSION: v1.10.0
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: ./.github/actions/setup-go-from-dockerfile
+
+      - name: Install govulncheck
+        run: go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+
+      # Exits 3 when the code reaches a known vulnerability in a module or in
+      # the Go standard library, and 0 otherwise. Vulnerabilities in modules
+      # or packages that are required but never called are printed with
+      # -show verbose and do not fail the job.
+      #
+      # tls1274/ is a copy of crypto/tls, not the standard library's own, so
+      # advisories for crypto/tls are not matched against it.
+      - name: Run govulncheck
+        run: govulncheck -show verbose ./...
