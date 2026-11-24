@@ -120,9 +120,10 @@ jobs:
             and (.given_cipher_suites | length > 0)
           ' "$MOUNTS/report.json"
           # The home page is a template and /s/ is static files, both embedded
-          # in the binary.
-          get / | grep --quiet "Your SSL client is"
-          get /s/about.html | grep --quiet "</html>"
+          # in the binary. --count and not --quiet, which stops reading at the
+          # first match and makes curl fail on its closed pipe.
+          get / | grep --count "Your SSL client is"
+          get /s/about.html | grep --count "</html>"
 
       - name: Print the container's log
         if: always()
