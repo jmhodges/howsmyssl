@@ -211,6 +211,10 @@ func (oa *originAllower) countRequest(entry *apiLogEntry, r *http.Request, remot
 	}
 }
 
+// maxDomainLength is the longest a domain name can be when written out, by
+// RFC 1035's limit of 255 bytes on the wire. An IP address is shorter.
+const maxDomainLength = 253
+
 func effectiveDomain(str string) (string, string, error) {
 	if str == "localhost" {
 		return "localhost", "localhost", nil
@@ -226,6 +230,9 @@ func effectiveDomain(str string) (string, string, error) {
 	h2, _, err := net.SplitHostPort(host)
 	if err == nil {
 		host = h2
+	}
+	if len(host) > maxDomainLength {
+		return "", "", fmt.Errorf("host of %d bytes is too long to be a domain", len(host))
 	}
 	ip := net.ParseIP(host)
 	if ip != nil {
