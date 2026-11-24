@@ -3,3 +3,4 @@ gendevcerts/gendevcerts
 .vscode
 .claude/worktrees
 .claude/settings.local.json
+gha-creds-*.json
