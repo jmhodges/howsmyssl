@@ -358,6 +358,12 @@
           sometimes used to determine which cipher suite a client prefers, but
           TLS servers tend to choose their own preference of those cipher
           suites. No rating will be given in this section.</p>
+          <p>Each suite may carry a mark. "Forward Secrecy" means the suite
+          uses ephemeral keys, the same thing the
+          <a href="#ephemeral-key-support">Ephemeral Key Support</a> section
+          looks for. "Weak" means the suite is one of the
+          <a href="#insecure-cipher-suites">Insecure Cipher Suites</a>. The
+          marks only repeat what those sections found.</p>
 
           <h4 class="fragpadded" id="given-named-groups"><a class="anchor-link" href="#given-named-groups" aria-label="Link to Given Named Groups">#</a>Given Named Groups</h4>
           <p>This section is a list of the named groups that the client says it

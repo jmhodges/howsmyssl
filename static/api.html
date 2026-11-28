@@ -66,6 +66,24 @@
         "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
         "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA"
       ],
+      "given_cipher_suite_details": [
+        {"name": "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_RSA_WITH_AES_128_GCM_SHA256", "forward_secret": false, "weak": false, "weak_reasons": []},
+        {"name": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_DHE_RSA_WITH_AES_256_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_RSA_WITH_AES_256_CBC_SHA", "forward_secret": false, "weak": false, "weak_reasons": []},
+        {"name": "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA", "forward_secret": true, "weak": true, "weak_reasons": ["uses RC4 which has insecure biases in its output"]},
+        {"name": "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_DHE_RSA_WITH_AES_128_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_DHE_DSS_WITH_AES_128_CBC_SHA", "forward_secret": true, "weak": false, "weak_reasons": []},
+        {"name": "TLS_RSA_WITH_AES_128_CBC_SHA", "forward_secret": false, "weak": false, "weak_reasons": []},
+        {"name": "TLS_RSA_WITH_3DES_EDE_CBC_SHA", "forward_secret": false, "weak": true, "weak_reasons": ["uses 3DES which is vulnerable to the Sweet32 attack but was not configured as a fallback in the ciphersuite order"]},
+        {"name": "TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA", "forward_secret": true, "weak": true, "weak_reasons": ["uses keys smaller than 128 bits in its encryption"]}
+      ],
       "given_named_groups": [
         "x25519",
         "secp256r1",
@@ -113,7 +131,17 @@
             their meaning</a>. The source code
             that <a href="https://github.com/jmhodges/howsmyssl/blob/main/client_info.go">gathers
             the client info</a> may also be helpful. All strings
-            returned may contain HTML escaped text.
+            returned may contain HTML escaped text.</p>
+
+          <p><code>given_cipher_suite_details</code> has one entry for each
+            entry of <code>given_cipher_suites</code>, in the same
+            order. <code>forward_secret</code> is true for the suites
+            that make <code>ephemeral_keys_supported</code> true,
+            and <code>weak</code> is true for the suites
+            in <code>insecure_cipher_suites</code>,
+            with <code>weak_reasons</code> the reasons listed there. They
+            repeat what those fields say per suite, and don't change the
+            rating.
 
           </p><p>Let me be a little more explicit. How's My SSL is Open Source
             software and can

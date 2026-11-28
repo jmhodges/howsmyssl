@@ -292,10 +292,14 @@
               <p>The cipher suites your client said it supports, in the order it
                 sent them, are:</p>
               <ul>
-                {{range .GivenCipherSuites}}
-                <li>{{.}}</li>
+                {{range .GivenCipherSuiteDetails}}
+                <li>{{.Name}}{{if .ForwardSecret}} <span class="suite-mark okay">Forward Secrecy</span>{{end}}{{if .Weak}} <span class="suite-mark bad" title="This cipher suite {{sentence .WeakReasons}}">Weak</span>{{end}}</li>
                 {{end}}
               </ul>
+              <p>Suites marked Forward Secrecy use ephemeral keys. Suites
+                marked Weak are the ones listed as insecure above. The marks
+                repeat what the sections above found, and don't change your
+                rating.</p>
               <p><a href="/s/about.html/#given-cipher-suites">Learn More</a></p>
             </section>
             <section>

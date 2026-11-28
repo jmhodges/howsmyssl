@@ -353,6 +353,25 @@ pre {
   background-color: #D95F02;
 }
 
+/* Marks next to each given cipher suite. */
+
+.suite-mark {
+  padding: 0.1em 0.4em 0.15em;
+  font-size: 0.75em;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  border-radius: 0.25em;
+}
+
+.suite-mark.okay {
+  background-color: #1B9E77;
+}
+
+.suite-mark.bad {
+  background-color: #D95F02;
+}
+
 /* The about page. */
 
 .site-prose p {
@@ -415,7 +434,8 @@ pre {
     content: "";
   }
 
-  .label {
+  .label,
+  .suite-mark {
     border: 1px solid #000;
   }
 
