@@ -169,15 +169,10 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	vers := st.Version
 	d.TLSVersion = actualSupportedVersions[vers]
 
-	// Check TLS 1.3's supported_versions extension for the actual TLS version
-	// if it was passed in.
-	for _, v := range st.SupportedVersions {
-		maybeStr, found := actualSupportedVersions[v]
-		if found && v > vers {
-			vers = v
-			d.TLSVersion = maybeStr
-		}
-	}
+	// The client is reported and rated by the version it negotiated, and not
+	// by its supported_versions extension. This server negotiates the highest
+	// version that both sides have, so the only versions a client can list
+	// above that one are TLS 1.3 drafts, which no server finishes now.
 	if d.TLSVersion == "" {
 		d.TLSVersion = "an unknown version of SSL/TLS"
 	}
