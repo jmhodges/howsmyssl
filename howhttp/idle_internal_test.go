@@ -25,7 +25,7 @@ import (
 // the test below run on synctest's fake clock.
 type pipeListener struct {
 	conf  *tls.Config
-	stats *handshakeStats
+	stats *connStats
 	ch    chan net.Conn
 	done  chan struct{}
 	once  sync.Once
@@ -34,7 +34,7 @@ type pipeListener struct {
 func (l *pipeListener) Accept() (net.Conn, error) {
 	select {
 	case c := <-l.ch:
-		return &Conn{Conn: tls.Server(c, l.conf), handshakeStats: l.stats}, nil
+		return &Conn{Conn: tls.Server(c, l.conf), connStats: l.stats}, nil
 	case <-l.done:
 		return nil, net.ErrClosed
 	}
@@ -100,7 +100,7 @@ func TestServer_HTTP2ConnWithNoRequestIsClosed(t *testing.T) {
 				Certificates: []tls.Certificate{selfSignedCert(t)},
 				NextProtos:   []string{"h2", "http/1.1"},
 			},
-			stats: newHandshakeStats(new(expvar.Map).Init()),
+			stats: newConnStats(new(expvar.Map).Init()),
 			ch:    make(chan net.Conn),
 			done:  make(chan struct{}),
 		}
