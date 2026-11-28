@@ -11,7 +11,6 @@ import (
 	"crypto/elliptic"
 	"crypto/md5"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -21,6 +20,7 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/zmap/zcrypto/rsa"
 	"github.com/zmap/zcrypto/x509"
 )
 
@@ -160,12 +160,16 @@ func (ka *signedKeyAgreement) verifyParameters(config *Config, clientHello *clie
 			return digest, errors.New("ECDSA verification failure")
 		}
 	case signatureRSA:
-		pubKey, ok := cert.PublicKey.(*rsa.PublicKey)
-		if !ok {
+		if zPub, ok := cert.PublicKey.(*rsa.PublicKey); ok {
+			if err := rsa.VerifyPKCS1v15(zPub, hashFunc, digest, sig); err != nil {
+				return digest, err
+			}
+		} else if pubKey, ok := cert.PublicKey.(*rsa.PublicKey); ok {
+			if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, sig); err != nil {
+				return digest, err
+			}
+		} else {
 			return digest, errors.New("ECDHE RSA requires a RSA server public key")
-		}
-		if err := rsa.VerifyPKCS1v15(pubKey, hashFunc, digest, sig); err != nil {
-			return digest, err
 		}
 	case signatureDSA:
 		pubKey, ok := cert.PublicKey.(*dsa.PublicKey)
@@ -242,11 +246,12 @@ func (ka *rsaKeyAgreement) generateClientKeyExchange(config *Config, clientHello
 		return nil, nil, err
 	}
 
-	publicKey, ok := cert.PublicKey.(*rsa.PublicKey)
-	if !ok {
+	var encrypted []byte
+	if publicKey, ok := cert.PublicKey.(*rsa.PublicKey); ok {
+		encrypted, err = rsa.EncryptPKCS1v15(config.rand(), publicKey, preMasterSecret)
+	} else {
 		return nil, nil, errClientKeyExchange
 	}
-	encrypted, err := rsa.EncryptPKCS1v15(config.rand(), publicKey, preMasterSecret)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -318,10 +323,10 @@ func sha512Hash(slices [][]byte) []byte {
 
 // hashForServerKeyExchange hashes the given slices and returns their digest
 // using the given hash function (for >= TLS 1.2) or using a default based on
-// the sigType (for earlier TLS versions). For Ed25519 signatures, which don't
-// do pre-hashing, it returns the concatenation of the slices.
+// the sigType (for earlier TLS versions). For Ed25519 and ML-DSA signatures,
+// which don't do pre-hashing, it returns the concatenation of the slices.
 func hashForServerKeyExchange(sigType uint8, hashFunc crypto.Hash, version uint16, slices ...[]byte) []byte {
-	if sigType == signatureEd25519 {
+	if isDirectSigning(sigType) {
 		var signed []byte
 		for _, slice := range slices {
 			signed = append(signed, slice...)
@@ -385,10 +390,19 @@ type ecdheKeyAgreement struct {
 	verifyError error
 }
 
+func isTLS13OnlyKeyExchange(curveID CurveID) bool {
+	switch curveID {
+	case X25519MLKEM768, SecP256r1MLKEM768, SecP384r1MLKEM1024, MLKEM512, MLKEM768, MLKEM1024:
+		return true
+	default:
+		return false
+	}
+}
+
 func (ka *ecdheKeyAgreement) generateServerKeyExchange(config *Config, cert *Certificate, clientHello *clientHelloMsg, hello *serverHelloMsg) (*serverKeyExchangeMsg, error) {
 	var curveID CurveID
 	for _, c := range clientHello.supportedCurves {
-		if c == X25519MLKEM768 {
+		if isTLS13OnlyKeyExchange(c) {
 			continue // ML-KEM hybrid group is TLS 1.3 (key_share) only.
 		}
 		if config.supportsCurve(c) {
@@ -514,6 +528,10 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	}
 	curveID := CurveID(skx.key[1])<<8 | CurveID(skx.key[2])
 
+	if isTLS13OnlyKeyExchange(curveID) {
+		return errors.New("tls: server selected TLS 1.3-only key exchange group")
+	}
+
 	publicLen := int(skx.key[3])
 	if publicLen+4 > len(skx.key) {
 		return errServerKeyExchange
@@ -595,8 +613,14 @@ func (ka *ecdheKeyAgreement) processServerKeyExchange(config *Config, clientHell
 	case *signedKeyAgreement:
 		auth.raw = sig
 		auth.valid = ka.verifyError == nil
+		// ECDSA cipher suites can be authenticated with any non-RSA signature
+		// (ECDSA, Ed25519, ML-DSA), so log the type the server actually used
+		// instead of the one implied by the cipher suite.
+		if !ka.isRSA {
+			auth.sigType = sigType
+		}
 		auth.sh.Signature = sigType
-		auth.sh.Hash = uint8(sigHash)
+		auth.sh.Hash = tls12HashID(sigHash)
 	default:
 		break
 	}

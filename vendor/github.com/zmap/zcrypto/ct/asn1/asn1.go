@@ -90,7 +90,7 @@ func parseInt64(bytes []byte) (ret int64, err error) {
 		err = StructuralError{"integer too large"}
 		return
 	}
-	for bytesRead := 0; bytesRead < len(bytes); bytesRead++ {
+	for bytesRead := range bytes {
 		ret <<= 8
 		ret |= int64(bytes[bytesRead])
 	}
@@ -202,7 +202,7 @@ func (oi ObjectIdentifier) Equal(other ObjectIdentifier) bool {
 	if len(oi) != len(other) {
 		return false
 	}
-	for i := 0; i < len(oi); i++ {
+	for i := range oi {
 		if oi[i] != other[i] {
 			return false
 		}
@@ -211,14 +211,14 @@ func (oi ObjectIdentifier) Equal(other ObjectIdentifier) bool {
 	return true
 }
 func (oi ObjectIdentifier) String() string {
-	var s string
+	var s strings.Builder
 	for i, v := range oi {
 		if i > 0 {
-			s += "."
+			s.WriteString(".")
 		}
-		s += strconv.Itoa(v)
+		s.WriteString(strconv.Itoa(v))
 	}
-	return s
+	return s.String()
 }
 
 // parseObjectIdentifier parses an OBJECT IDENTIFIER from the given bytes and
@@ -430,7 +430,7 @@ func parseTagAndLength(bytes []byte, initOffset int) (ret tagAndLength, offset i
 			return
 		}
 		ret.length = 0
-		for i := 0; i < numBytes; i++ {
+		for range numBytes {
 			if offset >= len(bytes) {
 				err = SyntaxError{"truncated tag or length"}
 				return
@@ -504,14 +504,14 @@ func parseSequenceOf(bytes []byte, sliceType reflect.Type, elemType reflect.Type
 }
 
 var (
-	bitStringType        = reflect.TypeOf(BitString{})
-	objectIdentifierType = reflect.TypeOf(ObjectIdentifier{})
-	enumeratedType       = reflect.TypeOf(Enumerated(0))
+	bitStringType        = reflect.TypeFor[BitString]()
+	objectIdentifierType = reflect.TypeFor[ObjectIdentifier]()
+	enumeratedType       = reflect.TypeFor[Enumerated]()
 	flagType             = reflect.TypeOf(Flag(false))
-	timeType             = reflect.TypeOf(time.Time{})
-	rawValueType         = reflect.TypeOf(RawValue{})
-	rawContentsType      = reflect.TypeOf(RawContent(nil))
-	bigIntType           = reflect.TypeOf(new(big.Int))
+	timeType             = reflect.TypeFor[time.Time]()
+	rawValueType         = reflect.TypeFor[RawValue]()
+	rawContentsType      = reflect.TypeFor[RawContent]()
+	bigIntType           = reflect.TypeFor[*big.Int]()
 )
 
 // invalidLength returns true iff offset + length > sliceLength, or if the
@@ -612,7 +612,7 @@ func parseField(v reflect.Value, bytes []byte, initOffset int, params fieldParam
 			err = SyntaxError{"data truncated"}
 			return
 		}
-		var result interface{}
+		var result any
 		if !t.isCompound && t.class == classUniversal {
 			innerBytes := bytes[offset : offset+t.length]
 			switch t.tag {
@@ -951,13 +951,13 @@ func setDefaultValue(v reflect.Value, params fieldParameters) (ok bool) {
 //
 // Other ASN.1 types are not supported; if it encounters them,
 // Unmarshal returns a parse error.
-func Unmarshal(b []byte, val interface{}) (rest []byte, err error) {
+func Unmarshal(b []byte, val any) (rest []byte, err error) {
 	return UnmarshalWithParams(b, val, "")
 }
 
 // UnmarshalWithParams allows field parameters to be specified for the
 // top-level element. The form of the params is the same as the field tags.
-func UnmarshalWithParams(b []byte, val interface{}, params string) (rest []byte, err error) {
+func UnmarshalWithParams(b []byte, val any, params string) (rest []byte, err error) {
 	v := reflect.ValueOf(val).Elem()
 	offset, err := parseField(v, b, 0, parseFieldParameters(params))
 	if err != nil {

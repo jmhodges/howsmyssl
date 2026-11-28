@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
-	"crypto/rsa"
 	"crypto/subtle"
 	"encoding/binary"
 	"errors"
@@ -17,11 +16,15 @@ import (
 	"hash"
 	"io"
 	"net"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/zmap/zcrypto/rsa"
 	"github.com/zmap/zcrypto/x509"
+
+	"crypto/mldsa"
 )
 
 type clientHandshakeState struct {
@@ -171,7 +174,7 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 				}
 			}
 			if !found {
-				return nil, errors.New(fmt.Sprintf("tls: unimplemented cipher suite %d", suite))
+				return nil, fmt.Errorf("tls: unimplemented cipher suite %d", suite)
 			}
 		}
 
@@ -187,10 +190,10 @@ func (c *ClientFingerprintConfiguration) marshal(config *Config) ([]byte, error)
 	if len(c.CompressionMethods) > 0 {
 		copy(compressions[1:], c.CompressionMethods)
 		if c.CompressionMethods[0] != 0 {
-			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[0]))
+			return nil, fmt.Errorf("tls: unimplemented compression method %d", c.CompressionMethods[0])
 		}
 		if len(c.CompressionMethods) > 1 {
-			return nil, errors.New(fmt.Sprintf("tls: unimplemented compression method %d", c.CompressionMethods[1]))
+			return nil, fmt.Errorf("tls: unimplemented compression method %d", c.CompressionMethods[1])
 		}
 	} else {
 		return nil, errors.New("tls: no compression method")
@@ -245,12 +248,22 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, map[CurveID]tls13KeyShare, er
 		return nil, nil, errors.New("tls: no supported versions satisfy MinVersion and MaxVersion")
 	}
 
-	clientHelloVersion := config.maxSupportedVersion()
 	// The version at the beginning of the ClientHello was capped at TLS 1.2
 	// for compatibility reasons. The supported_versions extension is used
 	// to negotiate versions now. See RFC 8446, Section 4.2.1.
-	if clientHelloVersion > VersionTLS12 {
-		clientHelloVersion = VersionTLS12
+	clientHelloVersion := min(config.maxSupportedVersion(), VersionTLS12)
+
+	supportsTLS13 := supportedVersions[0] == VersionTLS13
+	curvePreferences := config.curvePreferences()
+	if !supportsTLS13 {
+		filtered := make([]CurveID, 0, len(curvePreferences))
+		for _, curve := range curvePreferences {
+			if isTLS13OnlyKeyExchange(curve) {
+				continue
+			}
+			filtered = append(filtered, curve)
+		}
+		curvePreferences = filtered
 	}
 
 	hello := &clientHelloMsg{
@@ -261,7 +274,7 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, map[CurveID]tls13KeyShare, er
 		ocspStapling:                 true,
 		scts:                         true,
 		serverName:                   hostnameInSNI(config.ServerName),
-		supportedCurves:              config.curvePreferences(),
+		supportedCurves:              curvePreferences,
 		supportedPoints:              []uint8{pointFormatUncompressed},
 		secureRenegotiationSupported: true,
 		alpnProtocols:                config.NextProtos,
@@ -311,21 +324,33 @@ func (c *Conn) makeClientHello() (*clientHelloMsg, map[CurveID]tls13KeyShare, er
 	}
 
 	var keySharesByGroup map[CurveID]tls13KeyShare
-	if hello.supportedVersions[0] == VersionTLS13 {
-		hello.cipherSuites = append(hello.cipherSuites, defaultCipherSuitesTLS13()...)
+	if supportsTLS13 {
+		if !config.ForceSuites {
+			// If ForceSuites == true, we've already appended the user's ciphers above
+			hello.cipherSuites = append(hello.cipherSuites, config.cipherSuitesTLS13()...)
+		}
 
-		prefs := config.curvePreferences()
+		prefs := curvePreferences
 		if len(prefs) == 0 {
 			return nil, nil, errors.New("tls: no supported key exchange mechanisms (no curve preferences)")
 		}
 
-		// By default, send a single key_share.
-		// If ML-KEM hybrid is explicitly enabled as the top preference, also send X25519 as fallback.
+		// By default, send a single key_share. If one of the hybrid PQ
+		// algorithms is explicitly enabled as the top preference, also
+		// send a fallback.
 		shareGroups := []CurveID{prefs[0]}
-		if prefs[0] == X25519MLKEM768 {
-			// Ensure compatibility with servers that don't support the hybrid group.
-			if prefs[0] != X25519 {
+		switch prefs[0] {
+		case X25519MLKEM768:
+			if slices.Contains(prefs, X25519) {
 				shareGroups = append(shareGroups, X25519)
+			}
+		case SecP256r1MLKEM768:
+			if slices.Contains(prefs, CurveP256) {
+				shareGroups = append(shareGroups, CurveP256)
+			}
+		case SecP384r1MLKEM1024:
+			if slices.Contains(prefs, CurveP384) {
+				shareGroups = append(shareGroups, CurveP384)
 			}
 		}
 
@@ -389,13 +414,7 @@ func (c *Conn) clientHandshake() (err error) {
 			cacheKey = c.config.ClientFingerprintConfiguration.CacheKey.Key(c.conn.RemoteAddr())
 			candidateSession, ok := sessionCache.Get(cacheKey)
 			if ok {
-				cipherSuiteOk := false
-				for _, id := range c.config.ClientFingerprintConfiguration.CipherSuites {
-					if id == candidateSession.cipherSuite {
-						cipherSuiteOk = true
-						break
-					}
-				}
+				cipherSuiteOk := slices.Contains(c.config.ClientFingerprintConfiguration.CipherSuites, candidateSession.cipherSuite)
 				versOk := candidateSession.vers >= c.config.minSupportedVersion() &&
 					candidateSession.vers <= c.config.ClientFingerprintConfiguration.HandshakeVersion
 				if versOk && cipherSuiteOk {
@@ -595,13 +614,7 @@ func (c *Conn) loadSession(hello *clientHelloMsg) (cacheKey string,
 	}
 
 	// Check that version used for the previous session is still valid.
-	versOk := false
-	for _, v := range hello.supportedVersions {
-		if v == session.vers {
-			versOk = true
-			break
-		}
-	}
+	versOk := slices.Contains(hello.supportedVersions, session.vers)
 	if !versOk {
 		return cacheKey, nil, nil, nil
 	}
@@ -990,7 +1003,7 @@ func (hs *clientHandshakeState) establishKeys() error {
 
 	clientMAC, serverMAC, clientKey, serverKey, clientIV, serverIV :=
 		keysFromMasterSecret(c.vers, hs.suite, hs.masterSecret, hs.hello.random, hs.serverHello.random, hs.suite.macLen, hs.suite.keyLen, hs.suite.ivLen)
-	var clientCipher, serverCipher interface{}
+	var clientCipher, serverCipher any
 	var clientHash, serverHash hash.Hash
 	if hs.suite.cipher != nil {
 		clientCipher = hs.suite.cipher(clientKey, clientIV, false /* not for reading */)
@@ -1201,7 +1214,7 @@ func (c *Conn) verifyServerCertificate(certificates [][]byte) error {
 	}
 
 	switch certs[0].PublicKey.(type) {
-	case *rsa.PublicKey, *x509.AugmentedECDSA, *ecdsa.PublicKey, ed25519.PublicKey:
+	case *rsa.PublicKey, *x509.AugmentedECDSA, *ecdsa.PublicKey, ed25519.PublicKey, *mldsa.PublicKey:
 		break
 	default:
 		c.sendAlert(AlertUnsupportedCertificate)
@@ -1278,7 +1291,7 @@ func certificateRequestInfoFromMsg(vers uint16, certReq *certificateRequestMsg) 
 			continue
 		}
 		switch sigType {
-		case signatureECDSA, signatureEd25519:
+		case signatureECDSA, signatureEd25519, signatureMLDSA44, signatureMLDSA65, signatureMLDSA87:
 			if ecAvail {
 				cri.SignatureSchemes = append(cri.SignatureSchemes, sigScheme)
 			}
@@ -1321,10 +1334,8 @@ func clientSessionCacheKey(serverAddr net.Addr, config *Config) string {
 // protocols and a list of the preference order.
 func mutualProtocol(protos, preferenceProtos []string) string {
 	for _, s := range preferenceProtos {
-		for _, c := range protos {
-			if s == c {
-				return s
-			}
+		if slices.Contains(protos, s) {
+			return s
 		}
 	}
 	return ""

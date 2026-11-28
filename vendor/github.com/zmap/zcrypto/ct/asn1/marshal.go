@@ -573,7 +573,7 @@ func marshalField(out *forkableWriter, v reflect.Value, params fieldParameters) 
 }
 
 // Marshal returns the ASN.1 encoding of val.
-func Marshal(val interface{}) ([]byte, error) {
+func Marshal(val any) ([]byte, error) {
 	var out bytes.Buffer
 	v := reflect.ValueOf(val)
 	f := newForkableWriter()

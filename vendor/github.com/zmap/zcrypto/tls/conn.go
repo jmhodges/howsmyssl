@@ -16,6 +16,7 @@ import (
 	"hash"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -167,16 +168,16 @@ func (c *Conn) NetConn() net.Conn {
 type halfConn struct {
 	sync.Mutex
 
-	err     error       // first permanent error
-	version uint16      // protocol version
-	cipher  interface{} // cipher algorithm
+	err     error  // first permanent error
+	version uint16 // protocol version
+	cipher  any    // cipher algorithm
 	mac     hash.Hash
 	seq     [8]byte // 64-bit sequence number
 
 	scratchBuf [13]byte // to avoid allocs; interface method args escape
 
-	nextCipher interface{} // next encryption state
-	nextMac    hash.Hash   // next MAC algorithm
+	nextCipher any       // next encryption state
+	nextMac    hash.Hash // next MAC algorithm
 
 	trafficSecret []byte // current TLS 1.3 traffic secret
 }
@@ -201,7 +202,7 @@ func (hc *halfConn) setErrorLocked(err error) error {
 
 // prepareCipherSpec sets the encryption and MAC states
 // that a subsequent changeCipherSpec will use.
-func (hc *halfConn) prepareCipherSpec(version uint16, cipher interface{}, mac hash.Hash) {
+func (hc *halfConn) prepareCipherSpec(version uint16, cipher any, mac hash.Hash) {
 	hc.version = version
 	hc.nextCipher = cipher
 	hc.nextMac = mac
@@ -285,13 +286,9 @@ func extractPadding(payload []byte) (toRemove int, good byte) {
 	good = byte(int32(^t) >> 31)
 
 	// The maximum possible padding length plus the actual length field
-	toCheck := 256
-	// The length of the padded data is public, so we can use an if here
-	if toCheck > len(payload) {
-		toCheck = len(payload)
-	}
+	toCheck := min(256, len(payload))
 
-	for i := 0; i < toCheck; i++ {
+	for i := range toCheck {
 		t := uint(paddingLen) - uint(i)
 		// if i <= paddingLen then the MSB of t is zero
 		mask := byte(int32(^t) >> 31)
@@ -410,9 +407,9 @@ func (hc *halfConn) decrypt(record []byte) ([]byte, recordType, error) {
 				return nil, 0, AlertRecordOverflow
 			}
 			// Remove padding and find the ContentType scanning from the end.
-			for i := len(plaintext) - 1; i >= 0; i-- {
-				if plaintext[i] != 0 {
-					typ = recordType(plaintext[i])
+			for i, p := range slices.Backward(plaintext) {
+				if p != 0 {
+					typ = recordType(p)
 					plaintext = plaintext[:i]
 					break
 				}
@@ -909,10 +906,7 @@ func (c *Conn) maxPayloadSizeForWrite(typ recordType) int {
 		return maxPlaintext // avoid overflow in multiply below
 	}
 
-	n := payloadBytes * int(pkt+1)
-	if n > maxPlaintext {
-		n = maxPlaintext
-	}
+	n := min(payloadBytes*int(pkt+1), maxPlaintext)
 	return n
 }
 
@@ -941,7 +935,7 @@ func (c *Conn) flush() (int, error) {
 
 // outBufPool pools the record-sized scratch buffers used by writeRecordLocked.
 var outBufPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new([]byte)
 	},
 }
@@ -1017,7 +1011,7 @@ func (c *Conn) WriteRecord(typ recordType, data []byte) (int, error) {
 
 // readHandshake reads the next handshake message from
 // the record layer.
-func (c *Conn) readHandshake() (interface{}, error) {
+func (c *Conn) readHandshake() (any, error) {
 	for c.hand.Len() < 4 {
 		if err := c.readRecord(); err != nil {
 			return nil, err
@@ -1432,10 +1426,10 @@ func (c *Conn) handshake(ctx context.Context) (ret error) {
 	defer cancel()
 
 	// TODO This is pulled from a newer version of crypto/TLS with quic support which we lack. Commenting out for now.
-	//if c.quic != nil {
+	// if c.quic != nil {
 	//	c.quic.cancelc = handshakeCtx.Done()
 	//	c.quic.cancel = cancel
-	//} else if ctx.Done() != nil {
+	// } else if ctx.Done() != nil {
 	if ctx.Done() != nil {
 		// Start the "interrupter" goroutine, if this context might be canceled.
 		// (The background context cannot).
@@ -1469,7 +1463,7 @@ func (c *Conn) handshake(ctx context.Context) (ret error) {
 	// TODO: c.handshakeFn() gives a race condition in ZGrab2
 	// using explicit calls here instead
 
-	//c.handshakeErr = c.handshakeFn()
+	// c.handshakeErr = c.handshakeFn()
 	if c.isClient {
 		c.handshakeErr = c.clientHandshake()
 	} else {
