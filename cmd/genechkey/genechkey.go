@@ -8,6 +8,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -35,11 +36,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("unable to create %s: %s", *out, err)
 	}
-	if _, err := f.Write(keyFile); err != nil {
-		f.Close()
-		log.Fatalf("unable to write %s: %s", *out, err)
-	}
-	if err := f.Close(); err != nil {
+	_, writeErr := f.Write(keyFile)
+	closeErr := f.Close()
+	if err := errors.Join(writeErr, closeErr); err != nil {
 		log.Fatalf("unable to write %s: %s", *out, err)
 	}
 	fmt.Println(base64.StdEncoding.EncodeToString(configList))
