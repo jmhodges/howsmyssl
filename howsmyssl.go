@@ -307,6 +307,9 @@ func tlsMux(routeHost, redirectHost, acmeRedirectURL string, staticHandler http.
 	})
 	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Strict-Transport-Security", hstsHeaderValue)
+		// Every response says what it is in Content-Type, so a browser
+		// has no reason to guess at it from the body.
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 
 		// We always disconnect folks after their request is done to ensure
 		// we don't keep our tls.Conn fork with it's extra large memory
@@ -440,6 +443,9 @@ func defaultResponseHeaders(h http.Header, _r *http.Request, contentType string)
 	h.Set("Content-Type", contentType)
 	// Allow CORS requests from any domain, for easy API access
 	h.Set("Access-Control-Allow-Origin", "*")
+	// These responses describe the one connection they were sent on, so
+	// a copy kept by a browser or a proxy is wrong for any other.
+	h.Set("Cache-Control", "no-store")
 }
 
 func response500(w http.ResponseWriter, r *http.Request) {
@@ -449,6 +455,7 @@ func response500(w http.ResponseWriter, r *http.Request) {
 }
 
 func healthcheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
 	w.Write([]byte("ok"))
 }
