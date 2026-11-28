@@ -5,3 +5,4 @@ Dockerfile
 .dockerignore
 README.md
 LICENSE
+gha-creds-*.json
