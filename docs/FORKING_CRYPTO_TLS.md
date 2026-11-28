@@ -84,6 +84,10 @@ The copied `tls12` and `tls13` KDF packages import FIPS-module internals that
 don't exist outside `GOROOT`. Rewrite them to the public standard library and
 strip the FIPS service-indicator bookkeeping:
 
+* **`cast.go`** (in both packages): delete it. It is the FIPS power-on
+  self-test, registered through `crypto/internal/fips140` and
+  `crypto/internal/fips140/check`, which are unreachable outside `GOROOT`.
+  Each package keeps only its one KDF file.
 * **`internal/fips140/tls13/tls13.go`**
   * `crypto/internal/fips140/hkdf` → `crypto/hkdf`
   * `crypto/internal/fips140deps/byteorder` → `encoding/binary`
@@ -101,6 +105,8 @@ strip the FIPS service-indicator bookkeeping:
     `func() H` directly, so wrap it: `hmac.New(func() hash.Hash { return h() }, secret)`.
     Rename the local hmac variable from `h` to `mac` to avoid colliding with the
     renamed `h` hash constructor.
+  * Drop the "allowed by SP 800-135" half of the `PRF` and `MasterSecret` doc
+    comments, as with the FIPS IG comments in `tls13.go`.
 
 ### A5. De-internalize `cipher_suites.go`
 
