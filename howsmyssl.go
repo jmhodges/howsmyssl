@@ -203,6 +203,8 @@ func main() {
 		log.Fatalf("unable to create custom TLS HTTPS server: %s", err)
 	}
 
+	shutdownQUIC := startQUIC(*quicAddr, tlsConf.GetCertificate, m)
+
 	httpSrv := &http.Server{
 		Handler:      plaintextMux(redirectHost, requestLogger),
 		ReadTimeout:  10 * time.Second,
@@ -243,6 +245,7 @@ func main() {
 			log.Printf("error shutting down HTTP: %s", err)
 		}
 	}()
+	shutdownQUIC(ctx)
 	wg.Wait()
 	cancel()
 	gclog.Flush()
@@ -413,6 +416,10 @@ func handleTLSClientInfo(w http.ResponseWriter, r *http.Request, statuses *statu
 	// avoid needing to do a bunch of connection management and HTTP response
 	// formatting ourselves.
 	w = &statWriter{w: w, stats: statuses}
+	if qh, ok := quicHelloFromContext(r.Context()); ok {
+		writeClientInfo(w, r, pullQUICClientInfo(qh, time.Now()), render)
+		return
+	}
 	tc, ok := howhttp.SmuggledConn(r.Context())
 	if !ok {
 		log.Printf("handleTLSClientInfo: unable to retrieve smuggled *tls.Conn from request context")
@@ -646,6 +653,8 @@ func (h logHandler) log(lw *logResponseWriter, r *http.Request, requestURL *url.
 	if ok && tlsConn != nil {
 		version := tlsConn.ConnectionState().Version
 		tlsVersion = actualSupportedVersions[version]
+	} else if qh, ok := quicHelloFromContext(r.Context()); ok {
+		tlsVersion = actualSupportedVersions[qh.Version]
 	}
 	h.requestLogger.InfoContext(r.Context(), "request", "host", host, "proto", proto, "requestURL", requestURL, "referrerHeader", referrer, "originHeader", origin, "userAgent", userAgent, "tlsVersion", tlsVersion, "httpVersion", r.Proto, "status", lw.loggedStatus(), "bytes", lw.bytes, "duration", duration)
 }
