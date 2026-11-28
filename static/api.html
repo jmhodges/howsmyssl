@@ -122,6 +122,19 @@
             <a href="https://github.com/jmhodges/howsmyssl#readme">README</a>.
           </p>
 
+          <h3 id="quic">Over QUIC and HTTP/3</h3>
+          <p>When the API is reached over HTTP/3, the answer has one more
+            key, <code>"transport": "QUIC"</code>. Answers over TCP leave it
+            out. QUIC carries only TLS 1.3, so a QUIC client can't be made
+            to use what only older TLS versions have, whatever else its
+            ClientHello lists. Over QUIC, <code>beast_vuln</code>,
+            <code>tls_compression_supported</code>,
+            <code>unknown_cipher_suite_supported</code> and
+            <code>able_to_detect_n_minus_one_splitting</code> are always
+            false, <code>insecure_cipher_suites</code> is always empty, and
+            <code>rating</code> rests on what TLS 1.3 leaves to the client,
+            its key agreement above all.</p>
+
           <h3 id="tlsversion">Just Need the TLS Version?</h3>
           <p>If all you need is the TLS version of the client, the preferred
             way to get it

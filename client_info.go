@@ -41,6 +41,7 @@ type clientInfo struct {
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
+	Transport                      string              `json:"transport,omitempty"` // "QUIC" over HTTP/3, left out over TCP
 	TLS12ImprovableCutoverPassed   bool                `json:"-"`
 	TLS12BadCutoverPassed          bool                `json:"-"`
 	NoPQImprovableCutoverPassed    bool                `json:"-"`
