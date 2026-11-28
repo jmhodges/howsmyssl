@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -74,29 +75,13 @@ func generateCACert(dir string) (*x509.Certificate, *rsa.PrivateKey, error) {
 		return nil, nil, fmt.Errorf("parse ca failed: %s", err)
 	}
 
-	certOut, err := os.Create(filepath.Join(dir, "development_ca_cert.pem"))
-	if err != nil {
-		return nil, nil, fmt.Errorf("create ca cert pem failed: %s", err)
-	}
-	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes}); err != nil {
-		certOut.Close()
-		return nil, nil, fmt.Errorf("encode ca cert pem failed: %s", err)
-	}
-	if err := certOut.Close(); err != nil {
-		return nil, nil, fmt.Errorf("close ca cert pem failed: %s", err)
+	if err := writePEM(filepath.Join(dir, "development_ca_cert.pem"), 0644, &pem.Block{Type: "CERTIFICATE", Bytes: caBytes}); err != nil {
+		return nil, nil, fmt.Errorf("write ca cert pem failed: %w", err)
 	}
 	log.Println("written development_ca_cert.pem")
 
-	keyOut, err := os.OpenFile(filepath.Join(dir, "development_ca_key.pem"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return nil, nil, fmt.Errorf("create ca key pem failed: %s", err)
-	}
-	if err := pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
-		keyOut.Close()
-		return nil, nil, fmt.Errorf("encode ca key pem failed: %s", err)
-	}
-	if err := keyOut.Close(); err != nil {
-		return nil, nil, fmt.Errorf("close ca key pem failed: %s", err)
+	if err := writePEM(filepath.Join(dir, "development_ca_key.pem"), 0600, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
+		return nil, nil, fmt.Errorf("write ca key pem failed: %w", err)
 	}
 	log.Println("written development_ca_key.pem")
 
@@ -134,20 +119,28 @@ func generateLeafCert(dir string, caCert *x509.Certificate, caKey *rsa.PrivateKe
 		return err
 	}
 
-	certOut, err := os.Create(filepath.Join(dir, "development_cert.pem"))
-	if err != nil {
-		return err
+	if err := writePEM(filepath.Join(dir, "development_cert.pem"), 0644, &pem.Block{Type: "CERTIFICATE", Bytes: cert_b}); err != nil {
+		return fmt.Errorf("write cert pem failed: %w", err)
 	}
-
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: cert_b})
-	certOut.Close()
 	log.Println("written development_cert.pem")
 
-	keyOut, err := os.OpenFile(filepath.Join(dir, "development_key.pem"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err := writePEM(filepath.Join(dir, "development_key.pem"), 0600, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}); err != nil {
+		return fmt.Errorf("write key pem failed: %w", err)
+	}
+	log.Println("written development_key.pem")
+	return nil
+}
+
+// writePEM writes block to path, truncating any file already there. It
+// returns the error from Close as well as from Encode, since a failed Close
+// on a writable file can mean the PEM never made it to disk.
+func writePEM(path string, perm os.FileMode, block *pem.Block) (err error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
-	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	log.Println("written development_key.pem")
-	return keyOut.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
+	return pem.Encode(f, block)
 }
