@@ -252,6 +252,81 @@ func TestSweet32(t *testing.T) {
 	}
 }
 
+// TestSweet32FallbackSCSV checks that TLS_FALLBACK_SCSV (RFC 7507) is treated
+// like the other signalling values in the Sweet32 check: it is not a cipher
+// suite, so 3DES suites followed only by it are still last in the client's
+// preference order.
+func TestSweet32FallbackSCSV(t *testing.T) {
+	const (
+		greaseCS   = 0x0A0A
+		renegCS    = 0x00FF
+		fallbackCS = 0x5600
+	)
+	// The server refuses a client that sends TLS_FALLBACK_SCSV with a version
+	// lower than the server's highest. The zcrypto/tls client stops at TLS
+	// 1.2, so the server here does, too.
+	tls12ServerConf := serverConf.Clone()
+	tls12ServerConf.MaxVersion = tls.VersionTLS12
+
+	tests := []struct {
+		name     string
+		rating   rating
+		suites   []uint16
+		expected map[string][]string
+	}{
+		{
+			"3DESThenFallback",
+			okay,
+			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, fallbackCS},
+			map[string][]string{},
+		},
+		{
+			"3DESThenOtherSignalsAndFallback",
+			okay,
+			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, ztls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, greaseCS, renegCS, fallbackCS},
+			map[string][]string{},
+		},
+		{
+			"3DESThenRealSuiteThenFallback",
+			bad,
+			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, fallbackCS},
+			map[string][]string{
+				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": {sweet32Reason},
+			},
+		},
+		{
+			"3DESThenFallbackThenRealSuite",
+			bad,
+			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, fallbackCS, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA},
+			map[string][]string{
+				"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": {sweet32Reason},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			clientConf := &ztls.Config{
+				MaxVersion:   ztls.VersionTLS12,
+				CipherSuites: tc.suites,
+				ForceSuites:  true,
+			}
+			c := connectZtlsTo(t, clientConf, tls12ServerConf)
+			ci := pullClientInfo(c, preCutover)
+			t.Logf("%#v", ci)
+
+			if ci.Rating != tc.rating {
+				t.Errorf("rating: want %s, got %s", tc.rating, ci.Rating)
+			}
+			if len(ci.GivenCipherSuites) != len(tc.suites) {
+				t.Errorf("num cipher suites given: want %d, got %d (%v)", len(tc.suites), len(ci.GivenCipherSuites), ci.GivenCipherSuites)
+			}
+			if !cmp.Equal(tc.expected, ci.InsecureCipherSuites) {
+				t.Errorf("insecure cipher suites found: want %s, got %s", tc.expected, ci.InsecureCipherSuites)
+			}
+		})
+	}
+}
+
 // TestRegisteredSuitesAreKnown checks that cipher suites IANA has registered
 // are named by allCipherSuites. A registered suite missing from that table is
 // reported as "Some unknown cipher suite", which alone rates the client Bad.
@@ -947,6 +1022,11 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 }
 
 func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {
+	return connectZtlsTo(t, clientConf, serverConf)
+}
+
+// connectZtlsTo is connectZtls against a server with the given config.
+func connectZtlsTo(t *testing.T, clientConf *ztls.Config, serverConf *tls.Config) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
