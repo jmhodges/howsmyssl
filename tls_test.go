@@ -160,6 +160,12 @@ func TestOffersTLS13Handshake(t *testing.T) {
 		// And TLS 1.3 can't be negotiated without a TLS 1.3 suite.
 		{"TLS13VersionNoSuite", []uint16{rsaAES128GCM, emptyRenegoSCSV}, []uint16{tls.VersionTLS13, tls.VersionTLS12}, false},
 		{"Nothing", nil, nil, false},
+		// The TLS 1.3 suites registered after RFC 8446's five count too.
+		{"SM4SuiteAndVersion", []uint16{0x00C6}, []uint16{tls.VersionTLS13}, true},
+		{"AEGISSuiteAndVersion", []uint16{0x1307}, []uint16{tls.VersionTLS13}, true},
+		{"GOSTMGMSuiteAndVersion", []uint16{0xC103}, []uint16{tls.VersionTLS13}, true},
+		// The GOST suites of RFC 9189 are TLS 1.2 suites.
+		{"GOSTTLS12SuiteAndVersion", []uint16{0xC100}, []uint16{tls.VersionTLS13}, false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -222,6 +228,39 @@ func TestSweet32(t *testing.T) {
 			map[string][]string{},
 		},
 	}
+	// A TLS 1.3 suite after 3DES doesn't make 3DES any less of a fallback,
+	// whichever TLS 1.3 suite it is: one for each document that registered
+	// some.
+	for _, tls13CS := range []uint16{
+		0x1301, // TLS_AES_128_GCM_SHA256
+		0x006E, // TLS_ASCONAEAD128_ASCONHASH256
+		0x00C6, // TLS_SM4_GCM_SM3
+		0x1306, // TLS_AEGIS_256_SHA512
+		0xC0B4, // TLS_SHA256_SHA256
+		0xC103, // TLS_GOSTR341112_256_WITH_KUZNYECHIK_MGM_L
+	} {
+		st := sweetTest{
+			okay,
+			[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, tls13CS, greaseCS},
+			map[string][]string{},
+		}
+		// An integrity-only suite has no encryption, which rates Bad on its
+		// own, but 3DES is still not flagged for Sweet32.
+		if tls13CS == 0xC0B4 {
+			st.rating = bad
+			st.expected = map[string][]string{"TLS_SHA256_SHA256": {nullReason}}
+		}
+		tests = append(tests, st)
+	}
+	// The GOST suites of RFC 9189 are TLS 1.2 suites, so 3DES before one of
+	// them is not last.
+	tests = append(tests, sweetTest{
+		bad,
+		[]uint16{ztls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305, ztls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, 0xC100},
+		map[string][]string{
+			"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA": {sweet32Reason},
+		},
+	})
 	for i, st := range tests {
 		t.Run(strconv.Itoa(i),
 			func(t *testing.T) {
@@ -304,6 +343,38 @@ var newerMLKEMHybrids = []struct {
 	{"MLKEM512X25519", 0x11ea},
 	{"curveSM2MLKEM768", 0x11ee},
 	{"MLKEM1024X448", 0x11ef},
+}
+
+// TLS 1.3 cipher suite names are an AEAD and a hash, with no "_WITH_", so a
+// name of that shape that tls13Suites lacks is most likely a TLS 1.3 suite
+// that a refresh of allCipherSuites brought in. This fails until someone
+// decides where it belongs.
+func TestTLS13SuitesHasEveryTLS13ShapedName(t *testing.T) {
+	// Names with no "_WITH_" that are not TLS 1.3 suites.
+	notTLS13 := map[uint16]bool{
+		0x0080: true, // TLS_GOST94-GOST89-GOST89
+		0x0081: true, // TLS_GOST2001-GOST89-GOST89
+		0x0082: true, // TLS_GOST94-NULL-GOST94
+		0x0083: true, // TLS_GOST2001-NULL-GOST94
+		0xFF85: true, // TLS_GOST2012256-GOST89-GOST89
+		// A signal, not a suite. The server refuses a ClientHello that
+		// carries it below TLS 1.3, so it never reaches the Sweet32 check
+		// behind a 3DES suite that matters.
+		0x5600: true, // TLS_FALLBACK_SCSV
+	}
+	for ci, name := range allCipherSuites {
+		if strings.Contains(name, "_WITH_") || metaCipherSuites[ci] || notTLS13[ci] {
+			continue
+		}
+		if !tls13Suites[ci] {
+			t.Errorf("%#04x %s: named like a TLS 1.3 cipher suite, but not in tls13Suites", ci, name)
+		}
+	}
+	for ci := range tls13Suites {
+		if metaCipherSuites[ci] {
+			t.Errorf("%#04x: in both tls13Suites and metaCipherSuites", ci)
+		}
+	}
 }
 
 func TestPostQuantumDetection(t *testing.T) {
