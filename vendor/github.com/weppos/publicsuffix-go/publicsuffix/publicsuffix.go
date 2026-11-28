@@ -20,7 +20,7 @@ const (
 	// Version identifies the current library version.
 	// This is a pro forma convention given that Go dependencies
 	// tends to be fetched directly from the repo.
-	Version = "0.50.3"
+	Version = "0.50.4"
 
 	// NormalType represents a normal rule such as "com"
 	NormalType = 1
@@ -177,10 +177,13 @@ Scanning:
 			var rule *Rule
 			var err error
 
+			// The list format reads a rule line only up to its first whitespace.
+			content := strings.Fields(line)[0]
+
 			if options.ASCIIEncoded {
-				rule, err = NewRule(line)
+				rule, err = NewRule(content)
 			} else {
-				rule, err = NewRuleUnicode(line)
+				rule, err = NewRuleUnicode(content)
 			}
 			if err != nil {
 				return []Rule{}, err

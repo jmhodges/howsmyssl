@@ -1,7 +1,7 @@
 # cloud.google.com/go v0.123.0
 ## explicit; go 1.24.0
 cloud.google.com/go
-# cloud.google.com/go/auth v0.24.4
+# cloud.google.com/go/auth v0.24.5
 ## explicit; go 1.26.0
 cloud.google.com/go/auth
 cloud.google.com/go/auth/credentials
@@ -103,7 +103,7 @@ github.com/googleapis/gax-go/v2/internallog
 github.com/googleapis/gax-go/v2/internallog/grpclog
 github.com/googleapis/gax-go/v2/internallog/internal
 github.com/googleapis/gax-go/v2/iterator
-# github.com/weppos/publicsuffix-go v0.50.3
+# github.com/weppos/publicsuffix-go v0.50.4
 ## explicit; go 1.24.0
 github.com/weppos/publicsuffix-go/publicsuffix
 # github.com/zmap/zcrypto v0.0.0-20260413215825-aacf0e34cc16 => github.com/jmhodges/zcrypto v0.0.0-20260424220243-a45e613e1b4b
@@ -223,7 +223,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.16.0
 ## explicit; go 1.26.0
 golang.org/x/time/rate
-# google.golang.org/api v0.316.0
+# google.golang.org/api v0.317.0
 ## explicit; go 1.26.0
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
@@ -238,10 +238,10 @@ google.golang.org/api/option/internaloption
 google.golang.org/api/support/bundler
 google.golang.org/api/transport/grpc
 google.golang.org/api/transport/http
-# google.golang.org/genproto v0.0.0-20261118221215-c8830f628b3f
+# google.golang.org/genproto v0.0.0-20261123191846-1e707ab9fbc2
 ## explicit; go 1.26.0
 google.golang.org/genproto/googleapis/logging/type
-# google.golang.org/genproto/googleapis/api v0.0.0-20261118221215-c8830f628b3f
+# google.golang.org/genproto/googleapis/api v0.0.0-20261123191846-1e707ab9fbc2
 ## explicit; go 1.26.0
 google.golang.org/genproto/googleapis/api
 google.golang.org/genproto/googleapis/api/annotations
@@ -249,7 +249,7 @@ google.golang.org/genproto/googleapis/api/distribution
 google.golang.org/genproto/googleapis/api/label
 google.golang.org/genproto/googleapis/api/metric
 google.golang.org/genproto/googleapis/api/monitoredres
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20261118221215-c8830f628b3f
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20261123191846-1e707ab9fbc2
 ## explicit; go 1.26.0
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
