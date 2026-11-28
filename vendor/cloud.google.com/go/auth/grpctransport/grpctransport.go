@@ -85,6 +85,9 @@ var codeToStr = [...]string{
 var (
 	// Set at init time by dial_socketopt.go. If nil, socketopt is not supported.
 	timeoutDialerOption grpc.DialOption
+
+	// Assign to var for unit test replacement.
+	grpcDialContext = grpc.DialContext
 )
 
 // ClientCertProvider is a function that returns a TLS client certificate to be
@@ -227,6 +230,10 @@ type InternalOptions struct {
 	EnableDirectPathXds bool
 	// EnableDirectPathXdsOverInterconnect enables DirectPath over Google Cloud
 	// Interconnect (on-premises xDS name resolution via google-c2p with force-xds).
+	// The channel negotiates TLS rather than ALTS, which is unavailable outside
+	// Google Cloud. Application Default Credentials must still be configured
+	// because the google-c2p resolver uses them for its connection to the control
+	// plane.
 	EnableDirectPathXdsOverInterconnect bool
 	// EnableJWTWithScope specifies if scope can be used with self-signed JWT.
 	EnableJWTWithScope bool
@@ -292,7 +299,7 @@ func dial(ctx context.Context, secure bool, opts *Options) (*grpc.ClientConn, er
 		Endpoint:           opts.Endpoint,
 		ClientCertProvider: opts.ClientCertProvider,
 		Client:             opts.client(),
-		UniverseDomain:     opts.UniverseDomain,
+		UniverseDomain:     opts.clientUniverseDomain(),
 		Logger:             opts.logger(),
 	}
 	if io := opts.InternalOptions; io != nil {
@@ -379,7 +386,7 @@ func dial(ctx context.Context, secure bool, opts *Options) (*grpc.ClientConn, er
 			}),
 		)
 		// Attempt Direct Path
-		grpcOpts, transportCreds.Endpoint, err = configureDirectPath(grpcOpts, opts, transportCreds.Endpoint, creds, metadata)
+		grpcOpts, transportCreds.Endpoint, err = configureDirectPath(ctx, grpcOpts, opts, transportCreds.Endpoint, creds, metadata)
 		if err != nil {
 			return nil, err
 		}
@@ -391,7 +398,7 @@ func dial(ctx context.Context, secure bool, opts *Options) (*grpc.ClientConn, er
 	grpcOpts = addOpenTelemetryStatsHandler(grpcOpts, opts, transportCreds.Endpoint)
 	grpcOpts = append(grpcOpts, opts.GRPCDialOpts...)
 
-	return grpc.DialContext(ctx, transportCreds.Endpoint, grpcOpts...)
+	return grpcDialContext(ctx, transportCreds.Endpoint, grpcOpts...)
 }
 
 // grpcKeyProvider satisfies https://pkg.go.dev/google.golang.org/grpc/credentials#PerRPCCredentials.
