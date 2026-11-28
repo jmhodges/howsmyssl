@@ -287,3 +287,50 @@ func TestReloadAllowMapsStats(t *testing.T) {
 		t.Errorf("after a later good reload: reload_last_success_epoch_secs: want at least %d, got %d", before, got)
 	}
 }
+
+// TestOriginAllowerDomainLength checks that a host too long to be a domain
+// name is treated like any other Origin or Referer we can't parse: it is not
+// allowed and is counted under no domain.
+func TestOriginAllowerDomainLength(t *testing.T) {
+	am := &allowMaps{
+		AllowTheseDomains: make(map[string]bool),
+		AllowSubdomainsOn: make(map[string]bool),
+		BlockedDomains:    make(map[string]bool),
+	}
+	ama := &atomic.Pointer[allowMaps]{}
+	ama.Store(am)
+	oa := newOriginAllower(ama, "testhostname", nullLogClient{}, new(expvar.Map).Init(), newTestLogger(t))
+
+	label := strings.Repeat("a", 63)
+	longest := label + "." + label + "." + label + "." + strings.Repeat("a", 49) + ".example.com"
+	if len(longest) != maxDomainLength {
+		t.Fatalf("test domain is %d bytes, want %d", len(longest), maxDomainLength)
+	}
+	tooLong := "a" + longest
+
+	tests := []oaTest{
+		{"https://" + longest, "", "example.com", true},
+		{"", "https://" + longest + ":8443/page", "example.com", true},
+		{"https://" + tooLong, "", "", false},
+		{"https://" + tooLong + ":8443", "", "", false},
+		{"", "https://" + tooLong + "/page", "", false},
+		{"https://" + strings.Repeat("a", 100_000) + ".com", "", "", false},
+	}
+	for i, ot := range tests {
+		t.Run(fmt.Sprintf("%02d", i), func(t *testing.T) {
+			r, err := http.NewRequest("GET", "/whatever", nil)
+			if err != nil {
+				t.Fatalf("unable to make request: %s", err)
+			}
+			r.Header.Set("Origin", ot.origin)
+			r.Header.Set("Referer", ot.referrer)
+			domain, ok := oa.Allow(r)
+			if domain != ot.detectedDomain {
+				t.Errorf("want detectedDomain %#v, got one of %d bytes", ot.detectedDomain, len(domain))
+			}
+			if ok != ot.ok {
+				t.Errorf("want %t, got %t", ot.ok, ok)
+			}
+		})
+	}
+}
