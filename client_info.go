@@ -28,23 +28,25 @@ var (
 )
 
 type clientInfo struct {
-	GivenCipherSuites              []string            `json:"given_cipher_suites"`
-	GivenNamedGroups               []string            `json:"given_named_groups"`
-	GivenSignatureAlgorithms       []string            `json:"given_signature_algorithms"`
-	PostQuantumKeyAgreement        bool                `json:"post_quantum_key_agreement"`
-	EphemeralKeysSupported         bool                `json:"ephemeral_keys_supported"`             // good if true
-	SessionTicketsSupported        bool                `json:"session_ticket_supported"`             // good if true
-	TLSCompressionSupported        bool                `json:"tls_compression_supported"`            // bad if true
-	UnknownCipherSuiteSupported    bool                `json:"unknown_cipher_suite_supported"`       // bad if true
-	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
-	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
-	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
-	TLSVersion                     string              `json:"tls_version"`
-	Rating                         rating              `json:"rating"`
-	TLS12ImprovableCutoverPassed   bool                `json:"-"`
-	TLS12BadCutoverPassed          bool                `json:"-"`
-	NoPQImprovableCutoverPassed    bool                `json:"-"`
-	NoPQBadCutoverPassed           bool                `json:"-"`
+	GivenCipherSuites                 []string            `json:"given_cipher_suites"`
+	GivenNamedGroups                  []string            `json:"given_named_groups"`
+	GivenSignatureAlgorithms          []string            `json:"given_signature_algorithms"`
+	GivenPSKKeyExchangeModes          []string            `json:"given_psk_key_exchange_modes"`
+	PostQuantumKeyAgreement           bool                `json:"post_quantum_key_agreement"`
+	EphemeralKeysSupported            bool                `json:"ephemeral_keys_supported"`              // good if true
+	SessionTicketsSupported           bool                `json:"session_ticket_supported"`              // good if true
+	PSKWithoutForwardSecrecySupported bool                `json:"psk_without_forward_secrecy_supported"` // neutral, for now
+	TLSCompressionSupported           bool                `json:"tls_compression_supported"`             // bad if true
+	UnknownCipherSuiteSupported       bool                `json:"unknown_cipher_suite_supported"`        // bad if true
+	BEASTVuln                         bool                `json:"beast_vuln"`                            // bad if true
+	AbleToDetectNMinusOneSplitting    bool                `json:"able_to_detect_n_minus_one_splitting"`  // neutral
+	InsecureCipherSuites              map[string][]string `json:"insecure_cipher_suites"`
+	TLSVersion                        string              `json:"tls_version"`
+	Rating                            rating              `json:"rating"`
+	TLS12ImprovableCutoverPassed      bool                `json:"-"`
+	TLS12BadCutoverPassed             bool                `json:"-"`
+	NoPQImprovableCutoverPassed       bool                `json:"-"`
+	NoPQBadCutoverPassed              bool                `json:"-"`
 }
 
 const (
@@ -87,9 +89,14 @@ var actualSupportedVersions = map[uint16]string{
 }
 
 func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
+	return clientInfoFromState(c.ConnectionState(), now)
+}
+
+// clientInfoFromState is pullClientInfo without the connection, so that tests
+// can describe ClientHellos that none of our test clients will send.
+func clientInfoFromState(st tls.ConnectionState, now time.Time) *clientInfo {
 	d := &clientInfo{InsecureCipherSuites: make(map[string][]string)}
 
-	st := c.ConnectionState()
 	if !st.HandshakeComplete {
 		panic("given a TLS conn that has not completed its handshake")
 	}
@@ -139,7 +146,8 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	// TLS 1.3 cipher suite names carry no key exchange, so the "DHE_" check
 	// above never matches them. Every TLS 1.3 handshake a client can get
 	// from a server it has no pre-shared key with is (EC)DHE.
-	if offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions) {
+	offersTLS13 := offersTLS13Handshake(st.ClientCipherSuites, st.SupportedVersions)
+	if offersTLS13 {
 		d.EphemeralKeysSupported = true
 	}
 	d.PostQuantumKeyAgreement = false
@@ -159,6 +167,22 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported
+
+	// TLS 1.3 replaced the session_ticket extension with
+	// psk_key_exchange_modes (RFC 8446, Section 4.2.9): a server may only send
+	// a TLS 1.3 client a ticket if the client listed a mode the ticket can be
+	// used with. A client that offers only TLS 1.3 has no reason to send
+	// session_ticket at all. The modes mean nothing to a client that can't
+	// get a TLS 1.3 handshake, so they're only judged when it can.
+	d.GivenPSKKeyExchangeModes = renderPSKKeyExchangeModes(st.PSKModes)
+	if offersTLS13 {
+		if slices.Contains(st.PSKModes, pskModeKE) || slices.Contains(st.PSKModes, pskModeDHEKE) {
+			d.SessionTicketsSupported = true
+		}
+		// A session resumed with psk_ke gets no new (EC)DHE exchange: its
+		// keys come from the ticket alone, so it has no forward secrecy.
+		d.PSKWithoutForwardSecrecySupported = slices.Contains(st.PSKModes, pskModeKE)
+	}
 
 	for _, cm := range st.CompressionMethods {
 		if cm != 0x0 {
@@ -219,6 +243,33 @@ func offersTLS13Handshake(suites, versions []uint16) bool {
 		return false
 	}
 	return slices.ContainsFunc(suites, func(ci uint16) bool { return tls13Suites[ci] })
+}
+
+// The PskKeyExchangeMode values of RFC 8446, Section 4.2.9.
+const (
+	pskModeKE    uint8 = 0 // psk_ke
+	pskModeDHEKE uint8 = 1 // psk_dhe_ke
+)
+
+var allPSKKeyExchangeModes = map[uint8]string{
+	pskModeKE:    "psk_ke",
+	pskModeDHEKE: "psk_dhe_ke",
+}
+
+// renderPSKKeyExchangeModes maps the codepoints of a psk_key_exchange_modes
+// extension to their IANA registry names, falling back to a hex string for
+// unknown values (which include RFC 8701's GREASE values). It always returns
+// a non-nil slice so JSON output renders [] rather than null.
+func renderPSKKeyExchangeModes(modes []uint8) []string {
+	out := make([]string, 0, len(modes))
+	for _, m := range modes {
+		name, found := allPSKKeyExchangeModes[m]
+		if !found {
+			name = fmt.Sprintf("Unknown PSK key exchange mode: %#02x", m)
+		}
+		out = append(out, name)
+	}
+	return out
 }
 
 // renderSignatureSchemes maps TLS SignatureScheme codepoints to their IANA

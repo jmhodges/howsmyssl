@@ -134,6 +134,107 @@ func TestTLS13OnlyIsEphemeral(t *testing.T) {
 	}
 }
 
+// TLS 1.3 clients say how they'll resume sessions in psk_key_exchange_modes
+// instead of session_ticket. None of this may move the overall rating.
+func TestPSKKeyExchangeModes(t *testing.T) {
+	atBad := time.Date(2026, 12, 14, 18, 0, 0, 0, time.UTC)
+	check := func(t *testing.T, st tls.ConnectionState, wantModes []string, wantTickets, wantNoFS bool) {
+		t.Helper()
+		ci := clientInfoFromState(st, preCutover)
+		t.Logf("%#v", ci)
+		if diff := cmp.Diff(wantModes, ci.GivenPSKKeyExchangeModes); diff != "" {
+			t.Errorf("GivenPSKKeyExchangeModes (-want +got):\n%s", diff)
+		}
+		if ci.SessionTicketsSupported != wantTickets {
+			t.Errorf("SessionTicketsSupported: want %t, got %t", wantTickets, ci.SessionTicketsSupported)
+		}
+		if ci.PSKWithoutForwardSecrecySupported != wantNoFS {
+			t.Errorf("PSKWithoutForwardSecrecySupported: want %t, got %t", wantNoFS, ci.PSKWithoutForwardSecrecySupported)
+		}
+		// Whatever the modes are, the rating has to be the one the same
+		// ClientHello gets without them, before and after the cutovers.
+		without := st
+		without.PSKModes = nil
+		for _, now := range []time.Time{preCutover, atBad} {
+			want := clientInfoFromState(without, now)
+			got := clientInfoFromState(st, now)
+			if got.Rating != want.Rating {
+				t.Errorf("Rating at %s: want %s (as without the modes), got %s", now, want.Rating, got.Rating)
+			}
+			if got.EphemeralKeysSupported != want.EphemeralKeysSupported {
+				t.Errorf("EphemeralKeysSupported at %s: want %t (as without the modes), got %t", now, want.EphemeralKeysSupported, got.EphemeralKeysSupported)
+			}
+		}
+	}
+
+	// Go's client sends psk_dhe_ke alone. It also sends session_ticket,
+	// even when it only offers TLS 1.3, so the second check takes that out.
+	t.Run("TLS13DHEOnly", func(t *testing.T) {
+		c := connect(t, &tls.Config{MinVersion: tls.VersionTLS13})
+		st := c.ConnectionState()
+		if diff := cmp.Diff([]uint8{pskModeDHEKE}, st.PSKModes); diff != "" {
+			t.Fatalf("PSKModes from Go's client (-want +got):\n%s", diff)
+		}
+		check(t, st, []string{"psk_dhe_ke"}, true, false)
+
+		// The same client had it not sent the TLS 1.2 session_ticket
+		// extension, as a TLS 1.3-only client needn't.
+		st.SessionTicketsSupported = false
+		check(t, st, []string{"psk_dhe_ke"}, true, false)
+	})
+
+	// No client we have to hand lists psk_ke, so take a real TLS 1.3
+	// ClientHello and change the modes in it.
+	t.Run("TLS13ListsPSKKE", func(t *testing.T) {
+		c := connect(t, &tls.Config{MinVersion: tls.VersionTLS13})
+		st := c.ConnectionState()
+		st.SessionTicketsSupported = false
+
+		st.PSKModes = []uint8{pskModeDHEKE, pskModeKE}
+		check(t, st, []string{"psk_dhe_ke", "psk_ke"}, true, true)
+
+		st.PSKModes = []uint8{pskModeKE}
+		check(t, st, []string{"psk_ke"}, true, true)
+
+		// GREASE (RFC 8701) and other unknown modes are shown, not counted.
+		st.PSKModes = []uint8{0x0B, pskModeDHEKE}
+		check(t, st, []string{"Unknown PSK key exchange mode: 0x0b", "psk_dhe_ke"}, true, false)
+
+		st.PSKModes = []uint8{0x0B}
+		check(t, st, []string{"Unknown PSK key exchange mode: 0x0b"}, false, false)
+	})
+
+	// With session tickets off, Go's client sends neither extension.
+	t.Run("TLS13NoExtension", func(t *testing.T) {
+		c := connect(t, &tls.Config{MinVersion: tls.VersionTLS13, SessionTicketsDisabled: true})
+		st := c.ConnectionState()
+		if st.Version != tls.VersionTLS13 {
+			t.Fatalf("Version: want TLS 1.3, got %#04x", st.Version)
+		}
+		if len(st.PSKModes) != 0 {
+			t.Fatalf("PSKModes: want none, got %v", st.PSKModes)
+		}
+		check(t, st, []string{}, false, false)
+	})
+
+	t.Run("TLS12", func(t *testing.T) {
+		c := connect(t, &tls.Config{MaxVersion: tls.VersionTLS12})
+		st := c.ConnectionState()
+		if len(st.PSKModes) != 0 {
+			t.Fatalf("PSKModes: want none from a TLS 1.2 client, got %v", st.PSKModes)
+		}
+		// session_ticket is the TLS 1.2 client's own, sent by connect's
+		// session cache.
+		check(t, st, []string{}, true, false)
+
+		// A client that can't get a TLS 1.3 handshake can't resume one,
+		// whatever modes it lists: they're shown and nothing more.
+		st.SessionTicketsSupported = false
+		st.PSKModes = []uint8{pskModeKE, pskModeDHEKE}
+		check(t, st, []string{"psk_ke", "psk_dhe_ke"}, false, false)
+	})
+}
+
 func TestOffersTLS13Handshake(t *testing.T) {
 	const (
 		aes128GCM       = 0x1301 // TLS_AES_128_GCM_SHA256

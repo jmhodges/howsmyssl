@@ -234,6 +234,17 @@
             reconnects it includes this session ticket and most of the expensive
             reconnection process can be skipped. This is a huge performance
             boost, making users happier.</p>
+          <p>TLS 1.3 clients ask for session tickets differently. Instead of
+            the older <code>session_ticket</code> extension, they send
+            a <code>psk_key_exchange_modes</code> extension listing the ways
+            they are willing to resume a session, so How's My SSL counts a
+            TLS 1.3 client that sends it as supporting session tickets, and
+            shows the modes it listed. With <code>psk_dhe_ke</code>, the
+            resumed connection still does a new ephemeral key exchange.
+            With <code>psk_ke</code>, it does not, and the resumed connection
+            has no forward secrecy. How's My SSL points out clients that
+            list <code>psk_ke</code>, but doing so does not change their
+            rating.</p>
           <p>However, the session ticket key living on all of the website's
             computers means there is a secret that could be leaked to an
             attacker. Worse, it undermines the security
