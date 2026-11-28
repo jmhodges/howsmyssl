@@ -129,7 +129,9 @@
                 to defend against <a
                 href="https://en.wikipedia.org/wiki/Harvest_now,_decrypt_later">"harvest
                 now, decrypt later"</a> attacks.
-                {{if and .NoPQImprovableCutoverPassed (not .NoPQBadCutoverPassed) }}
+                {{if .NoPQBadCutoverPassed}}
+                Clients without post-quantum key agreement are marked as Bad.
+                {{else if .NoPQImprovableCutoverPassed}}
                 As of June 14th, 2026 at 10 AM PT, clients without
                 post-quantum key agreement are marked as Improvable. On
                 December 14th, 2026 at 10 AM PT, they will be
