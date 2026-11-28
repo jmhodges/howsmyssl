@@ -46,6 +46,36 @@ func TestDumbNilishIndex(t *testing.T) {
 	}
 }
 
+func TestIndexPostQuantumFix(t *testing.T) {
+	tmpl := loadIndex()
+	tests := []struct {
+		name    string
+		ci      *clientInfo
+		wantFix bool
+	}{
+		{"no post-quantum, before cutovers", &clientInfo{}, true},
+		{"no post-quantum, after Improvable cutover", &clientInfo{NoPQImprovableCutoverPassed: true}, true},
+		{"no post-quantum, after Bad cutover", &clientInfo{NoPQImprovableCutoverPassed: true, NoPQBadCutoverPassed: true}, true},
+		{"post-quantum supported", &clientInfo{PostQuantumKeyAgreement: true}, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			if err := tmpl.Execute(buf, tc.ci); err != nil {
+				t.Fatalf("index execution: %s", err)
+			}
+			body := buf.String()
+			gotFix := strings.Contains(body, `id="post-quantum-fix"`)
+			if gotFix != tc.wantFix {
+				t.Errorf("post-quantum fix paragraph shown: want %t, got %t", tc.wantFix, gotFix)
+			}
+			if gotFix && !strings.Contains(body, "<code>go 1.24</code>") {
+				t.Errorf("post-quantum fix paragraph is missing the go.mod advice")
+			}
+		})
+	}
+}
+
 type acmeTest struct {
 	challPath       string
 	acmeRedirectURL string

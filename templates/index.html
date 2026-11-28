@@ -141,6 +141,18 @@
                 be marked as Bad.
                 {{end}}
               </p>
+              <p id="post-quantum-fix">
+                To get post-quantum key agreement, upgrade the TLS library your
+                client uses. OpenSSL 3.5, Go 1.24 and later, Java 25, Node.js
+                releases that bundle OpenSSL 3.5 (current Node 22 and 24), and
+                Rust's rustls with its aws-lc-rs backend all offer it by
+                default. Ubuntu 24.04 and older ship OpenSSL 3.0 or older, so
+                their system curl, wget, Python, Ruby, and PHP don't offer it.
+                A Go program also needs the <code>go</code> line in its
+                <code>go.mod</code> to say <code>go 1.24</code> or later. With
+                an older <code>go</code> line, Go turns post-quantum key
+                agreement off, even on the newest Go toolchain.
+              </p>
               {{end}}
               <p><a href="/s/about.html/#post-quantum-key-agreement">Learn More</a></p>
             </section>
