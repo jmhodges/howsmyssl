@@ -16,6 +16,7 @@ package main
 // and the HTTP/3 server takes it back out when it accepts the connection.
 
 import (
+	"container/list"
 	"context"
 	origtls "crypto/tls"
 	"errors"
@@ -37,9 +38,10 @@ import (
 const (
 	// quicHelloLabel is the exporter label that keys a recorded hello.
 	quicHelloLabel = "EXPORTER-howsmyssl-quic-client-hello"
-	// quicHelloTTL is how long a recorded hello waits for its connection to
-	// be accepted. It is longer than the QUIC handshake timeout.
-	quicHelloTTL = time.Minute
+	// quicHelloKeyLen is how many bytes of keying material key a hello.
+	quicHelloKeyLen = 32
+	// quicHandshakeTimeout is how long a QUIC handshake may take.
+	quicHandshakeTimeout = 10 * time.Second
 )
 
 var (
@@ -48,12 +50,15 @@ var (
 	quicVars          = expvar.NewMap("quic")
 	quicConns         = new(expvar.Int)
 	quicHellosMissing = new(expvar.Int)
+	quicHellosRefused = new(expvar.Int)
 	errNoQUICHello    = errors.New("no recorded ClientHello for this QUIC connection")
+	errQUICHellosFull = errors.New("too many QUIC handshakes waiting to be accepted")
 )
 
 func init() {
 	quicVars.Set("connections", quicConns)
 	quicVars.Set("hellos_missing", quicHellosMissing)
+	quicVars.Set("hellos_refused", quicHellosRefused)
 }
 
 // quicHello is what we keep of a client's hello on a QUIC connection.
@@ -67,14 +72,34 @@ type quicHello struct {
 	Version uint16
 }
 
+// quicHelloListMax is the most entries of each of a hello's lists we keep. A
+// ClientHello can be near 64 KB, but no real client lists anywhere near this
+// many cipher suites, groups, signature schemes, versions or extensions, and
+// it bounds what one recorded hello costs us.
+const quicHelloListMax = 128
+
+func firstN[T any](s []T) []T {
+	return append([]T(nil), s[:min(len(s), quicHelloListMax)]...)
+}
+
 func newQUICHello(chi *origtls.ClientHelloInfo) *quicHello {
 	return &quicHello{
-		CipherSuites:      append([]uint16(nil), chi.CipherSuites...),
-		SupportedCurves:   append([]origtls.CurveID(nil), chi.SupportedCurves...),
-		SignatureSchemes:  append([]origtls.SignatureScheme(nil), chi.SignatureSchemes...),
-		SupportedVersions: append([]uint16(nil), chi.SupportedVersions...),
-		Extensions:        append([]uint16(nil), chi.Extensions...),
+		CipherSuites:      firstN(chi.CipherSuites),
+		SupportedCurves:   firstN(chi.SupportedCurves),
+		SignatureSchemes:  firstN(chi.SignatureSchemes),
+		SupportedVersions: firstN(chi.SupportedVersions),
+		Extensions:        firstN(chi.Extensions),
 	}
+}
+
+// quicHelloMaxSize is the most a recorded hello costs us, by size, with its
+// key.
+const quicHelloMaxSize = 128 + 2*5*quicHelloListMax + quicHelloKeyLen
+
+// size is roughly what h costs us to hold, in bytes.
+func (h *quicHello) size() int {
+	// Every list's elements are two bytes wide.
+	return 128 + 2*(len(h.CipherSuites)+len(h.SupportedCurves)+len(h.SignatureSchemes)+len(h.SupportedVersions)+len(h.Extensions))
 }
 
 type quicHelloKey struct{}
@@ -86,53 +111,128 @@ func quicHelloFromContext(ctx context.Context) (*quicHello, bool) {
 	return h, ok
 }
 
-// helloRecorder holds hellos between the end of their handshake and the
-// HTTP/3 server's accepting their connection.
+// helloRecorder holds hellos between their handshake's recording them and
+// the HTTP/3 server's accepting their connection.
+//
+// The server records a hello before the client has sent its Finished (see
+// quicTLSConfig), so a client that sends a ClientHello and walks away leaves
+// one here. Anyone can do that, from any source address, since we don't
+// require QUIC address validation. So the recorder holds at most maxEntries
+// hellos and maxBytes of them, each for at most ttl, and a full recorder
+// refuses new ones instead of growing.
 type helloRecorder struct {
-	mu        sync.Mutex
-	hellos    map[string]recordedHello
-	lastSweep time.Time
-	now       func() time.Time
+	mu     sync.Mutex
+	hellos map[string]*list.Element // of *recordedHello, oldest first in order
+	order  *list.List
+	bytes  int
+
+	ttl        time.Duration
+	maxEntries int
+	maxBytes   int
+	now        func() time.Time
 }
 
 type recordedHello struct {
+	key   string
 	hello *quicHello
+	size  int
 	at    time.Time
 }
 
+const (
+	// quicHelloTTL is how long a recorded hello waits for its connection to
+	// be accepted. It is a little longer than quicHandshakeTimeout, after
+	// which the connection can't be accepted anymore.
+	quicHelloTTL = 15 * time.Second
+	// quicHelloMaxEntries and quicHelloMaxBytes cap the hellos waiting to
+	// be accepted. A hello costs at most quicHelloMaxSize, about 1.4 KB,
+	// and a real one a few hundred bytes, so the entry cap usually binds
+	// first, and the bytes cap holds it to 4 MB whatever the hellos.
+	quicHelloMaxEntries = 4096
+	quicHelloMaxBytes   = 4 << 20
+)
+
 func newHelloRecorder() *helloRecorder {
-	return &helloRecorder{hellos: make(map[string]recordedHello), now: time.Now}
+	return &helloRecorder{
+		hellos:     make(map[string]*list.Element),
+		order:      list.New(),
+		ttl:        quicHelloTTL,
+		maxEntries: quicHelloMaxEntries,
+		maxBytes:   quicHelloMaxBytes,
+		now:        time.Now,
+	}
 }
 
-func (r *helloRecorder) put(key []byte, h *quicHello) {
-	now := r.now()
+// sweep drops expired hellos. r.mu must be held.
+func (r *helloRecorder) sweep(now time.Time) {
+	for e := r.order.Front(); e != nil; e = r.order.Front() {
+		rh := e.Value.(*recordedHello)
+		if now.Sub(rh.at) < r.ttl {
+			return
+		}
+		r.remove(e)
+	}
+}
+
+// remove drops e. r.mu must be held.
+func (r *helloRecorder) remove(e *list.Element) {
+	rh := r.order.Remove(e).(*recordedHello)
+	delete(r.hellos, rh.key)
+	r.bytes -= rh.size
+}
+
+// full reports whether the recorder can't take another hello of the
+// largest size we keep.
+func (r *helloRecorder) full() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	// Connections that finish their handshake but are never accepted (the
-	// peer went away first) leave their hellos here, so we drop old ones.
-	if now.Sub(r.lastSweep) >= quicHelloTTL {
-		for k, rh := range r.hellos {
-			if now.Sub(rh.at) >= quicHelloTTL {
-				delete(r.hellos, k)
-			}
-		}
-		r.lastSweep = now
+	r.sweep(r.now())
+	return r.order.Len() >= r.maxEntries || r.bytes+quicHelloMaxSize > r.maxBytes
+}
+
+// put records h under key, unless the recorder is full, in which case it
+// returns errQUICHellosFull and records nothing.
+func (r *helloRecorder) put(key []byte, h *quicHello) error {
+	size := len(key) + h.size()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := r.now()
+	r.sweep(now)
+	if e, ok := r.hellos[string(key)]; ok {
+		r.remove(e)
 	}
-	r.hellos[string(key)] = recordedHello{hello: h, at: now}
+	if r.order.Len() >= r.maxEntries || r.bytes+size > r.maxBytes {
+		quicHellosRefused.Add(1)
+		return errQUICHellosFull
+	}
+	rh := &recordedHello{key: string(key), hello: h, size: size, at: now}
+	r.hellos[rh.key] = r.order.PushBack(rh)
+	r.bytes += size
+	return nil
 }
 
 func (r *helloRecorder) take(key []byte) (*quicHello, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	rh, ok := r.hellos[string(key)]
-	if ok {
-		delete(r.hellos, string(key))
+	r.sweep(r.now())
+	e, ok := r.hellos[string(key)]
+	if !ok {
+		return nil, false
 	}
-	return rh.hello, ok
+	h := e.Value.(*recordedHello).hello
+	r.remove(e)
+	return h, true
+}
+
+// len returns how many hellos are held and how many bytes they cost.
+func (r *helloRecorder) len() (int, int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.order.Len(), r.bytes
 }
 
 func helloKey(cs origtls.ConnectionState) ([]byte, error) {
-	return cs.ExportKeyingMaterial(quicHelloLabel, nil, 32)
+	return cs.ExportKeyingMaterial(quicHelloLabel, nil, quicHelloKeyLen)
 }
 
 // quicTLSConfig returns the crypto/tls configuration for QUIC connections.
@@ -155,6 +255,12 @@ func quicTLSConfig(getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error),
 	}
 	conf := base.Clone()
 	conf.GetConfigForClient = func(chi *origtls.ClientHelloInfo) (*origtls.Config, error) {
+		// Refuse the handshake, before it costs us more, while we hold as
+		// many hellos as we will.
+		if rec.full() {
+			quicHellosRefused.Add(1)
+			return nil, errQUICHellosFull
+		}
 		h := newQUICHello(chi)
 		c := base.Clone()
 		c.VerifyConnection = func(cs origtls.ConnectionState) error {
@@ -163,8 +269,7 @@ func quicTLSConfig(getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error),
 				return err
 			}
 			h.Version = cs.Version
-			rec.put(key, h)
-			return nil
+			return rec.put(key, h)
 		}
 		return c, nil
 	}
@@ -186,9 +291,9 @@ func toOrigCertificate(c *tls.Certificate) *origtls.Certificate {
 }
 
 // listenQUIC starts listening for QUIC on the UDP address addr and returns
-// the HTTP/3 server to serve handler on it.
-func listenQUIC(addr string, getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error), handler http.Handler) (*h3.Server, *quic.Endpoint, error) {
-	rec := newHelloRecorder()
+// the HTTP/3 server to serve handler on it. rec holds the hellos of the
+// handshakes in between.
+func listenQUIC(addr string, getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error), handler http.Handler, rec *helloRecorder) (*h3.Server, *quic.Endpoint, error) {
 	ep, err := quic.Listen("udp", addr, &quic.Config{
 		TLSConfig: quicTLSConfig(getCert, rec),
 		// Our pages need a handful of requests. These keep what one client
@@ -197,7 +302,7 @@ func listenQUIC(addr string, getCert func(*tls.ClientHelloInfo) (*tls.Certificat
 		MaxUniRemoteStreams:     8,
 		MaxStreamReadBufferSize: 64 << 10,
 		MaxConnReadBufferSize:   256 << 10,
-		HandshakeTimeout:        10 * time.Second,
+		HandshakeTimeout:        quicHandshakeTimeout,
 		MaxIdleTimeout:          30 * time.Second,
 	})
 	if err != nil {
@@ -236,15 +341,17 @@ func startQUIC(addr string, getCert func(*tls.ClientHelloInfo) (*tls.Certificate
 	if addr == "" {
 		return func(context.Context) {}
 	}
-	srv, ep, err := listenQUIC(addr, getCert, handler)
+	srv, ep, err := listenQUIC(addr, getCert, handler, newHelloRecorder())
 	if err != nil {
 		log.Fatalf("unable to listen for the HTTP/3 server on %s: %s", addr, err)
 	}
 	log.Printf("Booting HTTP/3 on %s", addr)
 	go func() {
 		err := srv.Serve(ep)
+		// HTTP/3 is an extra. If its UDP socket fails, say so, and keep
+		// serving the site over TCP.
 		if err != nil && err != http.ErrServerClosed {
-			log.Fatalf("http/3 server error: %s", err)
+			log.Printf("http/3 server stopped, TCP serving goes on: %s", err)
 		}
 	}()
 	return func(ctx context.Context) {

@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ func TestQUICOffByDefault(t *testing.T) {
 type quicTestServer struct {
 	addr string
 	pool *x509.CertPool
+	rec  *helloRecorder
 }
 
 func startQUICTestServer(t *testing.T, handler http.Handler) *quicTestServer {
@@ -64,7 +66,8 @@ func startQUICTestServer(t *testing.T, handler http.Handler) *quicTestServer {
 	cert := &tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf}
 	getCert := func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return cert, nil }
 
-	srv, ep, err := listenQUIC("127.0.0.1:0", getCert, handler)
+	rec := newHelloRecorder()
+	srv, ep, err := listenQUIC("127.0.0.1:0", getCert, handler, rec)
 	if err != nil {
 		t.Fatalf("listenQUIC: %s", err)
 	}
@@ -76,7 +79,41 @@ func startQUICTestServer(t *testing.T, handler http.Handler) *quicTestServer {
 		srv.Shutdown(ctx)
 		<-done
 	})
-	return &quicTestServer{addr: ep.LocalAddr().String(), pool: pool}
+	return &quicTestServer{addr: ep.LocalAddr().String(), pool: pool, rec: rec}
+}
+
+// dial makes a QUIC connection to s, trusting the certificates in roots,
+// and closes it right after.
+func (s *quicTestServer) dial(t *testing.T, roots *x509.CertPool) error {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cep, err := quic.Listen("udp", "127.0.0.1:0", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		cep.Close(ctx)
+	}()
+	conf := &origtls.Config{ServerName: "localhost", RootCAs: roots, NextProtos: []string{"h3"}}
+	conn, err := cep.Dial(ctx, "udp", s.addr, &quic.Config{TLSConfig: conf})
+	if err != nil {
+		return err
+	}
+	conn.Abort(nil)
+	return nil
+}
+
+// abandon starts a handshake with s that gets as far as the server's
+// Finished and goes no further: the client doesn't trust the server's
+// certificate, so it never sends its own Finished.
+func (s *quicTestServer) abandon(t *testing.T) {
+	t.Helper()
+	if err := s.dial(t, x509.NewCertPool()); err == nil {
+		t.Fatalf("a client that trusts nothing finished its handshake")
+	}
 }
 
 func (s *quicTestServer) client(t *testing.T, conf *origtls.Config) *h3.ClientConn {
@@ -332,12 +369,17 @@ func TestHelloRecorder(t *testing.T) {
 	r.now = func() time.Time { return now }
 	h1, h2 := &quicHello{Version: 1}, &quicHello{Version: 2}
 
-	r.put([]byte("one"), h1)
+	if err := r.put([]byte("one"), h1); err != nil {
+		t.Fatal(err)
+	}
 	if got, ok := r.take([]byte("one")); !ok || got != h1 {
 		t.Errorf("take one: %v %v", got, ok)
 	}
 	if _, ok := r.take([]byte("one")); ok {
 		t.Errorf("a hello was taken twice")
+	}
+	if n, b := r.len(); n != 0 || b != 0 {
+		t.Errorf("after take: %d hellos, %d bytes held; want none", n, b)
 	}
 
 	r.put([]byte("old"), h1)
@@ -348,6 +390,135 @@ func TestHelloRecorder(t *testing.T) {
 	}
 	if got, ok := r.take([]byte("new")); !ok || got != h2 {
 		t.Errorf("take new: %v %v", got, ok)
+	}
+}
+
+func TestHelloRecorderTTL(t *testing.T) {
+	// The time to live must outlast a handshake, and not by much: a hello
+	// whose connection can no longer be accepted is only a cost.
+	if quicHelloTTL <= quicHandshakeTimeout || quicHelloTTL > 2*quicHandshakeTimeout {
+		t.Errorf("quicHelloTTL is %s; want just over the handshake timeout, %s", quicHelloTTL, quicHandshakeTimeout)
+	}
+}
+
+func TestHelloRecorderCaps(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	r := newHelloRecorder()
+	r.now = func() time.Time { return now }
+	r.maxEntries = 3
+
+	for i := range 3 {
+		if err := r.put([]byte{byte(i)}, &quicHello{}); err != nil {
+			t.Fatalf("put %d: %s", i, err)
+		}
+	}
+	if !r.full() {
+		t.Errorf("full() is false with maxEntries hellos held")
+	}
+	if err := r.put([]byte{9}, &quicHello{}); err != errQUICHellosFull {
+		t.Errorf("put into a full recorder: %v, want errQUICHellosFull", err)
+	}
+	if n, _ := r.len(); n != 3 {
+		t.Errorf("a full recorder grew to %d hellos", n)
+	}
+
+	// Taking one makes room for one.
+	r.take([]byte{0})
+	if r.full() {
+		t.Errorf("full() after a take")
+	}
+	if err := r.put([]byte{9}, &quicHello{}); err != nil {
+		t.Errorf("put after a take: %s", err)
+	}
+
+	// Expiry makes room with no new hello coming in.
+	now = now.Add(quicHelloTTL)
+	if r.full() {
+		t.Errorf("full() once every hello is past quicHelloTTL")
+	}
+	if n, b := r.len(); n != 0 || b != 0 {
+		t.Errorf("past quicHelloTTL: %d hellos, %d bytes held; want none", n, b)
+	}
+
+	// The bytes cap binds on its own, and a huge hello is cut down to size
+	// first.
+	r = newHelloRecorder()
+	r.now = func() time.Time { return now }
+	huge := make([]uint16, 30000)
+	h := newQUICHello(&origtls.ClientHelloInfo{CipherSuites: huge, SupportedVersions: huge, Extensions: huge})
+	if len(h.CipherSuites) != quicHelloListMax || len(h.Extensions) != quicHelloListMax {
+		t.Errorf("kept %d cipher suites and %d extensions; want %d", len(h.CipherSuites), len(h.Extensions), quicHelloListMax)
+	}
+	key := make([]byte, quicHelloKeyLen)
+	if got := len(key) + h.size(); got > quicHelloMaxSize {
+		t.Errorf("a hello costs %d bytes, over quicHelloMaxSize %d", got, quicHelloMaxSize)
+	}
+	r.maxBytes = 3 * quicHelloMaxSize
+	for i := 0; ; i++ {
+		key[0] = byte(i)
+		if err := r.put(key, h); err != nil {
+			if err != errQUICHellosFull {
+				t.Fatal(err)
+			}
+			break
+		}
+		if i > 10 {
+			t.Fatalf("the bytes cap didn't bind")
+		}
+	}
+	if _, b := r.len(); b > r.maxBytes {
+		t.Errorf("holding %d bytes, over maxBytes %d", b, r.maxBytes)
+	}
+	if !r.full() {
+		t.Errorf("full() is false at the bytes cap")
+	}
+}
+
+func TestQUICAbandonedHandshakes(t *testing.T) {
+	// A client that sends its ClientHello and never its Finished leaves a
+	// hello recorded. Many of them must not pile up past the cap, must
+	// expire, and a full recorder must refuse new handshakes, not grow.
+	ts := startQUICTestServer(t, testMux(t))
+	var mu sync.Mutex
+	now := time.Now()
+	ts.rec.mu.Lock()
+	ts.rec.maxEntries = 5
+	ts.rec.now = func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
+	ts.rec.mu.Unlock()
+
+	refusedBefore := quicHellosRefused.Value()
+	for range 20 {
+		// No RootCAs, so the client rejects our certificate and walks away
+		// without its Finished.
+		ts.abandon(t)
+	}
+	n, _ := ts.rec.len()
+	if n != 5 {
+		t.Errorf("after 20 abandoned handshakes, %d hellos held; want the cap, 5", n)
+	}
+	if quicHellosRefused.Value()-refusedBefore < 15 {
+		t.Errorf("only %d handshakes refused while full; want at least 15", quicHellosRefused.Value()-refusedBefore)
+	}
+
+	// While full, a good client is refused too.
+	if err := ts.dial(t, ts.pool); err == nil {
+		t.Errorf("a handshake succeeded while the recorder was full")
+	}
+
+	// Once the abandoned hellos expire, they are gone and good clients get
+	// in again.
+	mu.Lock()
+	now = now.Add(quicHelloTTL)
+	mu.Unlock()
+	if ts.rec.full() {
+		t.Errorf("still full after quicHelloTTL")
+	}
+	if n, b := ts.rec.len(); n != 0 || b != 0 {
+		t.Errorf("after quicHelloTTL, %d hellos and %d bytes held; want none", n, b)
+	}
+	cc := ts.client(t, nil)
+	if resp, _ := quicGet(t, cc, "/a/check", nil); resp.StatusCode != http.StatusOK {
+		t.Errorf("after expiry, /a/check gave %d", resp.StatusCode)
 	}
 }
 
