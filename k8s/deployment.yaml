@@ -38,6 +38,10 @@ spec:
         version: "1"
     spec:
       terminationGracePeriodSeconds: 45
+      # The server never talks to the Kubernetes API, so don't hand it a
+      # credential for it. See NAMESPACE_NAME below for the one thing that
+      # read a file from that mount.
+      automountServiceAccountToken: false
       # Prefer to put each replica on a different node so one node going away
       # (an upgrade, an auto-repair, a zonal network blip) doesn't take every
       # pod with it. This is a preference, not a requirement: the dg cluster is
@@ -62,6 +66,14 @@ spec:
             # -acmeRedirect=$ACME_REDIRECT_URL
             - name: ACME_REDIRECT_URL
               value: http://le.somethingsimilar.com/
+            # The Google Cloud Logging client labels the allowance-check log
+            # lines with the pod's namespace. It reads it from the service
+            # account mount, and falls back to this variable now that
+            # automountServiceAccountToken is off.
+            - name: NAMESPACE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
             requests:
               cpu: 400m
