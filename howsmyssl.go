@@ -57,7 +57,7 @@ var (
 	allowLogName   = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
 	adminAddr      = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 	headless       = flag.Bool("headless", false, "Run without templates")
-	echKeysFile    = flag.String("echKeysFile", "", "file path to Encrypted Client Hello (ECH) keys, made by cmd/genechkey; ECH is off without it")
+	echKeysFile    = flag.String("echKeysFile", "", "file path to Encrypted Client Hello (ECH) keys, made by cmd/genechkey; ECH is off without it. The TLS certificate must cover the keys' public name")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")

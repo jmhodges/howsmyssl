@@ -3,15 +3,24 @@ package main
 import (
 	"bytes"
 	"crypto/ecdh"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/hpke"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/binary"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
+	"os"
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/crypto/cryptobyte"
@@ -88,6 +97,195 @@ func TestECHAcceptedRatesInnerHello(t *testing.T) {
 	if ci.TLSVersion != "TLS 1.3" {
 		t.Errorf("TLSVersion: want TLS 1.3, got %q", ci.TLSVersion)
 	}
+}
+
+// TestECHRejectedSendsCurrentRetryConfigs checks a client whose ECH config is
+// one the server has no key for, like one left over from before a rotation.
+// The server must reject its ECH, see only its outer hello, and send back only
+// its current config, which the client can then use to be accepted.
+//
+// A rejected client aborts, as RFC 9849 has it, after checking the
+// certificate against the config's public name, so it never asks for an
+// answer on that connection: the test reads the server's side of it instead.
+func TestECHRejectedSendsCurrentRetryConfigs(t *testing.T) {
+	oldFile, oldList, err := echkeys.Generate("public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyFile, currentList, err := echkeys.AddKey(oldFile, "public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys, err := echkeys.Parse(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srvConf := serverConf.Clone()
+	srvConf.GetCertificate = nil
+	srvConf.Certificates = []tls.Certificate{publicNameCert(t)}
+	srvConf.EncryptedClientHelloKeys = keys
+
+	_, foreignList, err := echkeys.Generate("public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unlike the accepted test, this can't rewrite the outer hello: on
+	// rejection both sides hash the outer hello, so a rewritten one fails the
+	// handshake. The outer and inner hellos differ in their server names.
+	srv, srvErr, cliErr := handshakeBoth(t, srvConf, &tls.Config{
+		EncryptedClientHelloConfigList: foreignList,
+		MinVersion:                     tls.VersionTLS13,
+	})
+
+	var rej *tls.ECHRejectionError
+	if !errors.As(cliErr, &rej) {
+		t.Fatalf("client: want an ECHRejectionError, got %v", cliErr)
+	}
+	if !bytes.Equal(rej.RetryConfigList, currentList) {
+		t.Errorf("RetryConfigList: want only the current key's config")
+	}
+	if bytes.Contains(rej.RetryConfigList, oldList[2:]) {
+		t.Errorf("RetryConfigList holds the old key's config")
+	}
+	if srvErr != nil {
+		t.Fatalf("server: %s", srvErr)
+	}
+	st := srv.ConnectionState()
+	if st.ECHAccepted {
+		t.Errorf("server accepted ECH from a config it has no key for")
+	}
+	if st.ServerName != "public.example.com" {
+		t.Errorf("ServerName: want the outer hello's %q, got %q", "public.example.com", st.ServerName)
+	}
+	rejected := pullClientInfo(srv, preCutover)
+	if rejected.EncryptedClientHelloAccepted {
+		t.Errorf("EncryptedClientHelloAccepted: want false, got true")
+	}
+	if rejected.Rating != okay || rejected.TLSVersion != "TLS 1.3" {
+		t.Errorf("rejected: want the outer hello's TLS 1.3 and %q, got %q and %q", okay, rejected.TLSVersion, rejected.Rating)
+	}
+
+	// The client tries again with the retry configs, as a browser does.
+	c := connectWithServer(t, srvConf, &tls.Config{
+		EncryptedClientHelloConfigList: rej.RetryConfigList,
+		MinVersion:                     tls.VersionTLS13,
+	}, nil)
+	ci := pullClientInfo(c, preCutover)
+	if !ci.EncryptedClientHelloAccepted {
+		t.Errorf("retry with the retry configs: EncryptedClientHelloAccepted: want true, got false")
+	}
+	if ci.Rating != okay {
+		t.Errorf("retry: Rating: want %q, got %q", okay, ci.Rating)
+	}
+}
+
+// TestECHTwoKeysAcceptEither checks that during a rotation, with the new key
+// and the old one in the file, clients holding either config are accepted.
+func TestECHTwoKeysAcceptEither(t *testing.T) {
+	oldFile, oldList, err := echkeys.Generate("public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyFile, newList, err := echkeys.AddKey(oldFile, "public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys, err := echkeys.Parse(keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srvConf := serverConf.Clone()
+	srvConf.EncryptedClientHelloKeys = keys
+	for name, list := range map[string][]byte{"old": oldList, "new": newList} {
+		t.Run(name, func(t *testing.T) {
+			c := connectWithServer(t, srvConf, &tls.Config{
+				EncryptedClientHelloConfigList: list,
+				MinVersion:                     tls.VersionTLS13,
+			}, nil)
+			if !c.ConnectionState().ECHAccepted {
+				t.Fatalf("server did not accept ECH with the %s config", name)
+			}
+			if ci := pullClientInfo(c, preCutover); !ci.EncryptedClientHelloAccepted {
+				t.Errorf("EncryptedClientHelloAccepted: want true, got false")
+			}
+		})
+	}
+}
+
+// publicNameCert returns a certificate for localhost and the ECH public name,
+// signed by the development CA, as a rejected ECH client wants.
+func publicNameCert(t *testing.T) tls.Certificate {
+	t.Helper()
+	caKeyPEM, err := os.ReadFile("./config/development_ca_key.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, _ := pem.Decode(caKeyPEM)
+	caKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "localhost"},
+		DNSNames:     []string{"localhost", "public.example.com"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, rootCA, &key.PublicKey, caKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
+}
+
+// handshakeBoth runs one handshake that may fail, and returns the server's
+// side of it with each side's error.
+func handshakeBoth(t *testing.T, srvConf, clientConf *tls.Config) (*tls.Conn, error, error) {
+	t.Helper()
+	clientConf.ServerName = "localhost"
+	clientConf.RootCAs = x509.NewCertPool()
+	clientConf.RootCAs.AddCert(rootCA)
+
+	li, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer li.Close()
+	type res struct {
+		c   *tls.Conn
+		err error
+	}
+	ch := make(chan res, 1)
+	go func() {
+		raw, err := li.Accept()
+		if err != nil {
+			ch <- res{err: err}
+			return
+		}
+		c := tls.Server(raw, srvConf)
+		c.SetDeadline(time.Now().Add(5 * time.Second))
+		ch <- res{c: c, err: c.Handshake()}
+	}()
+	raw, err := net.DialTimeout("tcp", li.Addr().String(), 5*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer raw.Close()
+	cliErr := tls.Client(raw, clientConf).Handshake()
+	r := <-ch
+	if r.c == nil {
+		t.Fatalf("Accept: %s", r.err)
+	}
+	t.Cleanup(func() { r.c.Close() })
+	return r.c, r.err, cliErr
 }
 
 // TestECHKeysChangeNothingWithoutECH checks that giving the server ECH keys

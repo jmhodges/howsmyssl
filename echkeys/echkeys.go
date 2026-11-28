@@ -2,10 +2,16 @@
 // Client Hello (ECH) server keys.
 //
 // The file is PEM, in the layout of draft-farrell-tls-pemesni that OpenSSL's
-// ECH support also uses: one "PRIVATE KEY" block holding a PKCS #8 X25519
-// private key, and one "ECHCONFIG" block holding the ECHConfigList (RFC 9849)
+// ECH support also uses: a "PRIVATE KEY" block holding a PKCS #8 X25519
+// private key, then an "ECHCONFIG" block holding the ECHConfigList (RFC 9849)
 // that clients are given, usually in the "ech" parameter of an HTTPS DNS
 // record. Every ECHConfig in the list must be for that one private key.
+//
+// To rotate keys, a file may hold more than one such pair. The server accepts
+// ECH from clients holding any of them, but only the first pair is the current
+// key: its ECHConfigs alone are sent as retry configs to clients whose ECH
+// offer was rejected. The pairs after it are older keys, kept until clients
+// have stopped using them.
 package echkeys
 
 import (
@@ -52,10 +58,34 @@ func LoadFile(path string) ([]tls.EncryptedClientHelloKey, error) {
 }
 
 // Parse reads the contents of an ECH key file. Each ECHConfig in it becomes
-// one key, sent as a retry config to clients whose ECH offer was rejected.
+// one key. Only the first pair's keys are sent as retry configs.
 func Parse(data []byte) ([]tls.EncryptedClientHelloKey, error) {
-	var privDER, configList []byte
-	blocks := 0
+	pairs, err := parsePairs(data)
+	if err != nil {
+		return nil, err
+	}
+	var keys []tls.EncryptedClientHelloKey
+	for i, p := range pairs {
+		for _, c := range p.configs {
+			keys = append(keys, tls.EncryptedClientHelloKey{
+				Config:      c,
+				PrivateKey:  p.priv.Bytes(),
+				SendAsRetry: i == 0,
+			})
+		}
+	}
+	return keys, nil
+}
+
+// keyPair is one PRIVATE KEY block and the ECHCONFIG block after it.
+type keyPair struct {
+	priv    *ecdh.PrivateKey
+	configs [][]byte
+}
+
+func parsePairs(data []byte) ([]keyPair, error) {
+	var pairs []keyPair
+	var privDER []byte // a PRIVATE KEY block still waiting for its ECHCONFIG
 	rest := data
 	for {
 		var block *pem.Block
@@ -63,67 +93,99 @@ func Parse(data []byte) ([]tls.EncryptedClientHelloKey, error) {
 		if block == nil {
 			break
 		}
-		blocks++
 		switch block.Type {
 		case privateKeyBlock:
 			if privDER != nil {
-				return nil, errors.New("more than one PRIVATE KEY block")
+				return nil, fmt.Errorf("PRIVATE KEY block %d has no ECHCONFIG block after it", len(pairs))
 			}
 			privDER = block.Bytes
 		case echConfigBlock:
-			if configList != nil {
-				return nil, errors.New("more than one ECHCONFIG block")
+			if privDER == nil {
+				return nil, fmt.Errorf("ECHCONFIG block %d has no PRIVATE KEY block before it", len(pairs))
 			}
-			configList = block.Bytes
+			p, err := parsePair(privDER, block.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("key %d: %w", len(pairs), err)
+			}
+			pairs = append(pairs, p)
+			privDER = nil
 		default:
 			return nil, fmt.Errorf("unexpected PEM block %q", block.Type)
 		}
 	}
-	if blocks == 0 {
-		return nil, errors.New("no PEM blocks")
-	}
 	if len(bytes.TrimSpace(rest)) != 0 {
 		return nil, errors.New("data after the last PEM block")
 	}
-	if privDER == nil {
-		return nil, errors.New("no PRIVATE KEY block")
+	if privDER != nil {
+		return nil, fmt.Errorf("PRIVATE KEY block %d has no ECHCONFIG block after it", len(pairs))
 	}
-	if configList == nil {
-		return nil, errors.New("no ECHCONFIG block")
+	if len(pairs) == 0 {
+		return nil, errors.New("no PRIVATE KEY and ECHCONFIG blocks")
 	}
+	return pairs, nil
+}
 
+func parsePair(privDER, configList []byte) (keyPair, error) {
 	k, err := x509.ParsePKCS8PrivateKey(privDER)
 	if err != nil {
-		return nil, fmt.Errorf("parsing PRIVATE KEY: %w", err)
+		return keyPair{}, fmt.Errorf("parsing PRIVATE KEY: %w", err)
 	}
 	priv, ok := k.(*ecdh.PrivateKey)
 	if !ok || priv.Curve() != ecdh.X25519() {
-		return nil, errors.New("PRIVATE KEY is not an X25519 key")
+		return keyPair{}, errors.New("PRIVATE KEY is not an X25519 key")
 	}
 	pub := priv.PublicKey().Bytes()
 
 	configs, err := splitConfigList(configList)
 	if err != nil {
-		return nil, err
+		return keyPair{}, err
 	}
-	keys := make([]tls.EncryptedClientHelloKey, 0, len(configs))
 	for i, c := range configs {
 		if err := checkConfig(c, pub); err != nil {
-			return nil, fmt.Errorf("ECHConfig %d: %w", i, err)
+			return keyPair{}, fmt.Errorf("ECHConfig %d: %w", i, err)
 		}
-		keys = append(keys, tls.EncryptedClientHelloKey{
-			Config:      c,
-			PrivateKey:  priv.Bytes(),
-			SendAsRetry: true,
-		})
 	}
-	return keys, nil
+	return keyPair{priv: priv, configs: configs}, nil
+}
+
+// AddKey makes a new key, as Generate does, and returns a key file with it as
+// the current key, followed by every key of the existing file, which are then
+// still accepted but no longer sent as retry configs. The new key's config ID
+// differs from those of the existing keys.
+func AddKey(existing []byte, publicName string) (keyFile, configList []byte, err error) {
+	pairs, err := parsePairs(existing)
+	if err != nil {
+		return nil, nil, err
+	}
+	var used [256]bool
+	n := 0
+	for _, p := range pairs {
+		for _, c := range p.configs {
+			if !used[c[4]] {
+				used[c[4]] = true
+				n++
+			}
+		}
+	}
+	if n == len(used) {
+		return nil, nil, errors.New("every config ID is in use")
+	}
+	keyFile, configList, err = generate(publicName, &used)
+	if err != nil {
+		return nil, nil, err
+	}
+	return append(keyFile, existing...), configList, nil
 }
 
 // Generate makes a new X25519 ECH key whose ECHConfig names publicName as the
 // client-facing server. It returns the key file's contents and the
 // ECHConfigList to publish for clients.
 func Generate(publicName string) (keyFile, configList []byte, err error) {
+	return generate(publicName, new([256]bool))
+}
+
+// generate is Generate, with a config ID that used doesn't mark.
+func generate(publicName string, used *[256]bool) (keyFile, configList []byte, err error) {
 	if err := checkPublicName([]byte(publicName)); err != nil {
 		return nil, nil, err
 	}
@@ -132,8 +194,13 @@ func Generate(publicName string) (keyFile, configList []byte, err error) {
 		return nil, nil, err
 	}
 	var id [1]byte
-	if _, err := rand.Read(id[:]); err != nil {
-		return nil, nil, err
+	for {
+		if _, err := rand.Read(id[:]); err != nil {
+			return nil, nil, err
+		}
+		if !used[id[0]] {
+			break
+		}
 	}
 
 	var b cryptobyte.Builder

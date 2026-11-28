@@ -109,6 +109,9 @@ func TestParseErrors(t *testing.T) {
 		"no config":         keyBlock,
 		"two keys":          cat(keyBlock, keyBlock, configBlock),
 		"two configs":       cat(keyBlock, configBlock, configBlock),
+		"config first":      cat(configBlock, keyBlock),
+		"second key alone":  cat(keyBlock, configBlock, keyBlock),
+		"bad second key":    cat(keyBlock, configBlock, pem.EncodeToMemory(otherKeyBlock), configBlock),
 		"other block":       cat(keyBlock, configBlock, block("CERTIFICATE", []byte{1})),
 		"trailing junk":     cat(keyBlock, configBlock, []byte("junk")),
 		"not PKCS8":         cat(block(privateKeyBlock, []byte{1, 2, 3}), configBlock),
@@ -126,5 +129,65 @@ func TestParseErrors(t *testing.T) {
 	}
 	if _, err := Parse(good); err != nil {
 		t.Errorf("the good file: %s", err)
+	}
+}
+
+func TestAddKey(t *testing.T) {
+	oldFile, oldList, err := Generate("public.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newFile, newList, err := AddKey(oldFile, "public.example.com")
+	if err != nil {
+		t.Fatalf("AddKey: %s", err)
+	}
+	if !bytes.HasSuffix(newFile, oldFile) {
+		t.Errorf("the new file does not end with the old file")
+	}
+	keys, err := Parse(newFile)
+	if err != nil {
+		t.Fatalf("Parse: %s", err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("want 2 keys, got %d", len(keys))
+	}
+	if !bytes.Equal(keys[0].Config, newList[2:]) || !keys[0].SendAsRetry {
+		t.Errorf("first key: want the new config, sent as retry; got SendAsRetry %t", keys[0].SendAsRetry)
+	}
+	if !bytes.Equal(keys[1].Config, oldList[2:]) || keys[1].SendAsRetry {
+		t.Errorf("second key: want the old config, not sent as retry; got SendAsRetry %t", keys[1].SendAsRetry)
+	}
+	if bytes.Equal(keys[0].PrivateKey, keys[1].PrivateKey) {
+		t.Errorf("the new key is the old key")
+	}
+	if keys[0].Config[4] == keys[1].Config[4] {
+		t.Errorf("both keys have config ID %d", keys[0].Config[4])
+	}
+
+	// A third key keeps both old ones, in order.
+	third, _, err := AddKey(newFile, "public.example.com")
+	if err != nil {
+		t.Fatalf("AddKey on a two-key file: %s", err)
+	}
+	keys3, err := Parse(third)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(keys3) != 3 || !bytes.Equal(keys3[1].Config, keys[0].Config) || !bytes.Equal(keys3[2].Config, keys[1].Config) {
+		t.Errorf("a third key did not keep the two older ones in order")
+	}
+	ids := map[byte]bool{}
+	for _, k := range keys3 {
+		ids[k.Config[4]] = true
+	}
+	if len(ids) != 3 {
+		t.Errorf("config IDs repeat: %v", ids)
+	}
+
+	if _, _, err := AddKey([]byte("junk"), "public.example.com"); err == nil {
+		t.Errorf("AddKey on a bad file: want an error")
+	}
+	if _, _, err := AddKey(oldFile, "localhost"); err == nil {
+		t.Errorf("AddKey with a bad public name: want an error")
 	}
 }
