@@ -452,6 +452,10 @@ var metaCipherSuites = map[uint16]bool{
 	0x00FF: true,
 }
 
+// tlsFallbackSCSV is TLS_FALLBACK_SCSV, RFC 7507's signal that the client is
+// retrying at a lower version. It is not in metaCipherSuites.
+const tlsFallbackSCSV = 0x5600
+
 // TLS 1.3 cipher suites
 var tls13Suites = map[uint16]bool{
 	0x1301: true,
