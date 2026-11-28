@@ -1,0 +1,130 @@
+name: Image
+on:
+  # Every pull request, not only ones that touch the Dockerfile: Go code,
+  # templates, static files and flags can each stop the server from starting
+  # inside the image, and before this check the first build of the image was
+  # the one in the production deploy.
+  #
+  # This is deliberately not a required check and has no merge_group trigger.
+  # It pulls base images from a registry, and a registry's bad day should
+  # never be able to block a deploy. To require it, add merge_group here
+  # first, or merge queue entries will wait on it forever.
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Naming bash gets us `set -eo pipefail`, which the default shell lacks.
+    shell: bash
+
+jobs:
+  image:
+    name: Build and try the image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: howsmyssl:image-check
+      CONTAINER: howsmyssl-image-check
+      # Outside the runner's home directory so that the image's unprivileged
+      # user can read the mounted files.
+      MOUNTS: /tmp/howsmyssl-image-check
+      # The Dockerfile's -vhost. The server only routes requests for it.
+      VHOST: www.howsmyssl.com
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The same command deploy.yml builds with. Nothing is pushed anywhere.
+      - name: Build the image
+        run: docker build -t "$IMAGE" .
+
+      # Started the way k8s/deployment.yaml starts it: the image's own
+      # command, user and ports, the same environment variable, and files
+      # mounted at the same paths. Two things differ. The certificate is the
+      # development one from config/, and -googAcctConf is cut from the
+      # command, because the server pings Google Cloud Logging at boot and
+      # there is no service account here to do that with.
+      - name: Start the container
+        run: |
+          mkdir -p "$MOUNTS/tls" "$MOUNTS/allowlists"
+          cp config/development_cert.pem "$MOUNTS/tls/tls.crt"
+          cp config/development_key.pem "$MOUNTS/tls/tls.key"
+          echo '{"allow_these_domains": [], "allow_subdomains_on": [], "blocked_domains": ["example.com"]}' > "$MOUNTS/allowlists/allow_lists.json"
+          chmod -R a+rX "$MOUNTS"
+
+          acme_redirect_url=$(yq -r 'select(.kind == "Deployment") | .spec.template.spec.containers[0].env[] | select(.name == "ACME_REDIRECT_URL") | .value' k8s/deployment.yaml)
+          if [ -z "$acme_redirect_url" ]; then
+            echo "found no ACME_REDIRECT_URL in k8s/deployment.yaml"
+            exit 1
+          fi
+
+          # The ENTRYPOINT is ["/bin/sh", "-c", "exec howsmyssl ..."].
+          command=$(docker inspect --format '{{index .Config.Entrypoint 2}}' "$IMAGE" | sed -E 's/ +-googAcctConf=[^ ]+//')
+          if [[ "$command" != "exec howsmyssl "* || "$command" == *googAcctConf* ]]; then
+            echo "the image's ENTRYPOINT is not in the form this check knows how to run: $command"
+            exit 1
+          fi
+          echo "running: $command"
+
+          docker run --detach --name "$CONTAINER" \
+            --env ACME_REDIRECT_URL="$acme_redirect_url" \
+            --publish 127.0.0.1:10080:10080 \
+            --publish 127.0.0.1:10443:10443 \
+            --volume "$MOUNTS/tls:/secrets/howsmyssl-tls:ro" \
+            --volume "$MOUNTS/allowlists:/etc/howsmyssl-allowlists:ro" \
+            --entrypoint /bin/sh \
+            "$IMAGE" -c "$command"
+
+      # The same request as the readiness and liveness probes.
+      - name: Wait for the health check
+        run: |
+          for _ in $(seq 1 30); do
+            if curl --fail --silent --show-error --max-time 5 http://127.0.0.1:10080/healthcheck; then
+              exit 0
+            fi
+            if [ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
+              echo "the container exited"
+              exit 1
+            fi
+            sleep 1
+          done
+          echo "the health check never passed"
+          exit 1
+
+      # The development certificate is for localhost, so connect to that name
+      # and ask for the vhost in the Host header.
+      - name: Ask for a report over TLS
+        run: |
+          get() {
+            curl --fail --silent --show-error --max-time 10 \
+              --cacert config/development_ca_cert.pem \
+              --header "Host: $VHOST" \
+              "https://localhost:10443$1"
+          }
+          get /a/check | tee "$MOUNTS/report.json"
+          echo
+          jq --exit-status '
+            (.rating | IN("Probably Okay", "Improvable", "Bad"))
+            and (.tls_version | startswith("TLS "))
+            and (.given_cipher_suites | length > 0)
+          ' "$MOUNTS/report.json"
+          # The home page is a template and /s/ is static files, both embedded
+          # in the binary. --count and not --quiet, which stops reading at the
+          # first match and makes curl fail on its closed pipe.
+          get / | grep --count "Your SSL client is"
+          get /s/about.html | grep --count "</html>"
+
+      - name: Print the container's log
+        if: always()
+        run: docker logs "$CONTAINER" || true
