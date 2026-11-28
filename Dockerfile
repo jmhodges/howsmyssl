@@ -37,7 +37,7 @@ EXPOSE 10080 10443
 ENTRYPOINT ["/bin/sh", "-c", "exec howsmyssl \
     -httpsAddr=:10443 \
     -httpAddr=:10080 \
-    -adminAddr=:4567 \
+    -adminAddr=127.0.0.1:4567 \
     -vhost=www.howsmyssl.com \
     -acmeRedirect=$ACME_REDIRECT_URL \
     -allowListsFile=/etc/howsmyssl-allowlists/allow_lists.json \
