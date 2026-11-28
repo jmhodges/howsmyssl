@@ -176,7 +176,15 @@ SessionTicketsSupported          bool
 SupportedVersions                []uint16
 SupportedCurves                  []CurveID
 SupportedSignatureAlgorithms     []SignatureScheme
+SupportedSignatureAlgorithmsCert []SignatureScheme
+ClientExtensions                 []uint16
 ```
+
+`SupportedSignatureAlgorithmsCert` is the client's `signature_algorithms_cert`
+extension (RFC 8446, Section 4.2.3), and `ClientExtensions` is the type of each
+extension in the ClientHello, in the order sent, unknown ones included. Upstream
+already parses both, into `clientHelloMsg.supportedSignatureAlgorithmsCert` and
+`clientHelloMsg.extensions`, so no parsing is added.
 
 ### B2. Add a client-side `signature_algorithms` override (`common.go`)
 
@@ -227,6 +235,8 @@ SignatureAlgorithms []SignatureScheme
       state.SupportedVersions              = c.clientHello.supportedVersions
       state.SupportedCurves                = ... copy of c.clientHello.supportedCurves
       state.SupportedSignatureAlgorithms   = ... copy of c.clientHello.supportedSignatureAlgorithms
+      state.SupportedSignatureAlgorithmsCert = ... copy of c.clientHello.supportedSignatureAlgorithmsCert
+      state.ClientExtensions               = ... copy of c.clientHello.extensions
   }
   state.AbleToDetectNMinusOneSplitting = c.ableToDetectNMinusOneSplitting
   state.NMinusOneRecordSplittingDetected = c.nMinusOneRecordSplittingDetected

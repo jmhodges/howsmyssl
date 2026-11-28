@@ -365,6 +365,12 @@
           groups for the cipher suites the client supports. The named groups are
           where the post-quantum key agreement algorithms are advertised. No
           rating will be given in this section.</p>
+          <p>Below the list, the section names any of the pre-standard Kyber
+          draft groups the client lists (<code>X25519Kyber768Draft00</code>
+          and <code>SecP256r1Kyber768Draft00</code>). IANA's TLS Supported
+          Groups registry marks both obsolete, replaced by the ML-KEM groups.
+          They don't count as post-quantum key agreement here. This is shown
+          for information only, and doesn't change the rating.</p>
 
           <h4 class="fragpadded" id="given-signature-algorithms"><a class="anchor-link" href="#given-signature-algorithms" aria-label="Link to Given Signature Algorithms">#</a>Given Signature Algorithms</h4>
           <p>This section lists the signature algorithms the client says it
@@ -381,6 +387,16 @@
           href="https://datatracker.ietf.org/doc/draft-ietf-tls-mldsa/">draft-ietf-tls-mldsa</a>)
           will appear here as clients begin to support them. No rating will be
           given in this section.</p>
+          <p>Below the list, the section names the signature algorithms the
+          client offers, in <code>signature_algorithms</code> or
+          <code>signature_algorithms_cert</code>, that hash with SHA-1 or MD5,
+          like <code>rsa_pkcs1_sha1</code> and <code>ecdsa_sha1</code>. Both
+          hashes have practical collision attacks. It also says whether the
+          client shows signs of support for post-quantum certificates: whether it offers
+          ML-DSA or SLH-DSA signatures, and whether it sends the trust anchor
+          IDs extension (<code>trust_anchors</code>, a temporary IANA
+          registration for draft-ietf-tls-trust-anchor-ids). These are shown
+          for information only, and don't change the rating.</p>
 
           <hr />
 

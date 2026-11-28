@@ -1,0 +1,106 @@
+Value,Description,DTLS-OK,Recommended,Reference,Comment
+0,Reserved,,,[RFC 8447],
+1,sect163k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+2,sect163r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+3,sect163r2,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+4,sect193r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+5,sect193r2,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+6,sect233k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+7,sect233r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+8,sect239k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+9,sect283k1,Y,N,[RFC 8422],
+10,sect283r1,Y,N,[RFC 8422],
+11,sect409k1,Y,N,[RFC 8422],
+12,sect409r1,Y,N,[RFC 8422],
+13,sect571k1,Y,N,[RFC 8422],
+14,sect571r1,Y,N,[RFC 8422],
+15,secp160k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+16,secp160r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+17,secp160r2,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+18,secp192k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+19,secp192r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+20,secp224k1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+21,secp224r1,Y,D,[RFC 8422]; [RFC 9847],[https://datatracker.ietf.org/meeting/118/materials/slides-118-tls-rfc8447bis-00]
+22,secp256k1,Y,N,[RFC 8422],
+23,secp256r1,Y,Y,[RFC 8422],
+24,secp384r1,Y,Y,[RFC 8422],
+25,secp521r1,Y,N,[RFC 8422],
+26,brainpoolP256r1,Y,N,[RFC 7027],
+27,brainpoolP384r1,Y,N,[RFC 7027],
+28,brainpoolP512r1,Y,N,[RFC 7027],
+29,x25519,Y,Y,[RFC 9846]; [RFC 8422],
+30,x448,Y,Y,[RFC 9846]; [RFC 8422],
+31,brainpoolP256r1tls13,Y,N,[RFC 8734],
+32,brainpoolP384r1tls13,Y,N,[RFC 8734],
+33,brainpoolP512r1tls13,Y,N,[RFC 8734],
+34,GC256A,Y,N,[RFC 9189],
+35,GC256B,Y,N,[RFC 9189],
+36,GC256C,Y,N,[RFC 9189],
+37,GC256D,Y,N,[RFC 9189],
+38,GC512A,Y,N,[RFC 9189],
+39,GC512B,Y,N,[RFC 9189],
+40,GC512C,Y,N,[RFC 9189],
+41,curveSM2,N,N,[RFC 8998],
+42,bign-curve256v1,N,N,[draft-kalosha-stb-tls13],For TLS 1.3 or later
+43,bign-curve384v1,N,N,[draft-kalosha-stb-tls13],For TLS 1.3 or later
+44,bign-curve512v1,N,N,[draft-kalosha-stb-tls13],For TLS 1.3 or later
+45-255,Unassigned,,,,
+256,ffdhe2048,Y,N,[RFC 7919],
+257,ffdhe3072,Y,N,[RFC 7919],
+258,ffdhe4096,Y,N,[RFC 7919],
+259,ffdhe6144,Y,N,[RFC 7919],
+260,ffdhe8192,Y,N,[RFC 7919],
+261-507,Unassigned,,,,
+508-511,Reserved for Private Use,,,[RFC 7919],
+512,MLKEM512,Y,N,[RFC-ietf-tls-mlkem-10],FIPS 203 version of ML-KEM-512
+513,MLKEM768,Y,N,[RFC-ietf-tls-mlkem-10],FIPS 203 version of ML-KEM-768
+514,MLKEM1024,Y,N,[RFC-ietf-tls-mlkem-10],FIPS 203 version of ML-KEM-1024
+515-2569,Unassigned,,,,
+2570,Reserved,Y,N,[RFC 8701],
+2571-4584,Unassigned,,,,
+4585,SecP256r1MLKEM512,Y,N,[draft-rosomakho-tls-ecdhe-mlkem512-00],Combining secp256r1 ECDH with ML-KEM-512
+4586,MLKEM512X25519,Y,N,[draft-rosomakho-tls-ecdhe-mlkem512-00],Combining ML-KEM-512 with X25519 ECDH
+4587,SecP256r1MLKEM768,Y,N,[RFC 10024],Combining secp256r1 ECDH with ML-KEM-768
+4588,X25519MLKEM768,Y,Y,[RFC 10024],Combining X25519 ECDH with ML-KEM-768
+4589,SecP384r1MLKEM1024,Y,N,[RFC 10024],Combining secp384r1 ECDH with ML-KEM-1024
+4590,curveSM2MLKEM768,N,N,[draft-yang-tls-hybrid-sm2-mlkem-03],Combining SM2 ECDH with ML-KEM-768
+4591,MLKEM1024X448,Y,N,[draft-preussmattsson-tls-mlkem1024-x448-01],PQ/T hybrid combining ML-KEM-1024 with X448
+4592-6681,Unassigned,,,,
+6682,Reserved,Y,N,[RFC 8701],
+6683-10793,Unassigned,,,,
+10794,Reserved,Y,N,[RFC 8701],
+10795-14905,Unassigned,,,,
+14906,Reserved,Y,N,[RFC 8701],
+14907-19017,Unassigned,,,,
+19018,Reserved,Y,N,[RFC 8701],
+19019-23129,Unassigned,,,,
+23130,Reserved,Y,N,[RFC 8701],
+23131-25496,Unassigned,,,,
+25497,X25519Kyber768Draft00 (OBSOLETE),Y,D,[draft-tls-westerbaan-xyber768d00-02]; [RFC 10024],Pre-standards version of Kyber768. Obsoleted by [RFC 10024].
+25498,SecP256r1Kyber768Draft00 (OBSOLETE),Y,D,[draft-kwiatkowski-tls-ecdhe-kyber-01]; [RFC 10024],Pre-standards version of Kyber768. Obsoleted by [RFC 10024].
+25499-27241,Unassigned,,,,
+27242,Reserved,Y,N,[RFC 8701],
+27243-31353,Unassigned,,,,
+31354,Reserved,Y,N,[RFC 8701],
+31355-35465,Unassigned,,,,
+35466,Reserved,Y,N,[RFC 8701],
+35467-39577,Unassigned,,,,
+39578,Reserved,Y,N,[RFC 8701],
+39579-43689,Unassigned,,,,
+43690,Reserved,Y,N,[RFC 8701],
+43691-47801,Unassigned,,,,
+47802,Reserved,Y,N,[RFC 8701],
+47803-51913,Unassigned,,,,
+51914,Reserved,Y,N,[RFC 8701],
+51915-56025,Unassigned,,,,
+56026,Reserved,Y,N,[RFC 8701],
+56027-60137,Unassigned,,,,
+60138,Reserved,Y,N,[RFC 8701],
+60139-64249,Unassigned,,,,
+64250,Reserved,Y,N,[RFC 8701],
+64251-65023,Unassigned,,,,
+65024-65279,Reserved for Private Use,,,[RFC 8422],
+65280,Unassigned,,,,
+65281,arbitrary_explicit_prime_curves,Y,N,[RFC 8422],
+65282,arbitrary_explicit_char2_curves,Y,N,[RFC 8422],
+65283-65535,Unassigned,,,,

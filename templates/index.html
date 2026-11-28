@@ -307,6 +307,12 @@
                 <li>{{.}}</li>
                 {{end}}
               </ul>
+              {{if .RetiredKyberDraftGroups}}
+              <p id="retired-kyber-draft-groups">Your client also lists the
+                pre-standard Kyber draft groups, which IANA's registry now
+                marks obsolete: {{range $i, $g := .RetiredKyberDraftGroups}}{{if $i}}, {{end}}{{$g}}{{end}}.
+                This doesn't change your rating.</p>
+              {{end}}
               <p><a href="/s/about.html/#given-named-groups">Learn More</a></p>
             </section>
             <section>
@@ -321,6 +327,17 @@
               </ul>
               {{else}}
               <p>Your client didn't send any signature algorithms.</p>
+              {{end}}
+              {{if .SHA1OrMD5SignatureAlgorithms}}
+              <p id="sha1-or-md5-signature-algorithms">Your client will still
+                accept signatures that hash with SHA-1 or MD5, in its
+                signature_algorithms or signature_algorithms_cert lists: {{range $i, $s := .SHA1OrMD5SignatureAlgorithms}}{{if $i}}, {{end}}{{$s}}{{end}}.
+                This doesn't change your rating.</p>
+              {{end}}
+              {{if or .PostQuantumSignatureAlgorithms .TrustAnchorIDsOffered}}
+              <p id="post-quantum-signatures">Your client shows signs of support for
+                post-quantum certificates: {{if .PostQuantumSignatureAlgorithms}}it accepts the post-quantum signatures {{range $i, $s := .PostQuantumSignatureAlgorithms}}{{if $i}}, {{end}}{{$s}}{{end}}{{end}}{{if and .PostQuantumSignatureAlgorithms .TrustAnchorIDsOffered}}, and {{end}}{{if .TrustAnchorIDsOffered}}it sent the trust anchor IDs extension{{end}}.
+                This doesn't change your rating.</p>
               {{end}}
               <p><a href="/s/about.html/#given-signature-algorithms">Learn More</a></p>
             </section>
