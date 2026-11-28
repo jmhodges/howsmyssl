@@ -412,30 +412,30 @@ func TestHelloRecorderCaps(t *testing.T) {
 			t.Fatalf("put %d: %s", i, err)
 		}
 	}
-	if !r.full() {
-		t.Errorf("full() is false with maxEntries hellos held")
-	}
-	if err := r.put([]byte{9}, &quicHello{}); err != errQUICHellosFull {
-		t.Errorf("put into a full recorder: %v, want errQUICHellosFull", err)
+	// A full recorder evicts its oldest hello to make room, and doesn't grow.
+	evictedBefore := quicHellosEvicted.Value()
+	if err := r.put([]byte{9}, &quicHello{}); err != nil {
+		t.Errorf("put into a full recorder: %s", err)
 	}
 	if n, _ := r.len(); n != 3 {
-		t.Errorf("a full recorder grew to %d hellos", n)
+		t.Errorf("a full recorder holds %d hellos; want 3", n)
 	}
-
-	// Taking one makes room for one.
-	r.take([]byte{0})
-	if r.full() {
-		t.Errorf("full() after a take")
+	if got := quicHellosEvicted.Value() - evictedBefore; got != 1 {
+		t.Errorf("%d hellos evicted; want 1", got)
 	}
-	if err := r.put([]byte{9}, &quicHello{}); err != nil {
-		t.Errorf("put after a take: %s", err)
+	if _, ok := r.take([]byte{0}); ok {
+		t.Errorf("the oldest hello wasn't the one evicted")
+	}
+	for _, k := range []byte{1, 2, 9} {
+		if _, ok := r.take([]byte{k}); !ok {
+			t.Errorf("hello %d was evicted; only the oldest should be", k)
+		}
 	}
 
 	// Expiry makes room with no new hello coming in.
+	r.put([]byte{1}, &quicHello{})
 	now = now.Add(quicHelloTTL)
-	if r.full() {
-		t.Errorf("full() once every hello is past quicHelloTTL")
-	}
+	r.take(nil)
 	if n, b := r.len(); n != 0 || b != 0 {
 		t.Errorf("past quicHelloTTL: %d hellos, %d bytes held; want none", n, b)
 	}
@@ -453,31 +453,41 @@ func TestHelloRecorderCaps(t *testing.T) {
 	if got := len(key) + h.size(); got > quicHelloMaxSize {
 		t.Errorf("a hello costs %d bytes, over quicHelloMaxSize %d", got, quicHelloMaxSize)
 	}
-	r.maxBytes = 3 * quicHelloMaxSize
-	for i := 0; ; i++ {
+	hsize := len(key) + h.size()
+	r.maxBytes = 3 * hsize
+	for i := range 10 {
 		key[0] = byte(i)
 		if err := r.put(key, h); err != nil {
-			if err != errQUICHellosFull {
-				t.Fatal(err)
-			}
-			break
+			t.Fatal(err)
 		}
-		if i > 10 {
-			t.Fatalf("the bytes cap didn't bind")
+		if _, b := r.len(); b > r.maxBytes {
+			t.Fatalf("holding %d bytes, over maxBytes %d", b, r.maxBytes)
 		}
 	}
-	if _, b := r.len(); b > r.maxBytes {
-		t.Errorf("holding %d bytes, over maxBytes %d", b, r.maxBytes)
+	if n, _ := r.len(); n != 3 {
+		t.Errorf("at the bytes cap, %d hellos held; want 3", n)
 	}
-	if !r.full() {
-		t.Errorf("full() is false at the bytes cap")
+	key[0] = 9
+	if _, ok := r.take(key); !ok {
+		t.Errorf("the newest hello was evicted at the bytes cap")
+	}
+
+	// A hello that can't fit at all isn't recorded, and evicts nothing.
+	r.maxBytes = hsize - 1
+	key[0] = 99
+	if err := r.put(key, h); err != errQUICHelloBig {
+		t.Errorf("put of a hello over maxBytes: %v, want errQUICHelloBig", err)
+	}
+	if n, _ := r.len(); n != 2 {
+		t.Errorf("a refused big hello changed the recorder to %d hellos; want 2", n)
 	}
 }
 
 func TestQUICAbandonedHandshakes(t *testing.T) {
 	// A client that sends its ClientHello and never its Finished leaves a
 	// hello recorded. Many of them must not pile up past the cap, must
-	// expire, and a full recorder must refuse new handshakes, not grow.
+	// expire, and must not keep good clients out: a full recorder evicts
+	// the oldest, so a good client still gets in, and gets its own hello.
 	ts := startQUICTestServer(t, testMux(t))
 	var mu sync.Mutex
 	now := time.Now()
@@ -486,7 +496,8 @@ func TestQUICAbandonedHandshakes(t *testing.T) {
 	ts.rec.now = func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
 	ts.rec.mu.Unlock()
 
-	refusedBefore := quicHellosRefused.Value()
+	evictedBefore := quicHellosEvicted.Value()
+	missingBefore := quicHellosMissing.Value()
 	for range 20 {
 		// No RootCAs, so the client rejects our certificate and walks away
 		// without its Finished.
@@ -496,29 +507,58 @@ func TestQUICAbandonedHandshakes(t *testing.T) {
 	if n != 5 {
 		t.Errorf("after 20 abandoned handshakes, %d hellos held; want the cap, 5", n)
 	}
-	if quicHellosRefused.Value()-refusedBefore < 15 {
-		t.Errorf("only %d handshakes refused while full; want at least 15", quicHellosRefused.Value()-refusedBefore)
+	if got := quicHellosEvicted.Value() - evictedBefore; got != 15 {
+		t.Errorf("%d hellos evicted by 20 abandoned handshakes into 5 places; want 15", got)
 	}
 
-	// While full, a good client is refused too.
-	if err := ts.dial(t, ts.pool); err == nil {
-		t.Errorf("a handshake succeeded while the recorder was full")
+	// With the recorder full of abandoned hellos, good clients still finish
+	// their handshakes and are rated on their own hellos, not on any of the
+	// flood's or each other's.
+	for _, c := range []struct {
+		curve origtls.CurveID
+		want  string
+	}{
+		{origtls.CurveP384, "secp384r1"},
+		{origtls.X25519MLKEM768, "X25519MLKEM768"},
+	} {
+		cc := ts.client(t, &origtls.Config{CurvePreferences: []origtls.CurveID{c.curve}})
+		resp, b := quicGet(t, cc, "/a/check", nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("with the recorder full, /a/check gave %d", resp.StatusCode)
+		}
+		var got clientInfo
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatal(err)
+		}
+		if diff := cmp.Diff([]string{c.want}, got.GivenNamedGroups); diff != "" {
+			t.Errorf("given_named_groups with the recorder full (-want +got):\n%s", diff)
+		}
+		if got.Transport != "QUIC" {
+			t.Errorf("transport %q; want QUIC", got.Transport)
+		}
+		// And more flood after its handshake doesn't touch a connection
+		// that already has its hello.
+		for range 10 {
+			ts.abandon(t)
+		}
+		if resp, _ := quicGet(t, cc, "/a/check", nil); resp.StatusCode != http.StatusOK {
+			t.Errorf("after more flood, /a/check on an accepted connection gave %d", resp.StatusCode)
+		}
+	}
+	if got := quicHellosMissing.Value() - missingBefore; got != 0 {
+		t.Errorf("%d accepted connections found no hello; want none", got)
+	}
+	if n, _ := ts.rec.len(); n != 5 {
+		t.Errorf("after the flood, %d hellos held; want the cap, 5", n)
 	}
 
-	// Once the abandoned hellos expire, they are gone and good clients get
-	// in again.
+	// Once the abandoned hellos expire, they are gone.
 	mu.Lock()
 	now = now.Add(quicHelloTTL)
 	mu.Unlock()
-	if ts.rec.full() {
-		t.Errorf("still full after quicHelloTTL")
-	}
+	ts.rec.take(nil)
 	if n, b := ts.rec.len(); n != 0 || b != 0 {
 		t.Errorf("after quicHelloTTL, %d hellos and %d bytes held; want none", n, b)
-	}
-	cc := ts.client(t, nil)
-	if resp, _ := quicGet(t, cc, "/a/check", nil); resp.StatusCode != http.StatusOK {
-		t.Errorf("after expiry, /a/check gave %d", resp.StatusCode)
 	}
 }
 

@@ -50,15 +50,15 @@ var (
 	quicVars          = expvar.NewMap("quic")
 	quicConns         = new(expvar.Int)
 	quicHellosMissing = new(expvar.Int)
-	quicHellosRefused = new(expvar.Int)
+	quicHellosEvicted = new(expvar.Int)
 	errNoQUICHello    = errors.New("no recorded ClientHello for this QUIC connection")
-	errQUICHellosFull = errors.New("too many QUIC handshakes waiting to be accepted")
+	errQUICHelloBig   = errors.New("QUIC ClientHello is bigger than the hello recorder holds")
 )
 
 func init() {
 	quicVars.Set("connections", quicConns)
 	quicVars.Set("hellos_missing", quicHellosMissing)
-	quicVars.Set("hellos_refused", quicHellosRefused)
+	quicVars.Set("hellos_evicted", quicHellosEvicted)
 }
 
 // quicHello is what we keep of a client's hello on a QUIC connection.
@@ -119,7 +119,16 @@ func quicHelloFromContext(ctx context.Context) (*quicHello, bool) {
 // one here. Anyone can do that, from any source address, since we don't
 // require QUIC address validation. So the recorder holds at most maxEntries
 // hellos and maxBytes of them, each for at most ttl, and a full recorder
-// refuses new ones instead of growing.
+// evicts its oldest hellos to make room for a new one instead of growing.
+//
+// Evicting, rather than refusing new handshakes while full, is what keeps a
+// flood of abandoned handshakes from turning QUIC off: refusing would take
+// only enough of them to fill the recorder once per ttl (4096 per 15s),
+// while pushing out a real client's hello takes maxEntries new ones between
+// its handshake's recording it and its connection's being accepted, about
+// one round trip. A client whose hello is evicted anyway finds none at
+// accept (quicHellosMissing) and its connection is closed, so it falls back
+// to TCP; it never gets another connection's hello.
 type helloRecorder struct {
 	mu     sync.Mutex
 	hellos map[string]*list.Element // of *recordedHello, oldest first in order
@@ -181,29 +190,24 @@ func (r *helloRecorder) remove(e *list.Element) {
 	r.bytes -= rh.size
 }
 
-// full reports whether the recorder can't take another hello of the
-// largest size we keep.
-func (r *helloRecorder) full() bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.sweep(r.now())
-	return r.order.Len() >= r.maxEntries || r.bytes+quicHelloMaxSize > r.maxBytes
-}
-
-// put records h under key, unless the recorder is full, in which case it
-// returns errQUICHellosFull and records nothing.
+// put records h under key, evicting the oldest hellos held until it fits
+// under the caps. A hello that wouldn't fit in an empty recorder isn't
+// recorded, and put returns errQUICHelloBig.
 func (r *helloRecorder) put(key []byte, h *quicHello) error {
 	size := len(key) + h.size()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if size > r.maxBytes {
+		return errQUICHelloBig
+	}
 	now := r.now()
 	r.sweep(now)
 	if e, ok := r.hellos[string(key)]; ok {
 		r.remove(e)
 	}
-	if r.order.Len() >= r.maxEntries || r.bytes+size > r.maxBytes {
-		quicHellosRefused.Add(1)
-		return errQUICHellosFull
+	for r.order.Len() > 0 && (r.order.Len() >= r.maxEntries || r.bytes+size > r.maxBytes) {
+		r.remove(r.order.Front())
+		quicHellosEvicted.Add(1)
 	}
 	rh := &recordedHello{key: string(key), hello: h, size: size, at: now}
 	r.hellos[rh.key] = r.order.PushBack(rh)
@@ -255,12 +259,6 @@ func quicTLSConfig(getCert func(*tls.ClientHelloInfo) (*tls.Certificate, error),
 	}
 	conf := base.Clone()
 	conf.GetConfigForClient = func(chi *origtls.ClientHelloInfo) (*origtls.Config, error) {
-		// Refuse the handshake, before it costs us more, while we hold as
-		// many hellos as we will.
-		if rec.full() {
-			quicHellosRefused.Add(1)
-			return nil, errQUICHellosFull
-		}
 		h := newQUICHello(chi)
 		c := base.Clone()
 		c.VerifyConnection = func(cs origtls.ConnectionState) error {
