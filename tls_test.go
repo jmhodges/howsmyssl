@@ -870,6 +870,12 @@ func init() {
 }
 
 func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
+	return connectWithServer(t, serverConf, clientConf, nil)
+}
+
+// connectWithServer is connect against the given server config. If wrap is
+// not nil, the client talks to the server through the net.Conn it returns.
+func connectWithServer(t *testing.T, srvConf *tls.Config, clientConf *tls.Config, wrap func(net.Conn) net.Conn) *tls.Conn {
 	clientConf.ServerName = "localhost"
 
 	// Required to flip on session ticket keys
@@ -880,7 +886,7 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 	clientConf.RootCAs = x509.NewCertPool()
 	clientConf.RootCAs.AddCert(rootCA)
 
-	tl, err := tls.Listen("tcp", "localhost:0", serverConf)
+	tl, err := tls.Listen("tcp", "localhost:0", srvConf)
 	if err != nil {
 		t.Fatalf("NewListener: %s", err)
 	}
@@ -913,7 +919,11 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 		d := &net.Dialer{
 			Timeout: 500 * time.Millisecond,
 		}
-		c, err = tls.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		if wrap == nil {
+			c, err = tls.DialWithDialer(d, "tcp", li.Addr().String(), clientConf)
+		} else {
+			c, err = dialWrapped(d, li.Addr().String(), clientConf, wrap)
+		}
 		if err == nil {
 			break
 		} else {
@@ -944,6 +954,19 @@ func connect(t *testing.T, clientConf *tls.Config) *tls.Conn {
 		t.Fatalf("timed out")
 	}
 	return cr.conn.Conn
+}
+
+func dialWrapped(d *net.Dialer, addr string, clientConf *tls.Config, wrap func(net.Conn) net.Conn) (*tls.Conn, error) {
+	raw, err := d.Dial("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	c := tls.Client(wrap(raw), clientConf)
+	if err := c.Handshake(); err != nil {
+		raw.Close()
+		return nil, err
+	}
+	return c, nil
 }
 
 func connectZtls(t *testing.T, clientConf *ztls.Config) *tls.Conn {

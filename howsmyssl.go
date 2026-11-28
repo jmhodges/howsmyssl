@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/logging"
+	"github.com/jmhodges/howsmyssl/echkeys"
 	"github.com/jmhodges/howsmyssl/gzip"
 	"github.com/jmhodges/howsmyssl/howhttp"
 	tls "github.com/jmhodges/howsmyssl/tls1274"
@@ -56,6 +57,7 @@ var (
 	allowLogName   = flag.String("allowLogName", "test_howsmyssl_allowance_checks", "the name to Google Cloud Logging log to send API allowance check data to")
 	adminAddr      = flag.String("adminAddr", "localhost:4567", "address to boot the admin server on")
 	headless       = flag.Bool("headless", false, "Run without templates")
+	echKeysFile    = flag.String("echKeysFile", "", "file path to Encrypted Client Hello (ECH) keys, made by cmd/genechkey; ECH is off without it")
 
 	apiVars         = expvar.NewMap("api")
 	staticVars      = expvar.NewMap("static")
@@ -93,6 +95,13 @@ func main() {
 	webVars.Set("requests", webRequests)
 
 	tlsConf := makeTLSConfig(*certPath, *keyPath)
+	if *echKeysFile != "" {
+		echKeys, err := echkeys.LoadFile(*echKeysFile)
+		if err != nil {
+			log.Fatalf("unable to load ECH keys: %s", err)
+		}
+		tlsConf.EncryptedClientHelloKeys = echKeys
+	}
 
 	tlsListener, err := tls.Listen("tcp", *httpsAddr, tlsConf)
 	if err != nil {
