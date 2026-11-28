@@ -358,6 +358,12 @@
           sometimes used to determine which cipher suite a client prefers, but
           TLS servers tend to choose their own preference of those cipher
           suites. No rating will be given in this section.</p>
+          <p>Below the list, the section names any of those cipher suites
+          whose TLS 1.2 key exchange is deprecated: plain RSA key exchange,
+          finite-field Diffie-Hellman, and static or anonymous Diffie-Hellman.
+          IANA's TLS cipher suite registry marks each of them "D"
+          (discouraged), citing RFC 10015. TLS 1.3 never uses them. This is
+          shown for information only, and doesn't change the rating.</p>
 
           <h4 class="fragpadded" id="given-named-groups"><a class="anchor-link" href="#given-named-groups" aria-label="Link to Given Named Groups">#</a>Given Named Groups</h4>
           <p>This section is a list of the named groups that the client says it
