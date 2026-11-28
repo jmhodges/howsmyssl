@@ -94,6 +94,23 @@ spec:
               mountPath: /etc/howsmyssl-allowlists
             - name: howsmyssl-tls-volume
               mountPath: /secrets/howsmyssl-tls
+          # The server needs none of what this takes away: it listens on high
+          # ports, reads its certificate, allowlists and logging account from
+          # the mounts above, and writes no files. The preStop sleep doesn't
+          # either.
+          securityContext:
+            # The Dockerfile's `app` user. Kubernetes can't tell that a named
+            # user isn't root, so runAsNonRoot needs the number said here. If
+            # the uid in the Dockerfile's useradd changes, change it here too.
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
       volumes:
         - name: howsmyssl-logging-svc-account-volume
           secret:
