@@ -38,6 +38,7 @@ type clientInfo struct {
 	UnknownCipherSuiteSupported    bool                `json:"unknown_cipher_suite_supported"`       // bad if true
 	BEASTVuln                      bool                `json:"beast_vuln"`                           // bad if true
 	AbleToDetectNMinusOneSplitting bool                `json:"able_to_detect_n_minus_one_splitting"` // neutral
+	EncryptedClientHelloAccepted   bool                `json:"encrypted_client_hello_accepted"`      // neutral, for now
 	InsecureCipherSuites           map[string][]string `json:"insecure_cipher_suites"`
 	TLSVersion                     string              `json:"tls_version"`
 	Rating                         rating              `json:"rating"`
@@ -159,6 +160,12 @@ func pullClientInfo(c *tls.Conn, now time.Time) *clientInfo {
 	d.GivenSignatureAlgorithms = renderSignatureSchemes(st.SupportedSignatureAlgorithms)
 
 	d.SessionTicketsSupported = st.SessionTicketsSupported
+
+	// When the server has ECH keys and accepts a client's offer, the
+	// ClientHello fields of st, and so this whole answer, come from the
+	// client's inner, encrypted ClientHello, not the outer one that an
+	// observer on the network sees.
+	d.EncryptedClientHelloAccepted = st.ECHAccepted
 
 	for _, cm := range st.CompressionMethods {
 		if cm != 0x0 {
