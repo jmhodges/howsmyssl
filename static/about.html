@@ -75,8 +75,8 @@
             if any of the following are true:</p>
           <ul>
             <li>They do not support ephemeral key cipher suites.</li>
-            <li>They do not support session tickets.</li>
-            <li>They are using TLS 1.1 and the current date is before June 14th, 2026 10 AM PT.</li>
+            <li>They are using TLS 1.1 and the current time is before
+            December 14th, 2026 10 AM PT.</li>
             <li>Their highest supported TLS version is TLS 1.2 and the current
             time is after June 14th, 2026 10 AM PT.</li>
             <li>They do not support post-quantum key agreement and the current
@@ -91,6 +91,8 @@
               the list of known insecure cipher suites in
               the <a href="https://github.com/jmhodges/howsmyssl/blob/main/insecure_suites.go">howsmyssl
               repository</a> on GitHub.</li>
+            <li>It supports <a href="#unknown-cipher-suites-supported">cipher
+              suites that How's My SSL? does not recognize</a>.</li>
             <li>It supports TLS compression (that is compression of the
               encryption information used to secure your connection) which
               exposes it to the
@@ -99,8 +101,8 @@
             <li>It is susceptible to the
               <a href="https://en.wikipedia.org/wiki/Transport_Layer_Security#BEAST_attack">BEAST
                 attack</a>.</li>
-            <li>Their highest supported TLS version is TLS 1.2 and the current
-            time is after December 14th, 2026 10 AM PT.</li>
+            <li>Their highest supported TLS version is TLS 1.1 or TLS 1.2 and
+            the current time is after December 14th, 2026 10 AM PT.</li>
             <li>They do not support post-quantum key agreement and the current
             time is after December 14th, 2026 10 AM PT.</li>
           </ul>
@@ -212,7 +214,7 @@
             the client and server to make the key smaller at the same
             security. Clients with support for ephemeral key cipher
             suites will be defaulted to <span class="label okay">Probably Okay</span>. Clients without it will be
-            marked as <span class="label bad">Bad</span>.</p>
+            marked as <span class="label improvable">Improvable</span>.</p>
 
           <h4 class="fragpadded" id="session-ticket-support"><a class="anchor-link" href="#session-ticket-support" aria-label="Link to Session Ticket Support">#</a>Session Ticket Support</h4>
           <p>Session tickets are a mechanism to speed up resumption of encrypted
@@ -245,10 +247,9 @@
             for a security engineer team. Of course, another alternative is for
             the website to simply turn off support for session tickets and
             enable support for ephemeral keys.</p>
-          <p>How's My SSL will rate clients with session ticket
-            support as <span class="label okay">Probably Okay</span>,
-            but not having it will only have it defaulted to
-            <span class="label improvable">Improvable</span>.</p>
+          <p>How's My SSL reports whether a client supports session
+            tickets, but session ticket support no longer affects the
+            client's overall rating.</p>
 
           <h4 class="fragpadded" id="tls-compression"><a class="anchor-link" href="#tls-compression" aria-label="Link to TLS Compression">#</a>TLS Compression</h4>
           <p>TLS compression was a specification of a way to make the data in
